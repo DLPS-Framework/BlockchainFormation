@@ -72,6 +72,10 @@ exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
   FORMATTED_ACC_ID=$(echo $ACC|cut -d "{" -f2 | cut -d "}" -f1 )
   echo $FORMATTED_ACC_ID > account.txt
   echo $FORMATTED_ACC_ID
+  
+  #set up genesis file
+  
+  #Set up enode adresses
 
   
   # ======= DOCKER Configs ==========
