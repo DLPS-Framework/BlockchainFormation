@@ -48,18 +48,23 @@ exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
   mount /dev/xvdb /data
   DISKUUID=`sudo file -s /dev/xvdb | awk '{print $8}'`
   bash -c  "echo '$DISKUUID       /data   ext4    defaults,nofail        0       2' >> /etc/fstab"
+  bash -c  "sudo chown -R ubuntu:ubuntu /data"
 
-  echo "Initial Script finished, Starting more advanced installs now"
+  #echo "Initial Script finished, Starting more advanced installs now"
   
   #add users with bash shell
 
 
   # ======== Install Ethereum Geth ========
 
-  bash -c  "apt-get install --reinstall ca-certificates"
+  bash -c  "sudo -E apt-get install --reinstall ca-certificates"
+  bash -c  "sudo -E apt-get install software-properties-common"
   bash -c  "sudo -E add-apt-repository -y ppa:ethereum/ethereum"
-  bash -c  "apt-get update"
-  bash -c  "apt-get install ethereum -y"
+  bash -c  "sudo -E apt-get update"
+  bash -c  "sudo -E apt-get install ethereum -y"
+  
+  #Geth service setup
+  #https://github.com/bas-vk/config/blob/master/geth-systemd-service.md
   
   # ======== Geth Network Setup ======== (https://atc.bmwgroup.net/confluence/display/BLOCHATEAM/Ethereum+%28Geth%29+Set+Up)
   cd /data
@@ -80,12 +85,16 @@ exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
   
   # ======= DOCKER Configs ==========
 
-  bash -c "wget -O - https://download.docker.com/linux/ubuntu/gpg"
+  bash -c "wget https://download.docker.com/linux/ubuntu/gpg"
   bash -c "sudo apt-key add gpg"
-  bash -c "add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable""
-  bash -c "apt update"
+  #sudo add-apt-repository  "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+  #bash -c "apt update"
+  add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
+  apt update
 
   apt-get install docker-ce -y
+
+  #sudo apt-get install docker-ce docker-ce-cli containerd.io
 
   mkdir /etc/systemd/system/docker.service.d
   touch /etc/systemd/system/docker.service.d/no_proxy.conf
