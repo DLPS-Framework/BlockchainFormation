@@ -24,7 +24,10 @@ exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
   bash -c "echo http_proxy=$HTTP_PROXY >> /etc/profile.d/environment_mods.sh"
   bash -c "echo https_proxy=$HTTPS_PROXY >> /etc/profile.d/environment_mods.sh"
   bash -c "echo no_proxy=$NO_PROXY >> /etc/profile.d/environment_mods.sh"   
-
+  
+  #test if sleeping works for the proxy problem
+  sleep 5s
+  
   #this is for going through some of the promts for linux packages
   export DEBIAN_FRONTEND=noninteractive
   DEBIAN_FRONTEND=noninteractive apt-get update && apt-get upgrade -y 
@@ -80,7 +83,7 @@ exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
   #https://github.com/bas-vk/config/blob/master/geth-systemd-service.md
   #https://gist.github.com/xiaoping378/4eabb1915ec2b64a06e5b7d996bb8214
   IP=$( hostname -I )
-  bash -c  "sudo printf '%s\n' '[Unit]' 'Description=Ethereum go client' '[Service]' 'Type=simple' 'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 31 --verbosity 3 --port 30310 --rpc --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin --nat=extip:$IP  --unlock $FORMATTED_ACC_ID --password /data/gethNetwork/password.txt' 'StandardOutput=file:/var/log/geth.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/geth.service"
+  bash -c  "sudo printf '%s\n' '[Unit]' 'Description=Ethereum go client' '[Service]' 'Type=simple' 'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 --port 30310 --rpc --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin --nat=extip:$IP  --unlock $FORMATTED_ACC_ID --password /data/gethNetwork/password.txt --mine ' 'StandardOutput=file:/var/log/geth.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/geth.service"
   #systemctl --user enable geth.service
   
   #add log rotate
