@@ -112,6 +112,13 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
   #systemctl daemon-reload
   #service docker restart
+  
+  # =======  Create success indicactor at end of this script ==========
+  touch /var/log/user_data_success.log
+  
+  
+  
+  
 
 
 
