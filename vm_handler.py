@@ -1,13 +1,15 @@
+import sys, os, pprint
+import boto3
 import getpass
-import os
-import pprint
-import sys
-import pytz
-import time
+import pytz, time
 utc = pytz.utc
+
+
 from dateutil import parser
+
 import paramiko
 from scp import SCPClient
+
 from web3 import Web3
 
 
