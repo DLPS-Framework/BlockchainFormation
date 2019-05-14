@@ -14,7 +14,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ec2_automation.cost_calculator import *
 from ec2_automation.cost_calculator import AWSCostCalculator
 
-class VM_handler:
+
+class VMHandler:
     """
     Class for handling startup and shutdown of aws VM instances
     """
@@ -34,7 +35,6 @@ class VM_handler:
 
         self.pprnt = pprint.PrettyPrinter(indent=1)
 
-        #print("Enter proxy password:")
         password = getpass.getpass(prompt=f"Enter proxy password for {self.config['proxy_user']}:")
 
         os.environ["HTTPS_PROXY"] = f"http://{self.config['proxy_user']}:{password}@proxy.muc:8080"
@@ -70,8 +70,6 @@ class VM_handler:
         General startup script needed for all blockchain frameworks. After general part is finished, the specific startup script are kicked off
         :return:
         """
-
-
         def search_newest_image(list_of_images):
             """
             Search for the newest ubuntu image from a given list
@@ -89,13 +87,11 @@ class VM_handler:
 
             return latest
 
+        # If no specific image ID is given search for the newest ubuntu 18 image
         if self.config['image']['image_id'] == None:
             ec2 = self.session.client('ec2', region_name='eu-central-1')
-            # pprnt.pprint(ec2.describe_instances())
 
             # Find the latest official Ubuntu image from Canonical(owner = 099720109477)
-            # aws ec2 describe-images --owners 099720109477 --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-*-18*-amd64-server-????????' 'Name=state,Values=available' --output json | jq -r '.Images | sort_by(.CreationDate) | last(.[])'
-
             amis = ec2.describe_images(
                 Filters=[
                     {
@@ -122,12 +118,9 @@ class VM_handler:
             image = search_newest_image(amis['Images'])
             self.config['image']['image_id'] = image["ImageId"]
 
-            # root_storage_mapping = image["BlockDeviceMappings"]
-            # print([x for x in source_image["BlockDeviceMappings"]])
 
         ec2 = self.session.resource('ec2')
         image = ec2.Image(self.config['image']['image_id'])
-        root_storage_mapping = image.block_device_mappings
 
         self.logger.info("Selected Image: " + image.description)
 
@@ -168,7 +161,7 @@ class VM_handler:
             self.logger.info(f"ID: {i.id}, State: {i.state['Name']}, IP: {i.private_ip_address}")
             ips.append(i.private_ip_address)
 
-        # add no procy for all VM IPs
+        # add no proxy for all VM IPs
         os.environ["NO_PROXY"] = f"localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net,{','.join(str(ip) for ip in ips)}"
 
         self.logger.info(f"You can now access machines via: ssh -i \"path to {self.config['key_name']} key\" ubuntu@{ips} (if user is ubuntu) ")
@@ -213,9 +206,9 @@ class VM_handler:
             self.logger.error("Creation of the directories failed")
 
         with open(f"{self.config['exp_dir']}/config.json", 'w') as outfile:
-            json.dump(self.config, outfile, default = self._datetimeconverter)
+            json.dump(self.config, outfile, default = VMHandler._datetimeconverter)
 
-        # wait couple min until vmss are up
+        # wait couple minutes until VMs are up
         # first connect ssh clients, then scp client
 
         self.logger.info("Waiting 60 seconds before creating ssh connection to VMs")
@@ -428,29 +421,15 @@ class VM_handler:
 
         geth_shutdown()
 
-        #or i in self.ec2_instances:
-         #   i.stop()
         #calculate aws costs
         ec2 = self.session.resource('ec2')
         ec2.instances.filter(InstanceIds=self.config['instance_ids']).stop()
 
-
-
         self.aws_calculator.calculate_uptime_costs(self.config)
-
-        #termination_times = []
-        #for i in self.ec2_instances:
-           # i.terminate()
-            # Note this termination is only an approximation
-           # termination_times.append(datetime.datetime.utcnow())
 
         ec2.instances.filter(InstanceIds=self.config['instance_ids']).terminate()
 
         self.logger.info("All instances terminated -  script is finished")
-
-
-
-
 
     def create_ssh_scp_clients(self):
         """
@@ -519,7 +498,9 @@ class VM_handler:
 
         }
         return genesis_dict
-    def _datetimeconverter(self, o):
+
+    @staticmethod
+    def _datetimeconverter(o):
         """Converter to make datetime objects json dumpable"""
         if isinstance(o, datetime.datetime):
             return o.__str__()

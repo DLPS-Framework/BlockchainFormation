@@ -12,7 +12,7 @@ The shutdown script also calculates the aws costs caused by the uptime of the vi
 
 ```run.py``` provides a argpass CLI for starting and terminating VMs.
 
-* Start a Geth Network: 
+* Start a private Geth Network with PoA consensus: 
 
 
 ```
@@ -84,8 +84,16 @@ To add another blockchain 4 things need to be added:
 * specific user data script in ```/UserDataScripts```
 
 ## Future Steps
-* Make geth setup more customizable
+* Make geth setup even more customizable
 *  Support more blockchains
     * Parity
     * Hyperledger Fabric
     * ...
+    
+## Needed Python packages 
+
+| os       | sys   | argparse | json  |
+|----------|-------|----------|-------|
+| logging  | boto3 | getpass  | time  |
+| dateutil | scp   | paramiko | web3  |
+| datetime | re    | pytz     | numpy |

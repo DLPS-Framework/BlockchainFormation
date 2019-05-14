@@ -20,7 +20,6 @@ class AWSCostCalculator:
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         # fh.setFormatter(formatter)
         ch.setFormatter(formatter)
-
         self.logger.addHandler(ch)
         
         self.pricing_client = session.client('pricing', region_name='us-east-1')
@@ -77,7 +76,7 @@ class AWSCostCalculator:
 
         self._extract_ebs_storage_from_blockdevicemapping(self.config['storage_settings'])
         self._extract_ebs_storage_from_blockdevicemapping(root_storage_mapping)
-        self.logger.info(self.storage_dict)
+        #self.logger.info(self.storage_dict)
         # Use AWS Pricing API at eu-central-1
         # 'eu-central-1' not working -> Pricing the same ? 
 
@@ -120,8 +119,7 @@ class AWSCostCalculator:
         }
 
         with open(f"{self.config['exp_dir']}/aws_costs.json", 'w') as outfile:
-            json.dump(aws_costs, outfile, default=self._datetimeconverter)
-
+            json.dump(aws_costs, outfile, default=AWSCostCalculator._datetimeconverter)
 
 
     def _get_instance_price(self, region, instance, osys):
@@ -140,7 +138,6 @@ class AWSCostCalculator:
                                                     {"Field": "location", "Value": region, "Type": "TERM_MATCH"}])
 
         od = json.loads(data['PriceList'][0])['terms']['OnDemand']
-        #print(od)
         id1 = list(od)[0]
         id2 = list(od[id1]['priceDimensions'])[0]
         return od[id1]['priceDimensions'][id2]['pricePerUnit']['USD']
@@ -171,7 +168,6 @@ class AWSCostCalculator:
         return od[id1]['priceDimensions'][id2]['pricePerUnit']['USD']
 
 
-    # Translate region code to region name
     def _get_region_name(self, region_code):
         """get region name for given region code"""
         default_region = 'EU (Frankfurt)'
@@ -207,8 +203,8 @@ class AWSCostCalculator:
 
                 return transition_time
 
-
-    def _datetimeconverter(self, o):
+    @staticmethod
+    def _datetimeconverter(o):
         """Converter to make datetime objects json dumpable"""
         if isinstance(o, datetime.datetime):
             return o.__str__()

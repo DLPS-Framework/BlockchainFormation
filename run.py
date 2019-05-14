@@ -1,9 +1,8 @@
 import sys, os, argparse
 import json
-import logging
 import logging.config
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ec2_automation.vm_handler import VM_handler
+from ec2_automation.vm_handler import VMHandler
 
 
 class ArgParser:
@@ -66,8 +65,6 @@ class ArgParser:
         parser.add_argument('--vm_count', '-vmc', help='specify how many VM you want to start', type=int)
         parser.add_argument('--instance_type', '-it',help='specify what type of instances you want to start',
                                  default='t2.micro', choices=['t2.nano','t2.micro','t2.small','t2.medium','t2.large', 't2.xlarge','t2.2xlarge'])
-        #parser.add_argument('--blockchain_type', '-bt',
-         #                        help='which network to setup', default='geth', choices=['geth'])
         parser.add_argument('--aws_credentials', '-cred',
                                  help='path to aws credentials', default=os.path.expanduser('~/.aws/credentials'))
         parser.add_argument('--key_name', '-kn',
@@ -190,29 +187,23 @@ if __name__ == '__main__':
     #src: https://docs.python.org/3/howto/logging-cookbook.html
     # create logger with
     logger = logging.getLogger(__name__)
-    #logger.setLevel(logging.DEBUG)
-    # create file handler which logs even debug messages
-    #fh = logging.FileHandler('ec2_automation.log')
-    #fh.setLevel(logging.DEBUG)
     # create console handler with a higher log level
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
     # create formatter and add it to the handlers
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    #fh.setFormatter(formatter)
     ch.setFormatter(formatter)
     # add the handlers to the logger
-    #logger.addHandler(fh)
     logger.addHandler(ch)
 
 
 
     if namespace.goal == 'start':
         config = argparser.create_config(vars(namespace), namespace.blockchain_type)
-        vm_handler = VM_handler(config)
+        vm_handler = VMHandler(config)
         vm_handler.run_general_startup()
 
     elif namespace.goal == 'termination':
         config = argparser.load_config(vars(namespace))
-        vm_handler = VM_handler(config)
+        vm_handler = VMHandler(config)
         vm_handler.run_shutdown()
