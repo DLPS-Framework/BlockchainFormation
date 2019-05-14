@@ -29,32 +29,32 @@ class ArgParser:
         self.parser_start.set_defaults(goal='start')
 
         self.parser_start.add_argument('--vm_count', '-vmc', help='specify how many VM you want to start', type=int)
-        self.parser_start.add_argument('--instance_type', '-it',help='specify what type of instances you want to start' ,
-                                 default='t2.micro',choices=['t2.nano','t2.micro','t2.small','t2.medium','t2.large', 't2.xlarge','t2.2xlarge'])
+        self.parser_start.add_argument('--instance_type', '-it',help='specify what type of instances you want to start',
+                                 default='t2.micro', choices=['t2.nano','t2.micro','t2.small','t2.medium','t2.large', 't2.xlarge','t2.2xlarge'])
         self.parser_start.add_argument('--blockchain_type', '-bt',
-                                 help='which network to setup',default='geth', choices=['geth'])
+                                 help='which network to setup', default='geth', choices=['geth'])
         self.parser_start.add_argument('--aws_credentials', '-cred',
-                                 help='path to aws credentials',default=os.path.expanduser('~/.aws/credentials'))
+                                 help='path to aws credentials', default=os.path.expanduser('~/.aws/credentials'))
         self.parser_start.add_argument('--key_name', '-kn',
                                        help='name of aws credentials key', default="blockchain")
         self.parser_start.add_argument('--aws_config', '-aws_con',
-                                 help='path to aws config',default=os.path.expanduser('~/.aws/config'))
+                                 help='path to aws config', default=os.path.expanduser('~/.aws/config'))
         self.parser_start.add_argument('--ssh_key', '-key',
-                                 help='path to  ssh key',default='/Users/q481264/.ssh/blockchain')
+                                 help='path to  ssh key', default='/Users/q481264/.ssh/blockchain')
         self.parser_start.add_argument('--image_id', '-img_id',
                                        help='image ID for vm (default is to get newest ubuntu 18 build)', default=None)
         self.parser_start.add_argument('--storage', '-s',
                                  help='amount of extra storage in GB', type=int, choices=range(1, 4), default=32)
         self.parser_start.add_argument('--profile', '-p',
-                                 help='name of aws profile',default='block_exp')
+                                 help='name of aws profile', default='block_exp')
         self.parser_start.add_argument('--tag', '-t',
-                                 help='tag for aws',default='blockchain_experiment')
+                                 help='tag for aws', default='blockchain_experiment')
         self.parser_start.add_argument('--subnet', '-st',
-                                 help='subnet id',default='subnet-0ac7aeeec87150dd7')
+                                 help='subnet id', default='subnet-0ac7aeeec87150dd7')
         self.parser_start.add_argument('--security_group', '-sg',
-                                 help='security group',default=["sg-0db312b6f84d66889"],nargs='+')
+                                 help='security group, multiple values allowed', default=["sg-0db312b6f84d66889"],nargs='+')
         self.parser_start.add_argument('--proxy_user', '-pu',
-                                 help='enter q number for proxy ',default='qqdpoc0')
+                                 help='enter q number for proxy ', default='qqdpoc0')
 
 
         self.parser_termination.add_argument('--config', '-c',
@@ -66,6 +66,11 @@ class ArgParser:
 
 
     def create_config(self, namespace_dict):
+        """
+        Crates config for vm handler for a given namespace provided by argpass CLI
+        :param namespace_dict: namespace containing the config informations
+        :return: config for vm handler
+        """
         config = {
             "vm_count": namespace_dict['vm_count'],
             "instance_type": namespace_dict['instance_type'],
@@ -104,6 +109,11 @@ class ArgParser:
         return config
 
     def load_config(self, namespace_dict):
+        """
+        Loads the config from a given JSON file
+        :param namespace_dict: namespace dict containing the config file path
+        :return: config dict
+        """
         if namespace_dict['config'].endswith('.json'):
             try:
                 with open(namespace_dict['config']) as json_file:

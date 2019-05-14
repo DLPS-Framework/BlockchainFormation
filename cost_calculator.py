@@ -5,7 +5,11 @@ from pkg_resources import resource_filename
 import numpy as np
 import logging
 
+
 class AWSCostCalculator:
+    """
+    Class responsible for calculating the aws costs caused by one or more aws instances during their uptime, including attached ebs storage.
+    """
 
     def __init__(self, session):
 
@@ -24,9 +28,12 @@ class AWSCostCalculator:
         self.session = session
 
 
-
-
     def calculate_uptime_costs(self, config):
+        """
+        Calculate uptime costs from launch to stopping of the VMs
+        :param config:
+        :return:
+        """
 
         self.config = config
         ec2 = self.session.resource('ec2', region_name='eu-central-1')
@@ -118,6 +125,13 @@ class AWSCostCalculator:
 
 
     def _get_instance_price(self, region, instance, osys):
+        """
+        get instance price for given region, instance type and osys
+        :param region:
+        :param instance:
+        :param osys:
+        :return:
+        """
         data = self.pricing_client.get_products(ServiceCode='AmazonEC2',
                                            Filters=[{"Field": "tenancy", "Value": "shared", "Type": "TERM_MATCH"},
                                                     {"Field": "operatingSystem", "Value": osys, "Type": "TERM_MATCH"},
@@ -133,6 +147,12 @@ class AWSCostCalculator:
 
 
     def _get_storage_price(self, region, volume_type):
+        """
+        get storage price for given region and volume_type
+        :param region: region
+        :param volume_type: volume_type
+        :return:
+        """
         ebs_name_map = {
             'standard': 'Magnetic',
             'gp2': 'General Purpose',
@@ -153,6 +173,7 @@ class AWSCostCalculator:
 
     # Translate region code to region name
     def _get_region_name(self, region_code):
+        """get region name for given region code"""
         default_region = 'EU (Frankfurt)'
         endpoint_file = resource_filename('botocore', 'data/endpoints.json')
         try:
