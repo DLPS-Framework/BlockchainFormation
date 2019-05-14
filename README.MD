@@ -12,47 +12,61 @@ The shutdown script also calculates the aws costs caused by the uptime of the vi
 
 ```run.py``` provides a argpass CLI for starting and terminating VMs.
 
-* Start a VM Network: 
+* Start a Geth Network: 
 
 
 ```
-python run.py start --vm_count 4 --instance_type t2.micro --blockchain_type geth --ssh_key ~/.ssh/blockchain --tag blockchain_philipp 
+python run.py start geth --vm_count 4 --instance_type t2.micro --ssh_key ~/.ssh/blockchain --tag blockchain_philipp 
 --subnet subnet-0ac7aeeec87150dd7 --security_group sg-0db312b6f84d66889 --aws_credentials ~/.aws/credentials --aws_config ~/.aws/config 
 --profile block_exp --key_name blockchain  --storage 32 --proxy_user qqdpoc0
 ```
 __This is an example  for a run command, values need to be adjusted for your config__
 
 
-Explanation of flags:
+Explanation of common flags (needed for all blockchains, not only e.g. geth):
 ```
   --vm_count VM_COUNT, -vmc VM_COUNT
                         specify how many VM you want to start
   --instance_type {t2.nano,t2.micro,t2.small,t2.medium,t2.large,t2.xlarge,t2.2xlarge}, -it {t2.nano,t2.micro,t2.small,t2.medium,t2.large,t2.xlarge,t2.2xlarge}
-                        specify what type of instances you want to start
-  --blockchain_type {geth}, -bt {geth}
-                        which network to setup (at the moment only geth)
+                        specify what type of instances you want to start [default=t2.micro]
   --aws_credentials AWS_CREDENTIALS, -cred AWS_CREDENTIALS
-                        path to aws credentials
+                        path to aws credentials [default=~.aws/credentials]
   --key_name KEY_NAME, -kn KEY_NAME
-                        name of aws credentials key
+                        name of aws credentials key [default=blockchain]
   --aws_config AWS_CONFIG, -aws_con AWS_CONFIG
-                        path to aws config
+                        path to aws config [default=~.aws/config]
   --ssh_key SSH_KEY, -key SSH_KEY
-                        path to ssh key
+                        path to ssh key [default=~.ssh/blockchain]
   --image_id IMAGE_ID, -img_id IMAGE_ID
-                        image ID for vm (default is to get newest ubuntu 18
-                        build)
-  --storage {1,2,3}, -s {1,2,3}
-                        amount of extra storage in GB
+                        image ID for vm [default=None (the script then pulls newest ubuntu 18 img)]
+  --storage STORAGE, -s STORAGE
+                        amount of extra storage in GB: min 8, max 1024 [default=32]
   --profile PROFILE, -p PROFILE
-                        name of aws profile
-  --tag TAG, -t TAG     tag for aws
+                        name of aws profile [default=block_exp]
+  --tag TAG, -t TAG     tag for aws [default=blockchain_experiment]
   --subnet SUBNET, -st SUBNET
-                        subnet id
+                        subnet id [default=subnet-0ac7aeeec87150dd7]
   --security_group SECURITY_GROUP [SECURITY_GROUP ...], -sg SECURITY_GROUP [SECURITY_GROUP ...]
-                        security group, multiple values allowed
+                        security group, multiple values allowed [default=sg-0db312b6f84d66889]
   --proxy_user PROXY_USER, -pu PROXY_USER
-                        enter q number for proxy
+                        enter q number for proxy [default=qqdpoc0]
+```
+
+Explanation of specific geth flags:
+```
+ --chainid CHAINID, -ci CHAINID
+                        specify chainID [default=11]
+  --period PERIOD, -pd PERIOD
+                        specify clique period [default=5]
+  --epoch EPOCH, -eh EPOCH
+                        specify clique epoch [default=30000]
+  --balance BALANCE, -bal BALANCE
+                        specify start balance of account [default=0x200000000000000000000000000000000000000000000000000000000000000]
+  --timestamp TIMESTAMP, -tp TIMESTAMP
+                        specify timestamp of genesis [default=0x00]
+  --gaslimit GASLIMIT, -gl GASLIMIT
+                        specify gasLimit [default=0x2fefd8]
+
 ```
 __Note that you need to enter the password for your proxy user after starting the script__
 

@@ -18,54 +18,91 @@ class ArgParser:
         """
 
         self.parser = argparse.ArgumentParser(description='This script automizes setup for various blockchain networks on aws and calculates aws costs after finshing'\
-                                    ,usage = 'run.py start --vm_count 4 --instance_type t2.micro --blockchain_type geth --ssh_key ~/.ssh/blockchain --tag blockchain_philipp --subnet subnet-0ac7aeeec87150dd7 --security_group sg-0db312b6f84d66889 '
+                                    ,usage = 'run.py start geth --vm_count 4 --instance_type t2.micro  --ssh_key ~/.ssh/blockchain --tag blockchain_philipp --subnet subnet-0ac7aeeec87150dd7 --security_group sg-0db312b6f84d66889 '
                                              'run.py terminate --config /Users/q481264/PycharmProjects/scripts/ec2_automation/experiments/exp_2019-05-13_16-32-49_geth/config.json')
 
-        self.subparsers = self.parser.add_subparsers(help='start instances or terminate them')
+        subparsers_start_terminate = self.parser.add_subparsers(help='start instances or terminate them')
 
-        self.parser_start = self.subparsers.add_parser('start', help='startup')
-        self.parser_termination = self.subparsers.add_parser('terminate', help='termination')
+        parser_start = subparsers_start_terminate.add_parser('start', help='startup')
+        parser_termination = subparsers_start_terminate.add_parser('terminate', help='termination')
 
-        self.parser_start.set_defaults(goal='start')
+        parser_start.set_defaults(goal='start')
 
-        self.parser_start.add_argument('--vm_count', '-vmc', help='specify how many VM you want to start', type=int)
-        self.parser_start.add_argument('--instance_type', '-it',help='specify what type of instances you want to start',
+        ArgParser._add_blockchain_subparsers(parser_start)
+
+        parser_termination.add_argument('--config', '-c', help='enter path to config')
+        parser_termination.set_defaults(goal='termination')
+
+    @staticmethod
+    def _add_blockchain_subparsers(superparser):
+        """
+        Add subparsers to a superparser, with arguments depending on the goal.
+        :param superparser: The parser to which to add subparsers.
+        :return:
+        """
+
+        subparsers = superparser.add_subparsers(help='Choose a blockchain type')
+
+        # geth parser
+        parser_geth = subparsers.add_parser('geth', help='Geth Network')
+        parser_geth.set_defaults(blockchain_type='geth')
+        ArgParser._add_common_args(parser_geth)
+        ArgParser._add_geth_args(parser_geth)
+
+    @staticmethod
+    def storage_type(x):
+        x = int(x)
+        if x < 8 or x > 1024:
+            raise argparse.ArgumentTypeError("Minimum storage is 8GB, maximum is 1024 GB")
+        return x
+
+    @staticmethod
+    def _add_common_args(parser):
+        """
+        Add common arguments to a (sub-)parser. Used instead of specifying parents for the subparsers (for design reasons).
+        :param parser: The parser to which to add the arguments.
+        :return:
+        """
+        parser.add_argument('--vm_count', '-vmc', help='specify how many VM you want to start', type=int)
+        parser.add_argument('--instance_type', '-it',help='specify what type of instances you want to start',
                                  default='t2.micro', choices=['t2.nano','t2.micro','t2.small','t2.medium','t2.large', 't2.xlarge','t2.2xlarge'])
-        self.parser_start.add_argument('--blockchain_type', '-bt',
-                                 help='which network to setup', default='geth', choices=['geth'])
-        self.parser_start.add_argument('--aws_credentials', '-cred',
+        #parser.add_argument('--blockchain_type', '-bt',
+         #                        help='which network to setup', default='geth', choices=['geth'])
+        parser.add_argument('--aws_credentials', '-cred',
                                  help='path to aws credentials', default=os.path.expanduser('~/.aws/credentials'))
-        self.parser_start.add_argument('--key_name', '-kn',
+        parser.add_argument('--key_name', '-kn',
                                        help='name of aws credentials key', default="blockchain")
-        self.parser_start.add_argument('--aws_config', '-aws_con',
+        parser.add_argument('--aws_config', '-aws_con',
                                  help='path to aws config', default=os.path.expanduser('~/.aws/config'))
-        self.parser_start.add_argument('--ssh_key', '-key',
+        parser.add_argument('--ssh_key', '-key',
                                  help='path to  ssh key', default=os.path.expanduser('~/.ssh/blockchain'))
-        self.parser_start.add_argument('--image_id', '-img_id',
+        parser.add_argument('--image_id', '-img_id',
                                        help='image ID for vm (default is to get newest ubuntu 18 build)', default=None)
-        self.parser_start.add_argument('--storage', '-s',
-                                 help='amount of extra storage in GB', type=int, choices=range(8, 2048), default=32)
-        self.parser_start.add_argument('--profile', '-p',
+        parser.add_argument('--storage', '-s',
+                                 help='amount of extra storage in GB: min 8, max 1024', type=ArgParser.storage_type, default=32)
+        parser.add_argument('--profile', '-p',
                                  help='name of aws profile', default='block_exp')
-        self.parser_start.add_argument('--tag', '-t',
+        parser.add_argument('--tag', '-t',
                                  help='tag for aws', default='blockchain_experiment')
-        self.parser_start.add_argument('--subnet', '-st',
+        parser.add_argument('--subnet', '-st',
                                  help='subnet id', default='subnet-0ac7aeeec87150dd7')
-        self.parser_start.add_argument('--security_group', '-sg',
+        parser.add_argument('--security_group', '-sg',
                                  help='security group, multiple values allowed', default=["sg-0db312b6f84d66889"],nargs='+')
-        self.parser_start.add_argument('--proxy_user', '-pu',
+        parser.add_argument('--proxy_user', '-pu',
                                  help='enter q number for proxy ', default='qqdpoc0')
 
 
-        self.parser_termination.add_argument('--config', '-c',
-                                 help='enter path to config')
-        self.parser_termination.set_defaults(goal='termination')
 
-        #TODO add subparser for geth/parity etc
+    @staticmethod
+    def _add_geth_args(parser):
+        parser.add_argument('--chainid', '-ci', help='specify chainID', type=int, default=11)
+        parser.add_argument('--period', '-pd', help='specify clique period', type=int, default=5)
+        parser.add_argument('--epoch', '-eh', help='specify clique epoch', type=int, default=30000)
+        parser.add_argument('--balance', '-bal', help='specify start balance of account', default="0x200000000000000000000000000000000000000000000000000000000000000")
+        parser.add_argument('--timestamp', '-tp', help='specify timestamp of genesis', default="0x00")
+        parser.add_argument('--gaslimit', '-gl', help='specify gasLimit', default="0x2fefd8")
 
-
-
-    def create_config(self, namespace_dict):
+    def create_config(self, namespace_dict, blockchain_type):
         """
         Crates config for vm handler for a given namespace provided by argpass CLI
         :param namespace_dict: namespace containing the config informations
@@ -90,7 +127,6 @@ class ArgParser:
             "aws_config": os.path.expanduser(namespace_dict['aws_config']),
             "priv_key_path": os.path.expanduser(namespace_dict['ssh_key']),
             "tag_name": namespace_dict['tag'],
-            "blockchain_type": namespace_dict['blockchain_type'],
             "user_data_script": "UserDataScripts/EC2_instance_bootstrap_geth.sh",
             "storage_settings": [
                 {
@@ -105,8 +141,27 @@ class ArgParser:
                     },
                 },
             ],
+            "blockchain_type": blockchain_type,
+            f"{blockchain_type}_settings": ArgParser._add_blockchain_type_config(namespace_dict, blockchain_type)
+
         }
         return config
+
+    @staticmethod
+    def _add_blockchain_type_config(namespace_dict, blockchain_type):
+
+        if blockchain_type == "geth":
+            return\
+            {
+                "chain_id": namespace_dict['chainid'],
+                "period": namespace_dict['period'],
+                "epoch": namespace_dict['epoch'],
+                "balance": namespace_dict['balance'],
+                "timestamp": namespace_dict['timestamp'],
+                "gaslimit": namespace_dict['gaslimit']
+
+            }
+
 
     def load_config(self, namespace_dict):
         """
@@ -153,7 +208,7 @@ if __name__ == '__main__':
 
 
     if namespace.goal == 'start':
-        config = argparser.create_config(vars(namespace))
+        config = argparser.create_config(vars(namespace), namespace.blockchain_type)
         vm_handler = VM_handler(config)
         vm_handler.run_general_startup()
 

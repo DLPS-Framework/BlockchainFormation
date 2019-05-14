@@ -205,7 +205,8 @@ class VM_handler:
         path = os.getcwd()
         try:
             os.makedirs(f"{path}/{self.config['exp_dir']}/accounts")
-            os.mkdir((f"{path}/{self.config['exp_dir']}/enodes"))
+            #enodes dir not needed anymore since enodes are saved in static-nodes file
+            #os.mkdir((f"{path}/{self.config['exp_dir']}/enodes"))
             os.mkdir((f"{path}/{self.config['exp_dir']}/geth_logs"))
             os.mkdir((f"{path}/{self.config['exp_dir']}/user_data_logs"))
         except OSError:
@@ -251,6 +252,8 @@ class VM_handler:
             self.logger.info(f"Boot up of all VMs as successful, waited {timer} minutes")
 
             self._run_specific_startup()
+
+            self.logger.info(f"Setup of all VMs/Nodes was successful, to terminate them run run.py terminate --config {self.config['exp_dir']}/config.json")
 
         try:
             map(lambda client: client.close(), ssh_clients)
@@ -399,7 +402,6 @@ class VM_handler:
         if self.config['blockchain_type'] == 'geth':
             _geth_startup()
 
-        #TODO: differentiate between different exp types
 
     def run_shutdown(self):
         """
@@ -479,7 +481,7 @@ class VM_handler:
         :return: genesis dictonary
         """
 
-        balances = ["0x200000000000000000000000000000000000000000000000000000000000000" for x in accounts]
+        balances = [self.config['geth_settings']['balance'] for x in accounts]
         base_balances = {"0000000000000000000000000000000000000001": {"balance": "1"},
                          "0000000000000000000000000000000000000002": {"balance": "1"},
                          "0000000000000000000000000000000000000003": {"balance": "1"},
@@ -495,25 +497,25 @@ class VM_handler:
         genesis_dict = {
 
             "config": {
-                'chainId': 11,
+                'chainId': self.config['geth_settings']['chain_id'],
                 'homesteadBlock': 0,
                 'eip150Block': 0,
                 'eip155Block': 0,
                 'eip158Block': 0,
                 'byzantiumBlock': 0,
                 'clique': {
-                    'period': 5,
-                    'epoch': 30000
+                    'period': self.config['geth_settings']['period'],
+                    'epoch': self.config['geth_settings']['epoch']
                 }
             },
             "alloc": merged_balances,
             "coinbase": "0x0000000000000000000000000000000000000000",
             "difficulty": "0x1",
             "extraData": f"0x0000000000000000000000000000000000000000000000000000000000000000{''.join(accounts)}0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-            "gasLimit": "0x2fefd8",
+            "gasLimit": self.config['geth_settings']['gaslimit'],
             "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
             "nonce": "0x0000000000000042",
-            "timestamp": "0x00"
+            "timestamp": self.config['geth_settings']['timestamp']
 
         }
         return genesis_dict
