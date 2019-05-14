@@ -40,11 +40,11 @@ class ArgParser:
         self.parser_start.add_argument('--aws_config', '-aws_con',
                                  help='path to aws config', default=os.path.expanduser('~/.aws/config'))
         self.parser_start.add_argument('--ssh_key', '-key',
-                                 help='path to  ssh key', default='/Users/q481264/.ssh/blockchain')
+                                 help='path to  ssh key', default=os.path.expanduser('~/.ssh/blockchain'))
         self.parser_start.add_argument('--image_id', '-img_id',
                                        help='image ID for vm (default is to get newest ubuntu 18 build)', default=None)
         self.parser_start.add_argument('--storage', '-s',
-                                 help='amount of extra storage in GB', type=int, choices=range(1, 4), default=32)
+                                 help='amount of extra storage in GB', type=int, choices=range(8, 2048), default=32)
         self.parser_start.add_argument('--profile', '-p',
                                  help='name of aws profile', default='block_exp')
         self.parser_start.add_argument('--tag', '-t',
@@ -86,11 +86,11 @@ class ArgParser:
             "user": "ubuntu",
             "profile": namespace_dict['profile'],
             "key_name": namespace_dict['key_name'],
-            "aws_credentials": namespace_dict['aws_credentials'],
-            "aws_config": namespace_dict['aws_config'],
-            "priv_key_path": namespace_dict['ssh_key'],
+            "aws_credentials": os.path.expanduser(namespace_dict['aws_credentials']),
+            "aws_config": os.path.expanduser(namespace_dict['aws_config']),
+            "priv_key_path": os.path.expanduser(namespace_dict['ssh_key']),
             "tag_name": namespace_dict['tag'],
-            "exp_type": namespace_dict['blockchain_type'],
+            "blockchain_type": namespace_dict['blockchain_type'],
             "user_data_script": "UserDataScripts/EC2_instance_bootstrap_geth.sh",
             "storage_settings": [
                 {

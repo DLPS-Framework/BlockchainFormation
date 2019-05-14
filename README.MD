@@ -12,12 +12,18 @@ The shutdown script also calculates the aws costs caused by the uptime of the vi
 
 ```run.py``` provides a argpass CLI for starting and terminating VMs.
 
-* Start a VM Network:
+* Start a VM Network: 
+
+
 ```
 python run.py start --vm_count 4 --instance_type t2.micro --blockchain_type geth --ssh_key ~/.ssh/blockchain --tag blockchain_philipp 
 --subnet subnet-0ac7aeeec87150dd7 --security_group sg-0db312b6f84d66889 --aws_credentials ~/.aws/credentials --aws_config ~/.aws/config 
---profile block_exp --key_name blockchain --image_id ami-0366f703a7edcf070 --storage 32 --proxy_user qqdpoc0
+--profile block_exp --key_name blockchain  --storage 32 --proxy_user qqdpoc0
 ```
+__This is an example  for a run command, values need to be adjusted for your config__
+
+
+Explanation of flags:
 ```
   --vm_count VM_COUNT, -vmc VM_COUNT
                         specify how many VM you want to start
@@ -48,6 +54,8 @@ python run.py start --vm_count 4 --instance_type t2.micro --blockchain_type geth
   --proxy_user PROXY_USER, -pu PROXY_USER
                         enter q number for proxy
 ```
+__Note that you need to enter the password for your proxy user after starting the script__
+
 * Terminate a VM Network:
 
 ```
@@ -58,11 +66,11 @@ python run.py terminate --config "path to config file"
 To add another blockchain 4 things need to be added:
 * specific startup function in ```vm_handler.py```
 * specific shutdown function in ```vm_handler.py```
-* adjustments of argpass CLI and config in ```vrun.py```
+* adjustments of argpass CLI and config in ```run.py```
 * specific user data script in ```/UserDataScripts```
 
 ## Future Steps
-
+* Make geth setup more customizable
 *  Support more blockchains
     * Parity
     * Hyperledger Fabric

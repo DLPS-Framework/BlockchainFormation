@@ -57,7 +57,7 @@ class VM_handler:
         with open("UserDataScripts/EC2_instance_bootstrap_base.sh", 'r') as content_file:
             user_data_base = content_file.read()
 
-        with open(f"UserDataScripts/EC2_instance_bootstrap_{self.config['exp_type']}.sh", 'r') as content_file:
+        with open(f"UserDataScripts/EC2_instance_bootstrap_{self.config['blockchain_type']}.sh", 'r') as content_file:
             user_data_specific = content_file.read()
 
         user_data_combined = user_data_base + user_data_specific
@@ -182,7 +182,7 @@ class VM_handler:
         ts = time.time()
         st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H-%M-%S')
         for index, i in enumerate(self.ec2_instances):
-            exp_tag = f"exp_{st}_{self.config['exp_type']}_Node{index}"
+            exp_tag = f"exp_{st}_{self.config['blockchain_type']}_Node{index}"
             ec2.create_tags(Resources=[
                 i.id,
             ],
@@ -201,7 +201,7 @@ class VM_handler:
 
         #create experiment directory structure
         self.config['launch_times'] = self.launch_times
-        self.config['exp_dir'] = f"experiments/exp_{st}_{self.config['exp_type']}"
+        self.config['exp_dir'] = f"experiments/exp_{st}_{self.config['blockchain_type']}"
         path = os.getcwd()
         try:
             os.makedirs(f"{path}/{self.config['exp_dir']}/accounts")
@@ -355,6 +355,7 @@ class VM_handler:
 
             time.sleep(3)
 
+            self.logger.info("Testing if transaction between Nodes work:")
             #TODO: move this to unit test section
             for index, i in enumerate(self.ec2_instances):
                 # web3 = Web3(Web3.HTTPProvider(f"http://{i.private_ip_address}:8545"))
