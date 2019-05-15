@@ -10,7 +10,7 @@ class AWSCostCalculator:
     """
     Class responsible for calculating the aws costs caused by one or more aws instances during their uptime, including attached ebs storage.
     """
-
+    # TODO: Check if Calculation is correct (30 days vs. 31 days question)
     def __init__(self, session):
 
         self.logger = logging.getLogger(__name__)

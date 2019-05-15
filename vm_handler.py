@@ -2,18 +2,17 @@ import sys, os, pprint
 import boto3
 import getpass
 import pytz, time
-utc = pytz.utc
 from dateutil import parser
 import paramiko
 from scp import SCPClient
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 
-
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ec2_automation.cost_calculator import *
 from ec2_automation.cost_calculator import AWSCostCalculator
 
+utc = pytz.utc
 
 class VMHandler:
     """
@@ -202,6 +201,7 @@ class VMHandler:
             #os.mkdir((f"{path}/{self.config['exp_dir']}/enodes"))
             os.mkdir((f"{path}/{self.config['exp_dir']}/geth_logs"))
             os.mkdir((f"{path}/{self.config['exp_dir']}/user_data_logs"))
+            self.logger.info(f"Created {str(self.config['exp_dir'])} directory")
         except OSError:
             self.logger.error("Creation of the directories failed")
 
@@ -210,7 +210,6 @@ class VMHandler:
 
         # wait couple minutes until VMs are up
         # first connect ssh clients, then scp client
-
         self.logger.info("Waiting 60 seconds before creating ssh connection to VMs")
         time.sleep(60)
         ssh_clients, scp_clients = self.create_ssh_scp_clients()

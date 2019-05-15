@@ -50,8 +50,9 @@ class ArgParser:
 
     @staticmethod
     def storage_type(x):
+        """Check if the chosen storage is in a given range (Needs to be >1 else the mounting process of the UserData script fails)"""
         x = int(x)
-        if x < 8 or x > 1024:
+        if x < 8 or x > 2048:
             raise argparse.ArgumentTypeError("Minimum storage is 8GB, maximum is 1024 GB")
         return x
 

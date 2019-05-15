@@ -85,6 +85,7 @@ To add another blockchain 4 things need to be added:
 
 ## Future Steps
 * Make geth setup even more customizable
+* Add logrotate to UserData setup scripts
 *  Support more blockchains
     * Parity
     * Hyperledger Fabric
@@ -92,8 +93,19 @@ To add another blockchain 4 things need to be added:
     
 ## Needed Python packages 
 
-| os       | sys   | argparse | json  |
-|----------|-------|----------|-------|
-| logging  | boto3 | getpass  | time  |
-| dateutil | scp   | paramiko | web3  |
-| datetime | re    | pytz     | numpy |
+* os       
+* sys   
+* argparse 
+* json  
+* logging  
+* boto3 
+* getpass  
+* time  
+* dateutil 
+* scp   
+* paramiko 
+* web3 
+* datetime 
+* re    
+* pytz     
+* numpy 
