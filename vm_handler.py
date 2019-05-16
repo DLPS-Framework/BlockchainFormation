@@ -88,7 +88,7 @@ class VMHandler:
 
         # If no specific image ID is given search for the newest ubuntu 18 image
         if self.config['image']['image_id'] == None:
-            ec2 = self.session.client('ec2', region_name='eu-central-1')
+            ec2 = self.session.client('ec2', region_name=self.config['aws_region'])
 
             # Find the latest official Ubuntu image from Canonical(owner = 099720109477)
             amis = ec2.describe_images(
@@ -124,7 +124,7 @@ class VMHandler:
         self.logger.info("Selected Image: " + image.description)
 
         session = boto3.Session(profile_name=self.config['profile'])
-        ec2 = session.resource('ec2', region_name='eu-central-1')
+        ec2 = session.resource('ec2', region_name=self.config['aws_region'])
         self.ec2_instances = ec2.create_instances(
             ImageId=self.config['image']['image_id'],
             MinCount=self.config['vm_count'],

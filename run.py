@@ -72,6 +72,8 @@ class ArgParser:
                                        help='name of aws credentials key', default="blockchain")
         parser.add_argument('--aws_config', '-aws_con',
                                  help='path to aws config', default=os.path.expanduser('~/.aws/config'))
+        parser.add_argument('--aws_region', '-aws_r',
+                            help='aws region where images should be hosted', default='eu-central-1')
         parser.add_argument('--ssh_key', '-key',
                                  help='path to  ssh key', default=os.path.expanduser('~/.ssh/blockchain'))
         parser.add_argument('--image_id', '-img_id',
@@ -123,6 +125,7 @@ class ArgParser:
             "key_name": namespace_dict['key_name'],
             "aws_credentials": os.path.expanduser(namespace_dict['aws_credentials']),
             "aws_config": os.path.expanduser(namespace_dict['aws_config']),
+            "aws_region": namespace_dict['aws_region'],
             "priv_key_path": os.path.expanduser(namespace_dict['ssh_key']),
             "tag_name": namespace_dict['tag'],
             "user_data_script": "UserDataScripts/EC2_instance_bootstrap_geth.sh",

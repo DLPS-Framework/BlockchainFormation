@@ -35,7 +35,7 @@ class AWSCostCalculator:
         """
 
         self.config = config
-        ec2 = self.session.resource('ec2', region_name='eu-central-1')
+        ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
         self.ec2_instances = [ec2.Instance(instance_id) for instance_id in self.config['instance_ids']]
 
 
@@ -83,14 +83,14 @@ class AWSCostCalculator:
 
         # Get current price for a given instance, region and os
         # make operation system not hardcoded
-        instance_price_per_hour = float(self._get_instance_price(self._get_region_name("eu-central-1"), self.config['instance_type'], 'Linux'))
+        instance_price_per_hour = float(self._get_instance_price(self._get_region_name(self.config['aws_region']), self.config['instance_type'], 'Linux'))
 
         # For example, let's say that you provision a 2000 GB volume for 12 hours (43,200 seconds) in a 30 day month. In a region that charges $0.10 per GB-month, you would be charged $3.33 for the volume ($0.10 per GB-month * 2000 GB * 43,200 seconds / (86,400 seconds/day * 30 day-month)).
         # source: https://aws.amazon.com/ebs/pricing/?nc1=h_ls
 
         # get price of used storage
         storage_price_per_hour = sum(
-            [float(self._get_storage_price(self._get_region_name("eu-central-1"), volume_type)) * float(volume_size) / 30 / 24 for
+            [float(self._get_storage_price(self._get_region_name(self.config['aws_region']), volume_type)) * float(volume_size) / 30 / 24 for
              volume_type, volume_size in self.storage_dict.items()])
 
         self.logger.info("Instance cost per hour: " + str(instance_price_per_hour))
@@ -192,7 +192,7 @@ class AWSCostCalculator:
 
         # get stop time for all stopped instances
         # https://stackoverflow.com/questions/41231630/checking-stop-time-of-ec2-instance-with-boto3
-        client = self.session.client('ec2', region_name='eu-central-1')
+        client = self.session.client('ec2', region_name=self.config['aws_region'])
         rsp = client.describe_instances(InstanceIds=[instance.id])
         if rsp:
             status = rsp['Reservations'][0]['Instances'][0]

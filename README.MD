@@ -35,6 +35,9 @@ Explanation of common flags (needed for all blockchains, not only e.g. geth):
                         name of aws credentials key [default=blockchain]
   --aws_config AWS_CONFIG, -aws_con AWS_CONFIG
                         path to aws config [default=~.aws/config]
+                        
+  --aws_region AWS_REGION, -aws_r AWS_REGION
+                        aws region where images should be hosted [default=eu-central-1]                   
   --ssh_key SSH_KEY, -key SSH_KEY
                         path to ssh key [default=~.ssh/blockchain]
   --image_id IMAGE_ID, -img_id IMAGE_ID
@@ -84,6 +87,9 @@ To add another blockchain 4 things need to be added:
 * specific user data script in ```/UserDataScripts```
 
 ## Future Steps
+* Add InstanceMarketOptions for cheapter VMs (Does the AWS Calculator take care of this?)
+* Add region flag
+* Make base options (no blockchain installed, only base script)
 * Make geth setup even more customizable
 * Add logrotate to UserData setup scripts
 *  Support more blockchains
