@@ -427,7 +427,7 @@ class VMHandler:
         self._run_specific_shutdown(ssh_clients, scp_clients)
 
         #calculate aws costs
-        ec2 = self.session.resource('ec2')
+        ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
         ec2.instances.filter(InstanceIds=self.config['instance_ids']).stop()
 
         self.aws_calculator.calculate_uptime_costs(self.config)
