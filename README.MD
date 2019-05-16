@@ -18,9 +18,19 @@ The shutdown script also calculates the aws costs caused by the uptime of the vi
 ```
 python run.py start geth --vm_count 4 --instance_type t2.micro --ssh_key ~/.ssh/blockchain --tag blockchain_philipp 
 --subnet subnet-0ac7aeeec87150dd7 --security_group sg-0db312b6f84d66889 --aws_credentials ~/.aws/credentials --aws_config ~/.aws/config 
+--profile block_exp --key_name blockchain  --storage 32 --proxy_user qqdpoc0 --chainid 11
+```
+__This is an example for a run command, values need to be adjusted for your config__
+
+* Start a Base Network where __NO__ blockchain frameworks will be installed, just x VMs with the base installations (e.g. proxy)
+
+
+```
+python run.py start base --vm_count 4 --instance_type t2.micro --ssh_key ~/.ssh/blockchain --tag blockchain_philipp 
+--subnet subnet-0ac7aeeec87150dd7 --security_group sg-0db312b6f84d66889 --aws_credentials ~/.aws/credentials --aws_config ~/.aws/config 
 --profile block_exp --key_name blockchain  --storage 32 --proxy_user qqdpoc0
 ```
-__This is an example  for a run command, values need to be adjusted for your config__
+__This is an example for a run command, values need to be adjusted for your config__
 
 
 Explanation of common flags (needed for all blockchains, not only e.g. geth):
@@ -88,8 +98,6 @@ To add another blockchain 4 things need to be added:
 
 ## Future Steps
 * Add InstanceMarketOptions for cheapter VMs (Does the AWS Calculator take care of this?)
-* Add region flag
-* Make base options (no blockchain installed, only base script)
 * Make geth setup even more customizable
 * Add logrotate to UserData setup scripts
 *  Support more blockchains

@@ -30,6 +30,8 @@ class ArgParser:
         ArgParser._add_blockchain_subparsers(parser_start)
 
         parser_termination.add_argument('--config', '-c', help='enter path to config')
+        #parser_termination.add_argument('--proxy_user', '-pu',
+         #                        help='enter q number for proxy ', default=None)
         parser_termination.set_defaults(goal='termination')
 
     @staticmethod
@@ -47,6 +49,14 @@ class ArgParser:
         parser_geth.set_defaults(blockchain_type='geth')
         ArgParser._add_common_args(parser_geth)
         ArgParser._add_geth_args(parser_geth)
+
+
+        #base parser
+        parser_base = subparsers.add_parser('base', help='Base Setup, only starts VM & installs basic packages, no blockchain')
+        parser_base.set_defaults(blockchain_type='base')
+        ArgParser._add_common_args(parser_base)
+        # base does no need any specific args
+
 
     @staticmethod
     def storage_type(x):
@@ -210,4 +220,4 @@ if __name__ == '__main__':
     elif namespace.goal == 'termination':
         config = argparser.load_config(vars(namespace))
         vm_handler = VMHandler(config)
-        vm_handler.run_shutdown()
+        vm_handler.run_general_shutdown()

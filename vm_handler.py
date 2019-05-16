@@ -56,10 +56,17 @@ class VMHandler:
         with open("UserDataScripts/EC2_instance_bootstrap_base.sh", 'r') as content_file:
             user_data_base = content_file.read()
 
-        with open(f"UserDataScripts/EC2_instance_bootstrap_{self.config['blockchain_type']}.sh", 'r') as content_file:
-            user_data_specific = content_file.read()
+        # if blockchain type is base, no specific startup script is needed
+        if self.config['blockchain_type'] == 'base':
 
-        user_data_combined = user_data_base + user_data_specific
+            user_data_specific = "\n  # =======  Create success indicator at end of this script ==========\n  touch /var/log/user_data_success.log"
+            user_data_combined = user_data_base + user_data_specific
+
+        else:
+            with open(f"UserDataScripts/EC2_instance_bootstrap_{self.config['blockchain_type']}.sh", 'r') as content_file:
+                user_data_specific = content_file.read()
+
+            user_data_combined = user_data_base + user_data_specific
 
         return user_data_combined
 
@@ -394,8 +401,11 @@ class VMHandler:
         if self.config['blockchain_type'] == 'geth':
             _geth_startup()
 
+        elif self.config['blockchain_type'] == 'base':
+            pass
 
-    def run_shutdown(self):
+
+    def run_general_shutdown(self):
         """
          Stops and terminates all VMs and calculates causes aws costs.
         :return:
@@ -404,21 +414,14 @@ class VMHandler:
 
         os.environ["NO_PROXY"] = f"localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net,{','.join(str(ip) for ip in self.config['ips'])}"
 
-        def geth_shutdown():
-            """
-            runs the geth specific shutdown operations (e.g. pulling the geth logs from the VMs)
-            :return:
-            """
-            ssh_clients, scp_clients = self.create_ssh_scp_clients()
+        ssh_clients, scp_clients = self.create_ssh_scp_clients()
 
-            for index, _ in enumerate(self.config['ips']):
-                # get account from all instances
-                scp_clients[index].get("/var/log/geth.log",
-                                       f"{self.config['exp_dir']}/geth_logs/geth_log_node_{index}.log")
-                scp_clients[index].get("/var/log/user_data.log",
-                                       f"{self.config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
+        for index, _ in enumerate(self.config['ips']):
+            # get userData from all instances
+            scp_clients[index].get("/var/log/user_data.log",
+                                   f"{self.config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
 
-        geth_shutdown()
+        self._run_specific_shutdown(ssh_clients, scp_clients)
 
         #calculate aws costs
         ec2 = self.session.resource('ec2')
@@ -429,6 +432,30 @@ class VMHandler:
         ec2.instances.filter(InstanceIds=self.config['instance_ids']).terminate()
 
         self.logger.info("All instances terminated -  script is finished")
+
+    def _run_specific_shutdown(self, ssh_clients, scp_clients):
+        """Runs the specific shutdown scripts depending on blockchain_type"""
+
+        def _geth_shutdown():
+            """
+            runs the geth specific shutdown operations (e.g. pulling the geth logs from the VMs)
+            :return:
+            """
+
+
+            for index, _ in enumerate(self.config['ips']):
+                # get account from all instances
+                scp_clients[index].get("/var/log/geth.log",
+                                       f"{self.config['exp_dir']}/geth_logs/geth_log_node_{index}.log")
+                scp_clients[index].get("/var/log/user_data.log",
+                                       f"{self.config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
+
+        if self.config['blockchain_type'] == 'geth':
+            _geth_shutdown()
+
+        elif self.config['blockchain_type'] == 'base':
+            pass
+
 
     def create_ssh_scp_clients(self):
         """

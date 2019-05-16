@@ -61,7 +61,7 @@
   #echo 'server 169.254.169.123 prefer iburst' >> /etc/chrony/chrony.conf
   #sudo /etc/init.d/chrony restart
   
-  # =======  Create success indicactor at end of this script ==========
+  # =======  Create success indicator at end of this script ==========
   touch /var/log/user_data_success.log
   
   
