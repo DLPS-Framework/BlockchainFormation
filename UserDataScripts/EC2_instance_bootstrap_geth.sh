@@ -4,6 +4,7 @@
 
   bash -c  "sudo -E apt-get install --reinstall ca-certificates"
   bash -c  "sudo -E apt-get install software-properties-common"
+  #Added || to commands where proxy fails sometimes -> Fixes the problem so far
   bash -c  "sudo -E add-apt-repository -y ppa:ethereum/ethereum" || bash -c  "sudo -E add-apt-repository -y ppa:ethereum/ethereum"
   bash -c  "sudo -E apt-get update"
   bash -c  "sudo -E apt-get install ethereum -y" || bash -c  "sudo -E apt-get install ethereum -y"
