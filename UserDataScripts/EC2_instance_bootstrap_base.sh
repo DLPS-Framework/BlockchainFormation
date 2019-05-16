@@ -30,8 +30,8 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
   #this is for going through some of the promts for linux packages
   export DEBIAN_FRONTEND=noninteractive
-  DEBIAN_FRONTEND=noninteractive apt-get update && apt-get upgrade -y
-  apt-get dist-upgrade -y
+  DEBIAN_FRONTEND=noninteractive apt-get update || apt-get update && apt-get upgrade -y || apt-get upgrade -y
+  apt-get dist-upgrade -y || apt-get dist-upgrade -y
   #apt-get install nginx -y
 
   #Automatic Security Updates

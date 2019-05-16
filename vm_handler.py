@@ -125,7 +125,7 @@ class VMHandler:
             self.config['image']['image_id'] = image["ImageId"]
 
 
-        ec2 = self.session.resource('ec2')
+        ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
         image = ec2.Image(self.config['image']['image_id'])
 
         self.logger.info("Selected Image: " + image.description)
@@ -203,17 +203,14 @@ class VMHandler:
         self.config['exp_dir'] = f"experiments/exp_{st}_{self.config['blockchain_type']}"
         path = os.getcwd()
         try:
-            os.makedirs(f"{path}/{self.config['exp_dir']}/accounts")
-            #enodes dir not needed anymore since enodes are saved in static-nodes file
-            #os.mkdir((f"{path}/{self.config['exp_dir']}/enodes"))
-            os.mkdir((f"{path}/{self.config['exp_dir']}/geth_logs"))
-            os.mkdir((f"{path}/{self.config['exp_dir']}/user_data_logs"))
+
+            os. makedirs((f"{path}/{self.config['exp_dir']}/user_data_logs"))
             self.logger.info(f"Created {str(self.config['exp_dir'])} directory")
         except OSError:
             self.logger.error("Creation of the directories failed")
 
         with open(f"{self.config['exp_dir']}/config.json", 'w') as outfile:
-            json.dump(self.config, outfile, default = VMHandler._datetimeconverter)
+            json.dump(self.config, outfile, default=VMHandler._datetimeconverter)
 
         # wait couple minutes until VMs are up
         # first connect ssh clients, then scp client
@@ -269,6 +266,12 @@ class VMHandler:
             Runs the geth specific startup script
             :return:
             """
+            path = os.getcwd()
+            os.mkdir(f"{path}/{self.config['exp_dir']}/accounts")
+            # enodes dir not needed anymore since enodes are saved in static-nodes file
+            # os.mkdir((f"{path}/{self.config['exp_dir']}/enodes"))
+            os.mkdir((f"{path}/{self.config['exp_dir']}/geth_logs"))
+
             ssh_clients, scp_clients = self.create_ssh_scp_clients()
 
             for index, _ in enumerate(self.config['ips']):

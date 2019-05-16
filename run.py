@@ -90,6 +90,8 @@ class ArgParser:
                                        help='image ID for vm (default is to get newest ubuntu 18 build)', default=None)
         parser.add_argument('--storage', '-s',
                                  help='amount of extra storage in GB: min 8, max 1024', type=ArgParser.storage_type, default=32)
+        parser.add_argument('--KmsKeyId', '-KId',
+                                 help='KmsKeyId for Encryption, None for no Encryption', default='arn:aws:kms:eu-central-1:731899578576:key/a808826d-e460-4271-a23b-29e1e0807c1d')
         parser.add_argument('--profile', '-p',
                                  help='name of aws profile', default='block_exp')
         parser.add_argument('--tag', '-t',
@@ -138,18 +140,11 @@ class ArgParser:
             "aws_region": namespace_dict['aws_region'],
             "priv_key_path": os.path.expanduser(namespace_dict['ssh_key']),
             "tag_name": namespace_dict['tag'],
-            "user_data_script": "UserDataScripts/EC2_instance_bootstrap_geth.sh",
             "storage_settings": [
                 {
                     'DeviceName': "/dev/sdb",
                     'VirtualName': 'string',
-                    'Ebs': {
-                        'DeleteOnTermination': True,
-                        'VolumeSize': namespace_dict['storage'],
-                        'VolumeType': 'gp2',
-                        'Encrypted': True,
-                        'KmsKeyId': 'arn:aws:kms:eu-central-1:731899578576:key/a808826d-e460-4271-a23b-29e1e0807c1d'
-                    },
+                    'Ebs': ArgParser._add_ebs_settings(namespace_dict),
                 },
             ],
             "blockchain_type": blockchain_type,
@@ -157,6 +152,29 @@ class ArgParser:
 
         }
         return config
+
+    @staticmethod
+    def _add_ebs_settings(namespace_dict):
+        """
+        Creates storage ebs settings
+        :param namespace_dict: namespace given by the Argpass CLI
+        :return: ebs dict
+        """
+        if namespace_dict['KmsKeyId'] == "None":
+            return {
+                        'DeleteOnTermination': True,
+                        'VolumeSize': namespace_dict['storage'],
+                        'VolumeType': 'gp2',
+                        'Encrypted': False
+                    }
+        else:
+            return {
+                'DeleteOnTermination': True,
+                'VolumeSize': namespace_dict['storage'],
+                'VolumeType': 'gp2',
+                'Encrypted': True,
+                'KmsKeyId': namespace_dict['KmsKeyId']
+                    }
 
     @staticmethod
     def _add_blockchain_type_config(namespace_dict, blockchain_type):

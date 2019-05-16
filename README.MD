@@ -10,7 +10,7 @@ The shutdown script also calculates the aws costs caused by the uptime of the vi
 
 ## How to run it
 
-```run.py``` provides a argpass CLI for starting and terminating VMs.
+```run.py``` provides a argpass CLI for starting and terminating VMs. 
 
 * Start a private Geth Network with PoA consensus: 
 
@@ -54,6 +54,8 @@ Explanation of common flags (needed for all blockchains, not only e.g. geth):
                         image ID for vm [default=None (the script then pulls newest ubuntu 18 img)]
   --storage STORAGE, -s STORAGE
                         amount of extra storage in GB: min 8, max 1024 [default=32]
+  --KmsKeyId KMSKEYID, -KId KMSKEYID
+                        KmsKeyId for Encryption, None for no Encryption [default=arn:aws:kms:eu-central-1:731899578576:key/a808826d-e460-4271-a23b-29e1e0807c1d]                       
   --profile PROFILE, -p PROFILE
                         name of aws profile [default=block_exp]
   --tag TAG, -t TAG     tag for aws [default=blockchain_experiment]
@@ -98,12 +100,14 @@ To add another blockchain 4 things need to be added:
 
 ## Future Steps
 * Add InstanceMarketOptions for cheapter VMs (Does the AWS Calculator take care of this?)
+* Add option to attach no storage at all
 * Make geth setup even more customizable
 * Add logrotate to UserData setup scripts
 *  Support more blockchains
     * Parity
     * Hyperledger Fabric
     * ...
+
     
 ## Needed Python packages 
 
