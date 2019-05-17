@@ -2,7 +2,7 @@
   "vm_count": 4,
   "instance_type": "t2.micro",
   "image": {
-            "image_id": "ami-029bb09da31cbfdfc",
+            "image_id": null,
             "os": "ubuntu",
             "version": 18,
             "permissions": "default"
