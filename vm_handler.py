@@ -417,22 +417,30 @@ class VMHandler:
 
         os.environ["NO_PROXY"] = f"localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net,{','.join(str(ip) for ip in self.config['ips'])}"
 
-        ssh_clients, scp_clients = self.create_ssh_scp_clients()
+        ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
+        ec2_instances = ec2.instances.filter(InstanceIds=self.config['instance_ids'])
+        if any(instance.state['Name'] == "stopped" for instance in ec2_instances):
+            self.logger.info(f"At least on of the instances was already stopped, hence no logs can be pulled from the machines, terminating them in the next step")
 
-        for index, _ in enumerate(self.config['ips']):
-            # get userData from all instances
-            scp_clients[index].get("/var/log/user_data.log",
-                                   f"{self.config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
+        else:
+            ssh_clients, scp_clients = self.create_ssh_scp_clients()
 
-        self._run_specific_shutdown(ssh_clients, scp_clients)
+            for index, _ in enumerate(self.config['ips']):
+                # get userData from all instances
+                scp_clients[index].get("/var/log/user_data.log",
+                                       f"{self.config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
+
+            self._run_specific_shutdown(ssh_clients, scp_clients)
+
+            for instance in ec2_instances:
+                instance.stop()
 
         #calculate aws costs
-        ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
-        ec2.instances.filter(InstanceIds=self.config['instance_ids']).stop()
-
         self.aws_calculator.calculate_uptime_costs(self.config)
 
-        ec2.instances.filter(InstanceIds=self.config['instance_ids']).terminate()
+        for instance in ec2_instances:
+            instance.terminate()
+
 
         self.logger.info("All instances terminated -  script is finished")
 

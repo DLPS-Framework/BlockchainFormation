@@ -16,9 +16,9 @@ The shutdown script also calculates the aws costs caused by the uptime of the vi
 
 
 ```
-python run.py start geth --vm_count 4 --instance_type t2.micro --ssh_key ~/.ssh/blockchain --tag blockchain_philipp 
---subnet subnet-0ac7aeeec87150dd7 --security_group sg-0db312b6f84d66889 --aws_credentials ~/.aws/credentials --aws_config ~/.aws/config 
---profile block_exp --key_name blockchain  --storage 32 --proxy_user qqdpoc0 --chainid 11
+python run.py start geth --vm_count 4 --instance_type t2.micro --priv_key_path ~/.ssh/blockchain --tag_name blockchain_philipp 
+--subnet_id subnet-0ac7aeeec87150dd7 --security_group_id sg-0db312b6f84d66889 --aws_credentials ~/.aws/credentials --aws_config ~/.aws/config 
+--profile block_exp --key_name blockchain  --VolumeSize 32 --proxy_user qqdpoc0 --chainid 11
 ```
 __This is an example for a run command, values need to be adjusted for your config__
 
@@ -26,9 +26,9 @@ __This is an example for a run command, values need to be adjusted for your conf
 
 
 ```
-python run.py start base --vm_count 4 --instance_type t2.micro --ssh_key ~/.ssh/blockchain --tag blockchain_philipp 
---subnet subnet-0ac7aeeec87150dd7 --security_group sg-0db312b6f84d66889 --aws_credentials ~/.aws/credentials --aws_config ~/.aws/config 
---profile block_exp --key_name blockchain  --storage 32 --proxy_user qqdpoc0
+python run.py start base --vm_count 4 --instance_type t2.micro --priv_key_path ~/.ssh/blockchain --tag_name blockchain_philipp 
+--subnet_id subnet-0ac7aeeec87150dd7 --security_group_id sg-0db312b6f84d66889 --aws_credentials ~/.aws/credentials --aws_config ~/.aws/config 
+--profile block_exp --key_name blockchain  --VolumeSize 32 --proxy_user qqdpoc0
 ```
 __This is an example for a run command, values need to be adjusted for your config__
 
@@ -48,20 +48,20 @@ Explanation of common flags (needed for all blockchains, not only e.g. geth):
                         
   --aws_region AWS_REGION, -aws_r AWS_REGION
                         aws region where images should be hosted [default=eu-central-1]                   
-  --ssh_key SSH_KEY, -key SSH_KEY
+  --priv_key_path PRIV_KEY_PATH, -key PRIV_KEY_PATH
                         path to ssh key [default=~.ssh/blockchain]
   --image_id IMAGE_ID, -img_id IMAGE_ID
-                        image ID for vm [default=None (the script then pulls newest ubuntu 18 img)]
-  --storage STORAGE, -s STORAGE
+                        image ID for vm, note that images other than ubuntu are not supported by startup script [default=None (the script then pulls newest ubuntu 18 img)]
+  --VolumeSize VOLUMESIZE, -s VOLUMESIZE
                         amount of extra storage in GB: min 8, max 1024 [default=32]
   --KmsKeyId KMSKEYID, -KId KMSKEYID
                         KmsKeyId for Encryption, None for no Encryption [default=arn:aws:kms:eu-central-1:731899578576:key/a808826d-e460-4271-a23b-29e1e0807c1d]                       
   --profile PROFILE, -p PROFILE
                         name of aws profile [default=block_exp]
-  --tag TAG, -t TAG     tag for aws [default=blockchain_experiment]
-  --subnet SUBNET, -st SUBNET
+  --tag_name TAG_NAME, -t TAG_NAME     tag for aws [default=blockchain_experiment]
+  --subnet_id SUBNET_ID, -st SUBNET_ID
                         subnet id [default=subnet-0ac7aeeec87150dd7]
-  --security_group SECURITY_GROUP [SECURITY_GROUP ...], -sg SECURITY_GROUP [SECURITY_GROUP ...]
+  --security_group_id SECURITY_GROUP_ID [SECURITY_GROUP_ID ...], -sg SECURITY_GROUP_ID [SECURITY_GROUP_ID ...]
                         security group, multiple values allowed [default=sg-0db312b6f84d66889]
   --proxy_user PROXY_USER, -pu PROXY_USER
                         enter q number for proxy [default=qqdpoc0]
@@ -84,6 +84,15 @@ Explanation of specific geth flags:
 
 ```
 __Note that you need to enter the password for your proxy user after starting the script__
+
+
+*If you do not want to create the large CLI every time you can also  start a network with a given config file:*
+```
+python run.py start --config "path to config file" 
+```
+Example config files for geth and base are provided in ```/example_config_files/base_config.json```
+
+*WARNING:* Config files and CLI arguments cannot be combined at the moment, so either use the config file to pass arguments or pass all arguments via argpass commands.
 
 * Terminate a VM Network:
 
@@ -109,21 +118,12 @@ To add another blockchain 4 things need to be added:
     * ...
 
     
-## Needed Python packages 
-
-* os       
-* sys   
-* argparse 
-* json  
-* logging  
-* boto3 
-* getpass  
-* time  
+## Needed Python packages (apart from standard packages)
+     
+* boto3  
 * dateutil 
 * scp   
 * paramiko 
-* web3 
-* datetime 
-* re    
+* web3   
 * pytz     
 * numpy 

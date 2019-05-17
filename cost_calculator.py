@@ -70,7 +70,7 @@ class AWSCostCalculator:
             'sc1': 0
         }
 
-        ec2 = self.session.resource('ec2', region_name=self.config['aws_config'])
+        ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
         image = ec2.Image(self.config['image']['image_id'])
         root_storage_mapping = image.block_device_mappings
 

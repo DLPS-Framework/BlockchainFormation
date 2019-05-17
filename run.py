@@ -17,7 +17,7 @@ class ArgParser:
         """
 
         self.parser = argparse.ArgumentParser(description='This script automizes setup for various blockchain networks on aws and calculates aws costs after finshing'\
-                                    ,usage = 'run.py start geth --vm_count 4 --instance_type t2.micro  --ssh_key ~/.ssh/blockchain --tag blockchain_philipp --subnet subnet-0ac7aeeec87150dd7 --security_group sg-0db312b6f84d66889 '
+                                    ,usage = 'run.py start geth --vm_count 4 --instance_type t2.micro  --priv_key_path ~/.ssh/blockchain --tag_name blockchain_philipp --subnet_id subnet-0ac7aeeec87150dd7 --security_group_id sg-0db312b6f84d66889 '
                                              'run.py terminate --config /Users/q481264/PycharmProjects/scripts/ec2_automation/experiments/exp_2019-05-13_16-32-49_geth/config.json')
 
         subparsers_start_terminate = self.parser.add_subparsers(help='start instances or terminate them')
@@ -26,10 +26,11 @@ class ArgParser:
         parser_termination = subparsers_start_terminate.add_parser('terminate', help='termination')
 
         parser_start.set_defaults(goal='start')
+        parser_start.add_argument('--config', '-c', help='enter path to config file')
 
         ArgParser._add_blockchain_subparsers(parser_start)
 
-        parser_termination.add_argument('--config', '-c', help='enter path to config')
+        parser_termination.add_argument('--config', '-c', help='enter path to config file')
         #parser_termination.add_argument('--proxy_user', '-pu',
          #                        help='enter q number for proxy ', default=None)
         parser_termination.set_defaults(goal='termination')
@@ -50,12 +51,14 @@ class ArgParser:
         ArgParser._add_common_args(parser_geth)
         ArgParser._add_geth_args(parser_geth)
 
-
-        #base parser
-        parser_base = subparsers.add_parser('base', help='Base Setup, only starts VM & installs basic packages, no blockchain')
+        # base parser
+        parser_base = subparsers.add_parser('base',
+                                            help='Base Setup, only starts VM & installs basic packages, no blockchain')
         parser_base.set_defaults(blockchain_type='base')
         ArgParser._add_common_args(parser_base)
         # base does no need any specific args
+
+
 
 
     @staticmethod
@@ -73,6 +76,7 @@ class ArgParser:
         :param parser: The parser to which to add the arguments.
         :return:
         """
+
         parser.add_argument('--vm_count', '-vmc', help='specify how many VM you want to start', type=int)
         parser.add_argument('--instance_type', '-it',help='specify what type of instances you want to start',
                                  default='t2.micro', choices=['t2.nano','t2.micro','t2.small','t2.medium','t2.large', 't2.xlarge','t2.2xlarge'])
@@ -84,24 +88,25 @@ class ArgParser:
                                  help='path to aws config', default=os.path.expanduser('~/.aws/config'))
         parser.add_argument('--aws_region', '-aws_r',
                             help='aws region where images should be hosted', default='eu-central-1')
-        parser.add_argument('--ssh_key', '-key',
+        parser.add_argument('--priv_key_path', '-key',
                                  help='path to  ssh key', default=os.path.expanduser('~/.ssh/blockchain'))
         parser.add_argument('--image_id', '-img_id',
                                        help='image ID for vm (default is to get newest ubuntu 18 build)', default=None)
-        parser.add_argument('--storage', '-s',
-                                 help='amount of extra storage in GB: min 8, max 1024', type=ArgParser.storage_type, default=32)
+        parser.add_argument('--VolumeSize', '-s',
+                                 help='amount of VolumeSize in GB: min 8, max 1024', type=ArgParser.storage_type, default=32)
         parser.add_argument('--KmsKeyId', '-KId',
                                  help='KmsKeyId for Encryption, None for no Encryption', default='arn:aws:kms:eu-central-1:731899578576:key/a808826d-e460-4271-a23b-29e1e0807c1d')
         parser.add_argument('--profile', '-p',
                                  help='name of aws profile', default='block_exp')
-        parser.add_argument('--tag', '-t',
+        parser.add_argument('--tag_name', '-t',
                                  help='tag for aws', default='blockchain_experiment')
-        parser.add_argument('--subnet', '-st',
+        parser.add_argument('--subnet_id', '-st',
                                  help='subnet id', default='subnet-0ac7aeeec87150dd7')
-        parser.add_argument('--security_group', '-sg',
+        parser.add_argument('--security_group_id', '-sg',
                                  help='security group, multiple values allowed', default=["sg-0db312b6f84d66889"],nargs='+')
         parser.add_argument('--proxy_user', '-pu',
                                  help='enter q number for proxy ', default='qqdpoc0')
+
 
 
 
@@ -124,13 +129,13 @@ class ArgParser:
             "vm_count": namespace_dict['vm_count'],
             "instance_type": namespace_dict['instance_type'],
             "image": {
-                "image_id": None,
+                "image_id": namespace_dict['image_id'],
                 "os": "ubuntu",
                 "version": 18,
                 "permissions": "default"
             },
-            "subnet_id": namespace_dict['subnet'],
-            "security_group_id": namespace_dict['security_group'],
+            "subnet_id": namespace_dict['subnet_id'],
+            "security_group_id": namespace_dict['security_group_id'],
             "proxy_user": namespace_dict['proxy_user'],
             "user": "ubuntu",
             "profile": namespace_dict['profile'],
@@ -138,8 +143,8 @@ class ArgParser:
             "aws_credentials": os.path.expanduser(namespace_dict['aws_credentials']),
             "aws_config": os.path.expanduser(namespace_dict['aws_config']),
             "aws_region": namespace_dict['aws_region'],
-            "priv_key_path": os.path.expanduser(namespace_dict['ssh_key']),
-            "tag_name": namespace_dict['tag'],
+            "priv_key_path": os.path.expanduser(namespace_dict['priv_key_path']),
+            "tag_name": namespace_dict['tag_name'],
             "storage_settings": [
                 {
                     'DeviceName': "/dev/sdb",
@@ -163,14 +168,14 @@ class ArgParser:
         if namespace_dict['KmsKeyId'] == "None":
             return {
                         'DeleteOnTermination': True,
-                        'VolumeSize': namespace_dict['storage'],
+                        'VolumeSize': namespace_dict['VolumeSize'],
                         'VolumeType': 'gp2',
                         'Encrypted': False
                     }
         else:
             return {
                 'DeleteOnTermination': True,
-                'VolumeSize': namespace_dict['storage'],
+                'VolumeSize': namespace_dict['VolumeSize'],
                 'VolumeType': 'gp2',
                 'Encrypted': True,
                 'KmsKeyId': namespace_dict['KmsKeyId']
@@ -231,7 +236,15 @@ if __name__ == '__main__':
 
 
     if namespace.goal == 'start':
-        config = argparser.create_config(vars(namespace), namespace.blockchain_type)
+
+        #if no config file is given, a config file is created with the passed argpass commands
+        if namespace.config is not None:
+            logger.info(f"Given config file ({namespace.config}) will be used")
+            config = argparser.load_config(vars(namespace))
+        else:
+            config = argparser.create_config(vars(namespace), namespace.blockchain_type)
+
+
         vm_handler = VMHandler(config)
         vm_handler.run_general_startup()
 

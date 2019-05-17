@@ -1,0 +1,43 @@
+{
+  "vm_count": 4,
+  "instance_type": "t2.micro",
+  "image": {
+            "image_id": "ami-029bb09da31cbfdfc",
+            "os": "ubuntu",
+            "version": 18,
+            "permissions": "default"
+            },
+  "subnet_id": "subnet-0ac7aeeec87150dd7",
+  "security_group_id": ["sg-0db312b6f84d66889"],
+  "proxy_user": "qqdpoc0",
+  "user": "ubuntu",
+  "profile": "block_exp",
+  "key_name": "blockchain",
+  "aws_credentials": "/Users/q481264/.aws/credentials",
+  "aws_config": "/Users/q481264/.aws/config",
+  "aws_region": "eu-central-1",
+  "priv_key_path": "/Users/q481264/.ssh/blockchain",
+  "tag_name": "example_conf_geth",
+  "storage_settings":
+  [{
+    "DeviceName": "/dev/sdb",
+    "VirtualName": "string",
+    "Ebs": {
+      "DeleteOnTermination": true,
+      "VolumeSize": 32,
+      "VolumeType": "gp2",
+      "Encrypted": true,
+      "KmsKeyId": "arn:aws:kms:eu-central-1:731899578576:key/a808826d-e460-4271-a23b-29e1e0807c1d"
+            }
+  }],
+  "blockchain_type": "geth",
+  "geth_settings":
+  {
+    "chain_id": 11,
+    "period": 5,
+    "epoch": 30000,
+    "balance": "0x200000000000000000000000000000000000000000000000000000000000000",
+    "timestamp": "0x00",
+    "gaslimit": "0x2fefd8"
+  }
+}
