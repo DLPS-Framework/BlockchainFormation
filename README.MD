@@ -102,8 +102,9 @@ python run.py terminate --config "path to config file"
 
 ## How to add another blockchain?
 To add another blockchain 4 things need to be added:
-* specific startup function in ```vm_handler.py```
-* specific shutdown function in ```vm_handler.py```
+* Write specific startup/shutdown in e.g. ```/blockchain_specifics/Geth.py```
+* add specific startup function in ```vm_handler.py```
+* add specific shutdown function in ```vm_handler.py```
 * adjustments of argpass CLI and config in ```run.py```
 * specific user data script in ```/UserDataScripts```
 
@@ -121,7 +122,6 @@ To add another blockchain 4 things need to be added:
 ## Needed Python packages (apart from standard packages)
      
 * boto3  
-* dateutil 
 * scp   
 * paramiko 
 * web3   

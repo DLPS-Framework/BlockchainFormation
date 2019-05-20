@@ -5,12 +5,11 @@ import pytz, time
 from dateutil import parser
 import paramiko
 from scp import SCPClient
-from web3 import Web3
-from web3.middleware import geth_poa_middleware
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ec2_automation.cost_calculator import *
 from ec2_automation.cost_calculator import AWSCostCalculator
+from ec2_automation.blockchain_specifics.Geth import *
 
 utc = pytz.utc
 
@@ -216,7 +215,7 @@ class VMHandler:
         # first connect ssh clients, then scp client
         self.logger.info("Waiting 60 seconds before creating ssh connection to VMs")
         time.sleep(60)
-        ssh_clients, scp_clients = self.create_ssh_scp_clients()
+        ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
 
         # convert to timedelta for nicer waiting time calcs
         status_flags = np.zeros((self.config['vm_count']), dtype=bool)
@@ -247,7 +246,7 @@ class VMHandler:
         else:
             self.logger.info(f"Boot up of all VMs as successful, waited {timer} minutes")
 
-            self._run_specific_startup()
+            self._run_specific_startup(ssh_clients, scp_clients)
 
             self.logger.info(f"Setup of all VMs/Nodes was successful, to terminate them run run.py terminate --config {self.config['exp_dir']}/config.json")
 
@@ -257,152 +256,12 @@ class VMHandler:
         except:
             self.logger.info("ssh/scp clients already closed")
 
-    def _run_specific_startup(self):
+    def _run_specific_startup(self, ssh_clients, scp_clients):
         """starts startup for given config (geth, parity, etc....)"""
 
 
-        def _geth_startup():
-            """
-            Runs the geth specific startup script
-            :return:
-            """
-            path = os.getcwd()
-            os.mkdir(f"{path}/{self.config['exp_dir']}/accounts")
-            # enodes dir not needed anymore since enodes are saved in static-nodes file
-            # os.mkdir((f"{path}/{self.config['exp_dir']}/enodes"))
-            os.mkdir((f"{path}/{self.config['exp_dir']}/geth_logs"))
-
-            ssh_clients, scp_clients = self.create_ssh_scp_clients()
-
-            for index, _ in enumerate(self.config['ips']):
-                scp_clients[index].get("/data/gethNetwork/account.txt",
-                                       f"{self.config['exp_dir']}/accounts/account_node_{index}.txt")
-            all_accounts = []
-
-            path = f"{self.config['exp_dir']}/accounts"
-            file_list = os.listdir(path)
-            #Sorting to get matching accounts to ip
-            file_list.sort()
-            for file in file_list:
-                try:
-                    file = open(os.path.join(path + "/" + file), 'r')
-                    all_accounts.append(file.read())
-                    file.close()
-                except IsADirectoryError:
-                    self.logger.debug(f"{file} is a directory")
-
-            all_accounts = [x.rstrip() for x in all_accounts]
-            self.logger.info(all_accounts)
-
-            #create genesis json
-            genesis_dict = self.generate_genesis(accounts=all_accounts,type="geth")
-            #self.pprnt.pprint(genesis_dict)
-
-            with open(f"{self.config['exp_dir']}/genesis.json", 'w') as outfile:
-                json.dump(genesis_dict, outfile)
-
-            # push genesis from local to remote VMs
-            for index, _ in enumerate(self.config['ips']):
-                scp_clients[index].put(f"{self.config['exp_dir']}/genesis.json", f"~/genesis.json")
-
-            for index, _ in enumerate(self.config['ips']):
-                # get account from all instances
-
-                ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
-                    "sudo mv ~/genesis.json /data/gethNetwork/genesis.json")
-
-                self.logger.debug(ssh_stdout)
-                self.logger.debug(ssh_stderr)
-                ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
-                    "sudo geth --datadir '/data/gethNetwork/node/' init /data/gethNetwork/genesis.json")
-                self.logger.debug(ssh_stdout)
-                self.logger.debug(ssh_stderr)
-
-                ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("ssudo systemctl daemon-reload")
-                self.logger.debug(ssh_stdout)
-                self.logger.debug(ssh_stderr)
-
-                ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo systemctl enable geth.service")
-                self.logger.debug(ssh_stdout)
-                self.logger.debug(ssh_stderr)
-
-                ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo systemctl start geth.service")
-                self.logger.debug(ssh_stdout)
-                self.logger.debug(ssh_stderr)
-
-            enodes = []
-            # collect enodes
-            web3_clients = []
-            for index, ip in enumerate(self.config['ips']):
-                #print(f"http://{ip}:8545")
-                web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545")))
-                # print(web3.admin)
-                enodes.append((ip, web3_clients[index].admin.nodeInfo.enode))
-                time.sleep(1)
-
-            #Does sleep fix the Max retries exceeded with url?
-            time.sleep(3)
-            # print(enodes)
-            self.logger.info([enode for (ip, enode) in enodes])
-
-            with open(f"{self.config['exp_dir']}/static-nodes.json", 'w') as outfile:
-                json.dump([enode for (ip, enode) in enodes], outfile)
-
-            # distribute collected enodes over network
-            for index, ip in enumerate(self.config['ips']):
-                # web3 = Web3(Web3.HTTPProvider(f"http://{i.private_ip_address}:8545"))
-                for ip_2, enode in enodes:
-                    # dont add own enode
-                    if ip != ip_2:
-                        web3_clients[index].admin.addPeer(enode)
-
-                self.logger.info(web3_clients[index].admin.peers)
-
-            time.sleep(3)
-
-            self.logger.info("Testing if transaction between Nodes work:")
-            #TODO: move this to unit test section
-            for index, i in enumerate(self.ec2_instances):
-                # web3 = Web3(Web3.HTTPProvider(f"http://{i.private_ip_address}:8545"))
-                self.logger.info("IsMining:" + str(web3_clients[index].eth.mining))
-                for acc in all_accounts:
-                    self.logger.info(str(web3_clients[index].toChecksumAddress(acc)) + ": " + str(
-                        web3_clients[index].eth.getBalance(web3_clients[index].toChecksumAddress(acc))))
-
-            # https://web3py.readthedocs.io/en/stable/middleware.html#geth-style-proof-of-authority
-
-            time.sleep(15)
-
-            try:
-                web3_clients[0].middleware_stack.inject(geth_poa_middleware, layer=0)
-            except:
-                self.logger.info("Middleware already injected")
-
-            self.logger.info("Tx from " + str(web3_clients[0].toChecksumAddress(all_accounts[0])) + " to " + str(
-                web3_clients[0].toChecksumAddress(all_accounts[1])))
-            web3_clients[0].personal.sendTransaction({'from': web3_clients[0].toChecksumAddress(all_accounts[0]),
-                                                      'to': web3_clients[0].toChecksumAddress(all_accounts[1]),
-                                                      'value': web3_clients[0].toWei(23456, 'ether'), 'gas': '0x5208',
-                                                      'gasPrice': web3_clients[0].toWei(5, 'gwei')}, "password")
-            time.sleep(30)
-            for index, i in enumerate(self.ec2_instances):
-                # web3 = Web3(Web3.HTTPProvider(f"http://{i.private_ip_address}:8545"))
-                for acc in all_accounts:
-                    self.logger.info(str(web3_clients[index].toChecksumAddress(acc)) + ": " + str(
-                        web3_clients[index].eth.getBalance(web3_clients[index].toChecksumAddress(acc))))
-                self.logger.info("---------------------------")
-
-            web3_clients[0].eth.getBlock('latest')
-
-            try:
-                map(lambda client: client.close(), ssh_clients)
-                map(lambda client: client.close(), scp_clients)
-            except:
-                self.logger.info("ssh/scp clients already closed")
-
-
         if self.config['blockchain_type'] == 'geth':
-            _geth_startup()
+            geth_startup(self.config, self.logger, ssh_clients, scp_clients)
 
         elif self.config['blockchain_type'] == 'base':
             pass
@@ -423,7 +282,7 @@ class VMHandler:
             self.logger.info(f"At least on of the instances was already stopped, hence no logs can be pulled from the machines, terminating them in the next step")
 
         else:
-            ssh_clients, scp_clients = self.create_ssh_scp_clients()
+            ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
 
             for index, _ in enumerate(self.config['ips']):
                 # get userData from all instances
@@ -447,41 +306,28 @@ class VMHandler:
     def _run_specific_shutdown(self, ssh_clients, scp_clients):
         """Runs the specific shutdown scripts depending on blockchain_type"""
 
-        def _geth_shutdown():
-            """
-            runs the geth specific shutdown operations (e.g. pulling the geth logs from the VMs)
-            :return:
-            """
-
-
-            for index, _ in enumerate(self.config['ips']):
-                # get account from all instances
-                scp_clients[index].get("/var/log/geth.log",
-                                       f"{self.config['exp_dir']}/geth_logs/geth_log_node_{index}.log")
-                scp_clients[index].get("/var/log/user_data.log",
-                                       f"{self.config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
-
         if self.config['blockchain_type'] == 'geth':
-            _geth_shutdown()
+            geth_shutdown(self.config, self.logger, ssh_clients, scp_clients)
 
         elif self.config['blockchain_type'] == 'base':
             pass
 
-
-    def create_ssh_scp_clients(self):
+    @staticmethod
+    def create_ssh_scp_clients(config):
         """
         Creates ssh/scp connection to aws VMs
 
+        :param config:
         :return: array of scp and ssh clients
         """
         ssh_clients = []
         scp_clients = []
-        ssh_key_priv = paramiko.RSAKey.from_private_key_file(self.config['priv_key_path'])
+        ssh_key_priv = paramiko.RSAKey.from_private_key_file(config['priv_key_path'])
 
-        for index, ip in enumerate(self.config['ips']):
+        for index, ip in enumerate(config['ips']):
             ssh_clients.append(paramiko.SSHClient())
             ssh_clients[index].set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh_clients[index].connect(hostname=ip, username=self.config['user'], pkey=ssh_key_priv)
+            ssh_clients[index].connect(hostname=ip, username=config['user'], pkey=ssh_key_priv)
             # ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd_to_execute)
 
             # SCPCLient takes a paramiko transport as an argument
@@ -489,52 +335,7 @@ class VMHandler:
 
         return ssh_clients, scp_clients
 
-    def generate_genesis(self, accounts, type= "geth"):
-        """
-        #TODO make it more dynamic to user desires
-        :param accounts: accounts to be added to signers/added some balance
-        :param type: type of experiment
-        :return: genesis dictonary
-        """
 
-        balances = [self.config['geth_settings']['balance'] for x in accounts]
-        base_balances = {"0000000000000000000000000000000000000001": {"balance": "1"},
-                         "0000000000000000000000000000000000000002": {"balance": "1"},
-                         "0000000000000000000000000000000000000003": {"balance": "1"},
-                         "0000000000000000000000000000000000000004": {"balance": "1"},
-                         "0000000000000000000000000000000000000005": {"balance": "1"},
-                         "0000000000000000000000000000000000000006": {"balance": "1"},
-                         "0000000000000000000000000000000000000007": {"balance": "1"},
-                         "0000000000000000000000000000000000000008": {"balance": "1"}}
-        additional_balances = {str(x): {"balance": str(y)} for x, y in zip(accounts, balances)}
-        merged_balances = {**base_balances, **additional_balances}
-
-        # clique genesis at beginning
-        genesis_dict = {
-
-            "config": {
-                'chainId': self.config['geth_settings']['chain_id'],
-                'homesteadBlock': 0,
-                'eip150Block': 0,
-                'eip155Block': 0,
-                'eip158Block': 0,
-                'byzantiumBlock': 0,
-                'clique': {
-                    'period': self.config['geth_settings']['period'],
-                    'epoch': self.config['geth_settings']['epoch']
-                }
-            },
-            "alloc": merged_balances,
-            "coinbase": "0x0000000000000000000000000000000000000000",
-            "difficulty": "0x1",
-            "extraData": f"0x0000000000000000000000000000000000000000000000000000000000000000{''.join(accounts)}0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-            "gasLimit": self.config['geth_settings']['gaslimit'],
-            "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "nonce": "0x0000000000000042",
-            "timestamp": self.config['geth_settings']['timestamp']
-
-        }
-        return genesis_dict
 
     @staticmethod
     def _datetimeconverter(o):
