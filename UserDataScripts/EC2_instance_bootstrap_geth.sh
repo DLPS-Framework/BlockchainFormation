@@ -57,9 +57,9 @@
   #systemctl daemon-reload
   #service docker restart
 
-  #sudo apt install chrony
-  #echo 'server 169.254.169.123 prefer iburst' >> /etc/chrony/chrony.conf
-  #sudo /etc/init.d/chrony restart
+  apt install chrony -y
+  echo 'server 169.254.169.123 prefer iburst' >> /etc/chrony/chrony.conf
+  /etc/init.d/chrony restart
   
   # =======  Create success indicator at end of this script ==========
   touch /var/log/user_data_success.log
