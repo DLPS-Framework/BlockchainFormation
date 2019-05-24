@@ -20,10 +20,14 @@ def geth_shutdown(config, logger, ssh_clients, scp_clients):
 
     for index, _ in enumerate(config['ips']):
         # get account from all instances
-        scp_clients[index].get("/var/log/geth.log",
-                               f"{config['exp_dir']}/geth_logs/geth_log_node_{index}.log")
-        scp_clients[index].get("/var/log/user_data.log",
-                               f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
+        try:
+            scp_clients[index].get("/var/log/geth.log",
+                                   f"{config['exp_dir']}/geth_logs/geth_log_node_{index}.log")
+            scp_clients[index].get("/var/log/user_data.log",
+                                   f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
+
+        except:
+            logger.info("Geth logs could not be pulled from the machines.")
 
 
 

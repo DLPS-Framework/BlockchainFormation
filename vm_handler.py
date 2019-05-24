@@ -242,7 +242,28 @@ class VMHandler:
 
         if (False in status_flags):
             self.logger.error('Boot up NOT successful')
-            self.logger.error(f"Failed VMs: {[ips[x] for x in np.where(status_flags != True)]}")
+            try:
+                self.logger.error(f"Failed VMs: {[ips[x] for x in np.where(status_flags != True)]}")
+            except:
+                pass
+
+            def yes_or_no(question):
+                reply = str(input(question + ' (y/n): ')).lower().strip()
+                if reply[0] == 'y':
+                    return 1
+                elif reply[0] == 'n':
+                    return 0
+                else:
+                    return yes_or_no("Please Enter (y/n) ")
+
+            if yes_or_no("Do you want to shut down the VMs?"):
+
+                self.logger.info(f"Running the shutdown script now")
+                self.run_general_shutdown()
+
+            else:
+                self.logger.info(f"VMs are not being shutdown")
+
         else:
             self.logger.info(f"Boot up of all VMs as successful, waited {timer} minutes")
 
@@ -284,10 +305,13 @@ class VMHandler:
         else:
             ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
 
-            for index, _ in enumerate(self.config['ips']):
+            for index, ip in enumerate(self.config['ips']):
                 # get userData from all instances
-                scp_clients[index].get("/var/log/user_data.log",
-                                       f"{self.config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
+                try:
+                    scp_clients[index].get("/var/log/user_data.log",
+                                           f"{self.config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
+                except:
+                    self.logger.info(f"User Data of {ip} cannot be pulled")
 
             self._run_specific_shutdown(ssh_clients, scp_clients)
 
