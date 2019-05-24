@@ -81,6 +81,8 @@ Explanation of specific geth flags:
                         specify timestamp of genesis [default=0x00]
   --gaslimit GASLIMIT, -gl GASLIMIT
                         specify gasLimit [default=0x2fefd8]
+  --num_acc NUM_ACC, -na NUM_ACC
+                        specify number of accounts added to each node [default=None -> every node gets a unique account]                        
 
 ```
 __Note that you need to enter the password for your proxy user after starting the script__

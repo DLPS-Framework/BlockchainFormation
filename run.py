@@ -118,6 +118,7 @@ class ArgParser:
         parser.add_argument('--balance', '-bal', help='specify start balance of account', default="0x200000000000000000000000000000000000000000000000000000000000000")
         parser.add_argument('--timestamp', '-tp', help='specify timestamp of genesis', default="0x00")
         parser.add_argument('--gaslimit', '-gl', help='specify gasLimit', default="0x2fefd8")
+        parser.add_argument('--num_acc', '-na', help='specify number of accounts added to each node', type=int, default=None)
 
     def create_config(self, namespace_dict, blockchain_type):
         """
@@ -192,7 +193,8 @@ class ArgParser:
                 "epoch": namespace_dict['epoch'],
                 "balance": namespace_dict['balance'],
                 "timestamp": namespace_dict['timestamp'],
-                "gaslimit": namespace_dict['gaslimit']
+                "gaslimit": namespace_dict['gaslimit'],
+                "num_acc": namespace_dict['num_acc']
 
             }
 

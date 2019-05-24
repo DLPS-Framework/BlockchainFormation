@@ -38,6 +38,7 @@
     "epoch": 30000,
     "balance": "0x200000000000000000000000000000000000000000000000000000000000000",
     "timestamp": "0x00",
-    "gaslimit": "0x2fefd8"
+    "gaslimit": "0x2fefd8",
+    "numm_acc": null
   }
 }
