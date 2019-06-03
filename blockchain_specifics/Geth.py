@@ -1,15 +1,12 @@
-import os
-import sys
-import json
-import re
-import time
-import random
 import glob
 import itertools
+import json
+import os
+import re
+import time
 import numpy as np
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
-
 
 
 def geth_shutdown(config, logger, ssh_clients, scp_clients):
@@ -70,18 +67,36 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
     account_mapping = get_relevant_account_mapping(all_accounts, config)
 
     logger.info(f"Relevant acc: {str(account_mapping)}")
+    i = 0
     for index, ip in enumerate(config['ips']):
+        if config['geth_settings']['num_acc'] != None:
+            if len(account_mapping[ip]) == (i + 1):
+                i = 0
+            else:
+                i += 1
+            #create service file on each machine
+            ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
+                f"printf '%s\\n' '[Unit]' 'Description=Ethereum go client' '[Service]' 'Type=simple' "
+                f"'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 "
+                f"--port 30310 --rpc --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool"
+                f" --nat=extip:{ip}  --syncmode full --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
+                f"--password /data/gethNetwork/passwords.txt --mine --etherbase {Web3.toChecksumAddress(account_mapping[ip][i])}' 'StandardOutput=file:/var/log/geth.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/geth.service")
+            #logger.debug(ssh_stdout)
+            #logger.debug(ssh_stderr)
+            logger.debug(ssh_stdin)
 
-        #create service file on each machine
-        ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
-            f"printf '%s\\n' '[Unit]' 'Description=Ethereum go client' '[Service]' 'Type=simple' "
-            f"'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 "
-            f"--port 30310 --rpc --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool"
-            f" --nat=extip:{ip}  --syncmode full --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
-            f"--password /data/gethNetwork/passwords.txt --mine ' 'StandardOutput=file:/var/log/geth.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/geth.service")
-        #logger.debug(ssh_stdout)
-        #logger.debug(ssh_stderr)
-        logger.debug(ssh_stdin)
+
+        else:
+            #create service file on each machine
+            ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
+                f"printf '%s\\n' '[Unit]' 'Description=Ethereum go client' '[Service]' 'Type=simple' "
+                f"'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 "
+                f"--port 30310 --rpc --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool"
+                f" --nat=extip:{ip}  --syncmode full --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
+                f"--password /data/gethNetwork/passwords.txt --mine ' 'StandardOutput=file:/var/log/geth.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/geth.service")
+            #logger.debug(ssh_stdout)
+            #logger.debug(ssh_stderr)
+            logger.debug(ssh_stdin)
 
         for _, acc in enumerate(account_mapping[ip]):
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("echo 'password' >> /data/gethNetwork/passwords.txt")
@@ -153,32 +168,9 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
         enodes.append((ip, web3_clients[index].admin.nodeInfo.enode))
         time.sleep(1)
         #web3_clients[index].miner.stop()
-        #time.sleep(1)
+        time.sleep(1)
+        logger.info(f"Coinbase of {ip}: {web3_clients[index].eth.coinbase}")
 
-
-        #add accounts to node
-        #for acc in account_mapping[ip]:
-            #logger.info(f"Unlocking {acc} on {ip}")
-            #logger.debug(f"{acc}:{web3_clients[index].personal.unlockAccount(account=Web3.toChecksumAddress(acc), passphrase='password', duration=100000)}")
-            #time.sleep(2)
-
-        #web3_clients[index].miner.start(8)
-
-
-    #Change default accounts of nodes to avoid the nodes getting stuck
-    if config['geth_settings']['num_acc'] != None:
-        i = 0
-        for index, ip in enumerate(config['ips']):
-            web3_clients[index].eth.defaultAccount = Web3.toChecksumAddress(account_mapping[ip][i])
-            web3_clients[index].miner.setEtherBase(Web3.toChecksumAddress(account_mapping[ip][i]))
-            if len(account_mapping[ip])== (i+1):
-                i = 0
-            else:
-                i += 1
-            web3_clients[index].miner.stop()
-            web3_clients[index].miner.start(8)
-            time.sleep(1)
-            logger.info(f"Coinbase of {ip}: {web3_clients[index].eth.coinbase}")
 
 
     #Does sleep fix the Max retries exceeded with url?
@@ -211,9 +203,6 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
             logger.info(str(web3_clients[index].toChecksumAddress(acc)) + ": " + str(
                 web3_clients[index].eth.getBalance(Web3.toChecksumAddress(acc))))
 
-
-
-    # https://web3py.readthedocs.io/en/stable/middleware.html#geth-style-proof-of-authority
 
     time.sleep(15)
 
@@ -267,6 +256,7 @@ def get_relevant_account_mapping(accounts, config):
 def generate_genesis(accounts, config):
     """
     #TODO make it more dynamic to user desires
+    # https://web3py.readthedocs.io/en/stable/middleware.html#geth-style-proof-of-authority
     :param accounts: accounts to be added to signers/added some balance
     :return: genesis dictonary
     """

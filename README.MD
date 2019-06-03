@@ -3,7 +3,7 @@
 ## General Information
 
 The purpose of this script is to automate the process of deploying blockchain solutions on aws.
-This process includes starting X ec2 instances, installing necessary packages and configure the virtual machines.
+This process includes starting ```x``` ec2 instances, installing necessary packages and configure the virtual machines.
 The provided VMs then can used for example to evaluate the performance of a given blockchain solution.
 If the network is not needed anymore, the script provides  a function to shutdown all started VMs after pulling log files.
 The shutdown script also calculates the aws costs caused by the uptime of the virtual machines using the aws pricing API.
@@ -112,6 +112,7 @@ To add another blockchain 4 things need to be added:
 
 ## Future Steps
 * Add InstanceMarketOptions for cheapter VMs (Does the AWS Calculator take care of this?)
+* Add Windows support
 * Add option to attach no storage at all
 * Make geth setup even more customizable
 * Add logrotate to UserData setup scripts
