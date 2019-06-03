@@ -77,7 +77,8 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
             f"printf '%s\\n' '[Unit]' 'Description=Ethereum go client' '[Service]' 'Type=simple' "
             f"'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 "
             f"--port 30310 --rpc --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool"
-            f" --nat=extip:{ip}  --syncmode full --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} --password /data/gethNetwork/passwords.txt --mine ' 'StandardOutput=file:/var/log/geth.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/geth.service")
+            f" --nat=extip:{ip}  --syncmode full --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
+            f"--password /data/gethNetwork/passwords.txt --mine ' 'StandardOutput=file:/var/log/geth.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/geth.service")
         #logger.debug(ssh_stdout)
         #logger.debug(ssh_stderr)
         logger.debug(ssh_stdin)
@@ -164,7 +165,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
         #web3_clients[index].miner.start(8)
 
 
-    #Change default accounts of nodes to avoid the nodes of  getting stuck
+    #Change default accounts of nodes to avoid the nodes getting stuck
     if config['geth_settings']['num_acc'] != None:
         i = 0
         for index, ip in enumerate(config['ips']):
@@ -238,10 +239,9 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info("testing if new blocks are generated")
     for x in range(15):
-        logger.info(web3_clients[0].eth.getBlock('latest')['number'])
-        logger.info(web3_clients[1].eth.getBlock('latest')['number'])
-        logger.info(web3_clients[2].eth.getBlock('latest')['number'])
-        logger.info(web3_clients[3].eth.getBlock('latest')['number'])
+        for index, _ in enumerate(web3_clients):
+            logger.info(web3_clients[index].eth.getBlock('latest')['number'])
+
         logger.info("----------------------------------")
         time.sleep(10)
 
@@ -301,7 +301,8 @@ def generate_genesis(accounts, config):
         "alloc": merged_balances,
         "coinbase": "0x0000000000000000000000000000000000000000",
         "difficulty": "0x1",
-        "extraData": f"0x0000000000000000000000000000000000000000000000000000000000000000{''.join(accounts)}0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "extraData": f"0x0000000000000000000000000000000000000000000000000000000000000000{''.join(accounts)}"
+        f"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         "gasLimit": config['geth_settings']['gaslimit'],
         "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "nonce": "0x0000000000000042",
