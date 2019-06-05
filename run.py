@@ -1,5 +1,6 @@
 import sys, os, argparse
 import json
+import datetime
 import logging.config
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ec2_automation.vm_handler import VMHandler
@@ -127,6 +128,7 @@ class ArgParser:
         :return: config for vm handler
         """
         config = {
+            "timestamp": datetime.datetime.utcnow(),
             "vm_count": namespace_dict['vm_count'],
             "instance_type": namespace_dict['instance_type'],
             "image": {
