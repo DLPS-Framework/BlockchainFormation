@@ -105,8 +105,10 @@ class ArgParser:
                                  help='subnet id', default='subnet-0ac7aeeec87150dd7')
         parser.add_argument('--security_group_id', '-sg',
                                  help='security group, multiple values allowed', default=["sg-0db312b6f84d66889"],nargs='+')
+        parser.add_argument('--public_ip', '-pub_ip',
+                            help='True or False if public IP is needed (remember to define correct subnet/security))', default=False, type=bool)
         parser.add_argument('--proxy_user', '-pu',
-                                 help='enter q number for proxy ', default='qqdpoc0')
+                                 help='enter q number for proxy; None for NO proxy ', default='qqdpoc0')
 
 
 
@@ -147,6 +149,7 @@ class ArgParser:
             "aws_config": os.path.expanduser(namespace_dict['aws_config']),
             "aws_region": namespace_dict['aws_region'],
             "priv_key_path": os.path.expanduser(namespace_dict['priv_key_path']),
+            "public_ip": namespace_dict['public_ip'],
             "tag_name": namespace_dict['tag_name'],
             "storage_settings": [
                 {

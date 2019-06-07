@@ -6,7 +6,43 @@ import re
 import time
 import numpy as np
 from web3 import Web3
+import web3
 from web3.middleware import geth_poa_middleware
+
+#TODO: Make code more efficient and nicer
+#TODO: improve natural sorting stuff
+
+
+########## U G L Y  M O N K E Y P A T C H ##################
+#web3 does not support request retry function, therefore we inject it ourselves
+import lru
+import requests
+from requests.packages.urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
+
+from web3.utils.caching import (
+    generate_cache_key,
+)
+
+
+def _remove_session(key, session):
+    session.close()
+
+_session_cache = lru.LRU(8, callback=_remove_session)
+
+def _get_session_new(*args, **kwargs):
+    cache_key = generate_cache_key((args, kwargs))
+    if cache_key not in _session_cache:
+        _session_cache[cache_key] = requests.Session()
+        retry = Retry(connect=10, backoff_factor=0.3)
+        adapter = HTTPAdapter(max_retries=retry)
+        _session_cache[cache_key].mount('http://', adapter)
+        _session_cache[cache_key].mount('https://', adapter)
+    return _session_cache[cache_key]
+
+web3.utils.request._get_session = _get_session_new
+
+#############################################
 
 
 def geth_shutdown(config, logger, ssh_clients, scp_clients):
@@ -51,7 +87,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
     acc_path = f"{config['exp_dir']}/accounts"
     file_list = os.listdir(acc_path)
     #Sorting to get matching accounts to ip
-    file_list.sort()
+    file_list.sort(key=natural_keys)
     for file in file_list:
         try:
             file = open(os.path.join(acc_path + "/" + file), 'r')
@@ -80,10 +116,25 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
                 f"'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 "
                 f"--port 30310 --rpc --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool"
                 f" --nat=extip:{ip}  --syncmode full --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
-                f"--password /data/gethNetwork/passwords.txt --mine --etherbase {Web3.toChecksumAddress(account_mapping[ip][i])}' 'StandardOutput=file:/var/log/geth.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/geth.service")
+                f"--password /data/gethNetwork/passwords.txt --mine --etherbase {Web3.toChecksumAddress(account_mapping[ip][i])}'"
+                f" 'StandardOutput=file:/var/log/geth.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/geth.service")
             #logger.debug(ssh_stdout)
             #logger.debug(ssh_stderr)
             logger.debug(ssh_stdin)
+
+            # add the keyfiles from all relevant accounts to the VMs keystores
+            keystore_files = [f for f in glob.glob(acc_path + "**/*/UTC--*", recursive=True) if
+                              re.match("(.*--.*--)(.*)", f).group(2) in list(
+                                  set(itertools.chain(*account_mapping.values())))]
+            keystore_files.sort(key=natural_keys)
+            logger.info(keystore_files)
+            for index_top, ip in enumerate(config['ips']):
+
+                ssh_clients[index_top].exec_command("rm /data/gethNetwork/node/keystore/*")
+
+                for index_lower, file in enumerate(keystore_files):
+                    # TODO: only add keyfile to VM if its the right account
+                    scp_clients[index_top].put(file, "/data/gethNetwork/node/keystore")
 
 
         else:
@@ -93,7 +144,8 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
                 f"'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 "
                 f"--port 30310 --rpc --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool"
                 f" --nat=extip:{ip}  --syncmode full --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
-                f"--password /data/gethNetwork/passwords.txt --mine ' 'StandardOutput=file:/var/log/geth.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/geth.service")
+                f"--password /data/gethNetwork/passwords.txt --mine ' 'StandardOutput=file:/var/log/geth.log' '[Install]' "
+                f"'WantedBy=default.target' > /etc/systemd/system/geth.service")
             #logger.debug(ssh_stdout)
             #logger.debug(ssh_stderr)
             logger.debug(ssh_stdin)
@@ -103,21 +155,6 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
             logger.debug(ssh_stdout)
             logger.debug(ssh_stderr)
 
-
-    if config['geth_settings']['num_acc'] != None:
-        #add the keyfiles from all relevant accounts to the VMs keystores
-
-        keystore_files = [f for f in glob.glob(acc_path + "**/*/UTC--*", recursive=True) if re.match("(.*--.*--)(.*)", f).group(2) in list(set(itertools.chain(*account_mapping.values())))]
-        keystore_files.sort()
-        logger.info(keystore_files)
-        for index_top, ip in enumerate(config['ips']):
-
-            ssh_clients[index_top].exec_command("rm /data/gethNetwork/node/keystore/*")
-
-            for index_lower, file in enumerate(keystore_files):
-                # only add keyfile to VM if its the right account
-                #if re.match("(.*--.*--)(.*)", file).group(2) in list(set(itertools.chain(*account_mapping.values()))):
-                scp_clients[index_top].put(file, "/data/gethNetwork/node/keystore")
 
 
     #create genesis json
@@ -132,50 +169,42 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
     for index, _ in enumerate(config['ips']):
         scp_clients[index].put(f"{config['exp_dir']}/genesis.json", f"~/genesis.json")
 
-    for index, _ in enumerate(config['ips']):
+        #TODO: How to log the execution of the ssh commands in a good way?
         # get account from all instances
-
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo mv ~/genesis.json /data/gethNetwork/genesis.json")
 
-        #logger.debug(ssh_stdout)
-        #logger.debug(ssh_stderr)
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo geth --datadir '/data/gethNetwork/node/' init /data/gethNetwork/genesis.json")
-        #logger.debug(ssh_stdout)
-        #logger.debug(ssh_stderr)
 
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("ssudo systemctl daemon-reload")
-        #logger.debug(ssh_stdout)
-        #logger.debug(ssh_stderr)
 
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo systemctl enable geth.service")
-        #logger.debug(ssh_stdout)
-        #logger.debug(ssh_stderr)
 
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo systemctl start geth.service")
-        #logger.debug(ssh_stdout)
-        #logger.debug(ssh_stderr)
+
 
     enodes = []
     # collect enodes
     web3_clients = []
     time.sleep(30)
+
     for index, ip in enumerate(config['ips']):
-        #print(f"http://{ip}:8545")
-        web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545")))
+        if config['public_ip']:
+            # use public ip if exists, else it wont work
+            ip_pub = config['public_ips'][index]
+            web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip_pub}:8545", request_kwargs={'timeout': 5})))
+        else:
+            web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 5})))
         # print(web3.admin)
         enodes.append((ip, web3_clients[index].admin.nodeInfo.enode))
-        time.sleep(1)
         #web3_clients[index].miner.stop()
-        time.sleep(1)
         logger.info(f"Coinbase of {ip}: {web3_clients[index].eth.coinbase}")
 
 
 
     #Does sleep fix the Max retries exceeded with url?
-    time.sleep(3)
-    # print(enodes)
+    #time.sleep(3)
     logger.info([enode for (ip, enode) in enodes])
 
     with open(f"{config['exp_dir']}/static-nodes.json", 'w') as outfile:
@@ -188,13 +217,11 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
             # dont add own enode
             if ip != ip_2:
                 web3_clients[index].admin.addPeer(enode)
-                time.sleep(1)
 
         logger.info(web3_clients[index].admin.peers)
 
     time.sleep(3)
 
-    logger.info("Testing if transaction between Nodes work:")
     #TODO: move this to unit test section
     for index, ip in enumerate(config['ips']):
         # web3 = Web3(Web3.HTTPProvider(f"http://{i.private_ip_address}:8545"))
@@ -226,7 +253,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
     #             web3_clients[index].eth.getBalance(Web3.toChecksumAddress(acc))))
     #     logger.info("---------------------------")
 
-    logger.info("testing if new blocks are generated")
+    logger.info("testing if new blocks are generated across all nodes; if latest block numbers are not changing over multiple cycles something is wrong")
     for x in range(15):
         for index, _ in enumerate(web3_clients):
             logger.info(web3_clients[index].eth.getBlock('latest')['number'])
@@ -246,8 +273,6 @@ def get_relevant_account_mapping(accounts, config):
     if config['geth_settings']['num_acc'] == None:
         return {ip: [account] for (ip, account) in zip(config['ips'], accounts)}
     else:
-
-        #return np.random.choice(a=accounts, replace=False, size=config['geth_settings']['num_acc'])
         rnd_accounts = np.random.choice(a=accounts, replace=False, size=config['geth_settings']['num_acc'])
         return {ip: rnd_accounts for ip in config['ips']}
 
@@ -300,3 +325,14 @@ def generate_genesis(accounts, config):
 
     }
     return genesis_dict
+
+def atoi(text):
+    return int(text) if text.isdigit() else text
+
+def natural_keys(text):
+    '''
+    alist.sort(key=natural_keys) sorts in human order
+    http://nedbatchelder.com/blog/200712/human_sorting.html
+    (See Toothy's implementation in the comments)
+    '''
+    return [ atoi(c) for c in re.split(r'(\d+)', text) ]

@@ -63,8 +63,11 @@ Explanation of common flags (needed for all blockchains, not only e.g. geth):
                         subnet id [default=subnet-0ac7aeeec87150dd7]
   --security_group_id SECURITY_GROUP_ID [SECURITY_GROUP_ID ...], -sg SECURITY_GROUP_ID [SECURITY_GROUP_ID ...]
                         security group, multiple values allowed [default=sg-0db312b6f84d66889]
+  --public_ip PUBLIC_IP, -pub_ip PUBLIC_IP
+                        True or False if public IP is needed (remember to
+                        define correct subnet/security)) [default=False]                   
   --proxy_user PROXY_USER, -pu PROXY_USER
-                        enter q number for proxy [default=qqdpoc0]
+                        enter q number for proxy; None for no proxy [default=qqdpoc0]
 ```
 
 Explanation of specific geth flags:

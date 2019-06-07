@@ -18,6 +18,7 @@
   "aws_region": "eu-central-1",
   "priv_key_path": "/Users/q481264/.ssh/blockchain",
   "tag_name": "example_conf_geth",
+  "public_ip": false,
   "storage_settings":
   [{
     "DeviceName": "/dev/sdb",

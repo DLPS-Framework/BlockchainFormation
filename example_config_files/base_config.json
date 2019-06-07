@@ -17,6 +17,7 @@
   "aws_config": "/Users/q481264/.aws/config",
   "aws_region": "eu-central-1",
   "priv_key_path": "/Users/q481264/.ssh/blockchain",
+  "public_ip": false,
   "tag_name": "example_conf_base",
   "storage_settings":
   [{

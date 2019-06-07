@@ -33,11 +33,16 @@ class VMHandler:
 
         self.pprnt = pprint.PrettyPrinter(indent=1)
 
-        password = getpass.getpass(prompt=f"Enter proxy password for {self.config['proxy_user']}:")
 
-        os.environ["HTTPS_PROXY"] = f"http://{self.config['proxy_user']}:{password}@proxy.muc:8080"
-        os.environ["HTTP_PROXY"] = f"http://{self.config['proxy_user']}:{password}@proxy.muc:8080"
-        os.environ["NO_PROXY"] = "localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net"
+
+        #no proxy if no proxy user
+        if self.config['proxy_user'] != "None":
+            password = getpass.getpass(prompt=f"Enter proxy password for {self.config['proxy_user']}:")
+            os.environ["HTTPS_PROXY"] = f"http://{self.config['proxy_user']}:{password}@proxy.muc:8080"
+            os.environ["HTTP_PROXY"] = f"http://{self.config['proxy_user']}:{password}@proxy.muc:8080"
+            os.environ["NO_PROXY"] = "localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net"
+        else:
+            self.logger.info("No proxy sets since proxy user is None")
 
         os.environ["AWS_SHARED_CREDENTIALS_FILE"] = self.config['aws_credentials']
         os.environ["AWS_CONFIG_FILE"] = self.config['aws_config']
@@ -52,8 +57,15 @@ class VMHandler:
 
     def create_user_data(self):
         """creates the user data script depending on experiment type. The user data is built out of base script and specific script depending on experiment type"""
-        with open("UserDataScripts/EC2_instance_bootstrap_base.sh", 'r') as content_file:
-            user_data_base = content_file.read()
+
+
+        #If VM is hosted in public the VMs do not need the internal proxy settings
+        if self.config['public_ip']:
+            with open("UserDataScripts/EC2_instance_bootstrap_base_no_proxy.sh", 'r') as content_file:
+                user_data_base = content_file.read()
+        else:
+            with open("UserDataScripts/EC2_instance_bootstrap_base.sh", 'r') as content_file:
+                user_data_base = content_file.read()
 
         # if blockchain type is base, no specific startup script is needed
         if self.config['blockchain_type'] == 'base':
@@ -137,7 +149,7 @@ class VMHandler:
             MaxCount=self.config['vm_count'],
             InstanceType=self.config['instance_type'],
             KeyName=self.config['key_name'],
-            SubnetId=self.config['subnet_id'],
+            #SubnetId=self.config['subnet_id'],
             BlockDeviceMappings=self.config['storage_settings'],
             UserData=self.user_data,
             TagSpecifications=[
@@ -155,25 +167,39 @@ class VMHandler:
                     ]
                 },
             ],
-            SecurityGroupIds=self.config['security_group_id']
+            #SecurityGroupIds=self.config['security_group_id'],
+             NetworkInterfaces = [
+                {
+                    'DeviceIndex': 0,
+                    'SubnetId': self.config['subnet_id'],
+                    'Groups': self.config['security_group_id'],
+                    'AssociatePublicIpAddress': self.config['public_ip']
+                }]
         )
         self.logger.info(f"Initiated the start of {self.config['vm_count']} {self.config['instance_type']} machines.")
         ips = []
+        public_ips =[]
         self.logger.info("Waiting until all VMs are up...")
         for i in self.ec2_instances:
             i.wait_until_running()
             i.load()
             self.logger.info(f"ID: {i.id}, State: {i.state['Name']}, IP: {i.private_ip_address}")
             ips.append(i.private_ip_address)
+            if self.config['public_ip']:
+                self.logger.info(f"ID: {i.id}, PUBLIC IP: {i.public_ip_address}")
+                public_ips.append(i.public_ip_address)
 
         # add no proxy for all VM IPs
-        os.environ["NO_PROXY"] = f"localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net,{','.join(str(ip) for ip in ips)}"
+        if self.config['proxy_user'] != None:
+            os.environ["NO_PROXY"] = f"localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net,{','.join(str(ip) for ip in ips)}"
 
         self.logger.info(f"You can now access machines via: ssh -i \"path to {self.config['key_name']} key\" ubuntu@{ips} (if user is ubuntu) ")
         self.logger.info(f"e.g. ssh -i {self.config['priv_key_path']} ubuntu@{ips[0]}")
 
         # add instance IPs and IDs to config
         self.config['ips'] = ips
+        if self.config['public_ip']:
+            self.config['public_ips'] = public_ips
         self.config['instance_ids'] = [instance.id for instance in self.ec2_instances]
 
         # Give launched instances tag with time/type of experiment/number of node
@@ -294,8 +320,8 @@ class VMHandler:
         :return:
         """
         #TODO: enable stopping and not only termination
-
-        os.environ["NO_PROXY"] = f"localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net,{','.join(str(ip) for ip in self.config['ips'])}"
+        if self.config['proxy_user'] != None:
+            os.environ["NO_PROXY"] = f"localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net,{','.join(str(ip) for ip in self.config['ips'])}"
 
         ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
         ec2_instances = ec2.instances.filter(InstanceIds=self.config['instance_ids'])
@@ -349,6 +375,9 @@ class VMHandler:
         ssh_key_priv = paramiko.RSAKey.from_private_key_file(config['priv_key_path'])
 
         for index, ip in enumerate(config['ips']):
+            if config['public_ip']:
+                #use public ip if exists, else it wont work
+                ip = config['public_ips'][index]
             ssh_clients.append(paramiko.SSHClient())
             ssh_clients[index].set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh_clients[index].connect(hostname=ip, username=config['user'], pkey=ssh_key_priv)
