@@ -15,6 +15,7 @@ from web3.middleware import geth_poa_middleware
 
 ########## U G L Y  M O N K E Y P A T C H ##################
 #web3 does not support request retry function, therefore we inject it ourselves
+#https://stackoverflow.com/questions/23013220/max-retries-exceeded-with-url-in-requests/47475019#47475019
 import lru
 import requests
 from requests.packages.urllib3.util.retry import Retry
@@ -34,6 +35,7 @@ def _get_session_new(*args, **kwargs):
     cache_key = generate_cache_key((args, kwargs))
     if cache_key not in _session_cache:
         _session_cache[cache_key] = requests.Session()
+        #TODO: Adjust these parameters
         retry = Retry(connect=10, backoff_factor=0.3)
         adapter = HTTPAdapter(max_retries=retry)
         _session_cache[cache_key].mount('http://', adapter)
