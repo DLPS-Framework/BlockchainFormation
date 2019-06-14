@@ -52,6 +52,12 @@ class ArgParser:
         ArgParser._add_common_args(parser_geth)
         ArgParser._add_geth_args(parser_geth)
 
+        # parity parser
+        parser_parity = subparsers.add_parser('parity', help='Parity Network')
+        parser_parity.set_defaults(blockchain_type='parity')
+        ArgParser._add_common_args(parser_parity)
+        ArgParser._add_parity_args(parser_parity)
+
         # base parser
         parser_base = subparsers.add_parser('base',
                                             help='Base Setup, only starts VM & installs basic packages, no blockchain')
@@ -122,6 +128,14 @@ class ArgParser:
         parser.add_argument('--timestamp', '-tp', help='specify timestamp of genesis', default="0x00")
         parser.add_argument('--gaslimit', '-gl', help='specify gasLimit', default="0x2fefd8")
         parser.add_argument('--num_acc', '-na', help='specify number of accounts added to each node', type=int, default=None)
+
+    @staticmethod
+    def _add_parity_args(parser):
+        parser.add_argument('--step_duration', '-sd', help='specify step_duration', type=int, default=5)
+        parser.add_argument('--num_acc', '-na', help='specify number of accounts added to each node', type=int,
+                            default=None)
+        parser.add_argument('--balance', '-bal', help='specify start balance of account', default="0x200000000000000000000000000000000000000000000000000000000000000")
+
 
     def create_config(self, namespace_dict, blockchain_type):
         """
@@ -200,6 +214,14 @@ class ArgParser:
                 "timestamp": namespace_dict['timestamp'],
                 "gaslimit": namespace_dict['gaslimit'],
                 "num_acc": namespace_dict['num_acc']
+
+            }
+        elif blockchain_type == "parity":
+            return\
+            {
+                "step_duration": namespace_dict['step_duration'],
+                "num_acc": namespace_dict['num_acc'],
+                "balance": namespace_dict['balance']
 
             }
 

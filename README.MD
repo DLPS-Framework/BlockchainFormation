@@ -1,5 +1,8 @@
 # EC2 Automation Script
 
+##Major Updates:
+ * *June X 2019:* Added Parity Support
+
 ## General Information
 
 The purpose of this script is to automate the process of deploying blockchain solutions on aws.
@@ -88,6 +91,12 @@ Explanation of specific geth flags:
                         specify number of accounts added to each node [default=None -> every node gets a unique account]                        
 
 ```
+
+Explanation of specific parity flags:
+```
+ TBA
+```
+
 __Note that you need to enter the password for your proxy user after starting the script__
 
 
@@ -95,7 +104,7 @@ __Note that you need to enter the password for your proxy user after starting th
 ```
 python run.py start --config "path to config file" 
 ```
-Example config files for geth and base are provided in ```/example_config_files/base_config.json```
+Example config files for geth, parity and base are provided in ```/example_config_files/base_config.json```
 
 *WARNING:* Config files and CLI arguments cannot be combined at the moment, so either use the config file to pass arguments or pass all arguments via argpass commands.
 
@@ -120,7 +129,6 @@ To add another blockchain 4 things need to be added:
 * Make geth setup even more customizable
 * Add logrotate to UserData setup scripts
 *  Support more blockchains
-    * Parity
     * Hyperledger Fabric
     * ...
 

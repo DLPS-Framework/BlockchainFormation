@@ -9,7 +9,7 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
   bash -c 'echo 127.0.0.1 localhost $hsname >> /etc/hosts'
 
   HTTP_PROXY=http://proxy.ccc.eu-central-1.aws.cloud.bmw:8080
-  HTTPS_PROXY=https://proxy.ccc.eu-central-1.aws.cloud.bmw:8080
+  HTTPS_PROXY=http://proxy.ccc.eu-central-1.aws.cloud.bmw:8080
   NO_PROXY=localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net
 
   export http_proxy=$HTTP_PROXY

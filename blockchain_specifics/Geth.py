@@ -179,7 +179,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo geth --datadir '/data/gethNetwork/node/' init /data/gethNetwork/genesis.json")
 
-        ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("ssudo systemctl daemon-reload")
+        ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo systemctl daemon-reload")
 
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo systemctl enable geth.service")
 
@@ -272,10 +272,10 @@ def get_relevant_account_mapping(accounts, config):
     :return:
     """
 
-    if config['geth_settings']['num_acc'] == None:
+    if config[f"{config['blockchain_type']}_settings"]['num_acc'] == None:
         return {ip: [account] for (ip, account) in zip(config['ips'], accounts)}
     else:
-        rnd_accounts = np.random.choice(a=accounts, replace=False, size=config['geth_settings']['num_acc'])
+        rnd_accounts = np.random.choice(a=accounts, replace=False, size=config[f"{config['blockchain_type']}_settings"]['num_acc'])
         return {ip: rnd_accounts for ip in config['ips']}
 
 

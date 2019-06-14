@@ -10,6 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ec2_automation.cost_calculator import *
 from ec2_automation.cost_calculator import AWSCostCalculator
 from ec2_automation.blockchain_specifics.Geth import *
+from ec2_automation.blockchain_specifics.Parity import *
 
 utc = pytz.utc
 
@@ -310,6 +311,9 @@ class VMHandler:
         if self.config['blockchain_type'] == 'geth':
             geth_startup(self.config, self.logger, ssh_clients, scp_clients)
 
+        elif self.config['blockchain_type'] == 'parity':
+            parity_startup(self.config, self.logger, ssh_clients, scp_clients)
+
         elif self.config['blockchain_type'] == 'base':
             pass
 
@@ -358,6 +362,9 @@ class VMHandler:
 
         if self.config['blockchain_type'] == 'geth':
             geth_shutdown(self.config, self.logger, ssh_clients, scp_clients)
+
+        elif self.config['blockchain_type'] == 'parity':
+            parity_shutdown(self.config, self.logger, ssh_clients, scp_clients)
 
         elif self.config['blockchain_type'] == 'base':
             pass

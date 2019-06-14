@@ -31,15 +31,11 @@
       "KmsKeyId": "arn:aws:kms:eu-central-1:731899578576:key/a808826d-e460-4271-a23b-29e1e0807c1d"
             }
   }],
-  "blockchain_type": "geth",
-  "geth_settings":
+  "blockchain_type": "parity",
+  "parity_settings":
   {
-    "chain_id": 11,
-    "period": 5,
-    "epoch": 30000,
+    "step_duration": 5,
     "balance": "0x200000000000000000000000000000000000000000000000000000000000000",
-    "timestamp": "0x00",
-    "gaslimit": "0x2fefd8",
     "num_acc": null
   }
 }
