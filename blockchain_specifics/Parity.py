@@ -2,9 +2,7 @@ import glob
 import itertools
 import json
 import os
-import re
 import time
-import numpy as np
 from web3 import Web3
 import web3
 from web3.middleware import geth_poa_middleware
@@ -71,7 +69,7 @@ def parity_shutdown(config, logger, ssh_clients, scp_clients):
 def verify_key(f, list):
     with open(f) as json_file:
         data = json.load(json_file)
-        print(list)
+        #print(list)
         #to checksum somehow makes capital letters
         if Web3.toChecksumAddress(data['address']).lower() in [x.lower() for x in list]:
             return True
@@ -127,6 +125,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
             #FIXME find a stable way to install parity instead of this bruteforce approach
 
             if i == 15:
+                logger.debug("Parity installation failed at least 15 times on one of the nodes!")
                 raise ParityInstallFailed
 
             logger.info(f"{i}. try to install parity on node {index}")
@@ -147,19 +146,6 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
 
             i +=1
 
-
-        #"sudo bash -c  'bash <(wget -O - http://get.parity.io) -r stable'"
-        # ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
-        #     "sudo bash -c  'bash <(wget -O - http://get.parity.io) -r stable'")
-        #sudo bash -c  'wget -O - http://get.parity.io | bash'
-        # while "Could not resolve proxy" in ssh_stderr or ssh_stderr:
-        #     ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
-        #         "sudo bash -c  'bash <(curl https://get.parity.io -L)'")
-        # try:
-        #     logger.info(f"Log node {index} {ssh_stdout.read().decode('utf-8').encode('utf-8')}")
-        #     logger.info(f"Log node {index} {ssh_stderr.read().decode('utf-8').encode('utf-8')}")
-        # except:
-        #     pass
         # create account
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo parity account new --config /data/parityNetwork/node.toml > /data/parityNetwork/account.txt")
@@ -231,7 +217,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         with open(f"{config['exp_dir']}/node_node_{index}.toml", 'w') as outfile:
 
             toml.dump(generate_node_dict(signers=Web3.toChecksumAddress(account_mapping[ip][i]),
-                                         unlock=[Web3.toChecksumAddress(x) for x in account_mapping[ip]]), outfile)
+                                         unlock=[Web3.toChecksumAddress(x).lower() for x in account_mapping[ip]]), outfile)
 
         # add the keyfiles from all relevant accounts to the VMs keystores
         keystore_files = [f for f in glob.glob(acc_path + "**/*/UTC--*", recursive=True)
@@ -277,12 +263,12 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
             "sudo mv ~/node.toml /data/parityNetwork/node.toml")
         #logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
         #logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
-        # start service
-        #ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
-        #    "sudo parity daemon --config node.toml  --log-file /var/log/parity.log")
+
         #logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
         #logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
 
+
+        #start service
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo systemctl daemon-reload")
 
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo systemctl enable parity.service")
@@ -291,10 +277,15 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
 
     logger.debug("service should now have been started")
 
+    time.sleep(10)
+    for index, ip in enumerate(config['ips']):
+        # Is this really needed?
+        ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo service parity restart")
+
     enodes = []
     # collect enodes
     web3_clients = []
-    time.sleep(15)
+    time.sleep(20)
 
     for index, ip in enumerate(config['ips']):
         if config['public_ip']:
@@ -385,7 +376,7 @@ def generate_node_dict(signers, unlock=None, reserved_peers= False):
 
                             },
                 'mining': {
-                            'engine_signer': signers,
+                            'engine_signer': signers.lower(),
                             'reseal_on_txs': 'none'
                             },
                 'network': {
