@@ -1,7 +1,7 @@
 # EC2 Automation Script
 
 ## Major Updates:
- * *June X 2019:* Added Parity Support (Still some proxy issues when installing parity)
+ * *June 17 2019:* Added Parity Support
 
 ## General Information
 
@@ -94,12 +94,12 @@ Explanation of specific geth flags:
 
 Explanation of specific parity flags:
 ```
- TBA
- 
   --step_duration STEP_DURATION, -sd STEP_DURATION
                         specify step_duration  [default=5]
   --num_acc NUM_ACC, -na NUM_ACC
                         specify number of accounts added to each node [default=None -> every node gets a unique account]      
+  --gaslimit GASLIMIT, -gl GASLIMIT
+                        specify gasLimit [default=0x5B8D80]
   --balance BALANCE, -bal BALANCE
                         specify start balance of account [default=0x200000000000000000000000000000000000000000000000000000000000000]
 
@@ -134,10 +134,11 @@ To add another blockchain 4 things need to be added:
 * Add InstanceMarketOptions for cheapter VMs (Does the AWS Calculator take care of this?)
 * Add Windows support
 * Add option to attach no storage at all
-* Make geth setup even more customizable
+* Make geth/parity setup even more customizable
 * Add logrotate to UserData setup scripts
 *  Support more blockchains
     * Hyperledger Fabric
+    * Quorum
     * ...
 
     
@@ -149,3 +150,4 @@ To add another blockchain 4 things need to be added:
 * web3   
 * pytz     
 * numpy 
+* toml

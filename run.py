@@ -134,6 +134,7 @@ class ArgParser:
         parser.add_argument('--step_duration', '-sd', help='specify step_duration', type=int, default=5)
         parser.add_argument('--num_acc', '-na', help='specify number of accounts added to each node', type=int,
                             default=None)
+        parser.add_argument('--gaslimit', '-gl', help='specify gasLimit', default="0x5B8D80")
         parser.add_argument('--balance', '-bal', help='specify start balance of account', default="0x200000000000000000000000000000000000000000000000000000000000000")
 
 
@@ -221,6 +222,7 @@ class ArgParser:
             {
                 "step_duration": namespace_dict['step_duration'],
                 "num_acc": namespace_dict['num_acc'],
+                "gaslimit": namespace_dict['gaslimit'],
                 "balance": namespace_dict['balance']
 
             }

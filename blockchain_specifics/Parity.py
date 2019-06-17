@@ -67,6 +67,12 @@ def parity_shutdown(config, logger, ssh_clients, scp_clients):
 
 
 def verify_key(f, list):
+    """
+    checks if address in provided file f is in account list
+    :param f: filename with account data
+    :param list: list of verified accounts
+    :return:
+    """
     with open(f) as json_file:
         data = json.load(json_file)
         #print(list)
@@ -104,12 +110,12 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         scp_clients[index].put(f"{config['exp_dir']}/node_basic.toml", f"~/node.toml")
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo mv ~/spec.json /data/parityNetwork/spec.json")
-        logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-        logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
+        logger.debug(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
+        logger.debug(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo mv ~/node.toml /data/parityNetwork/node.toml")
-        logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-        logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
+        logger.debug(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
+        logger.debug(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
 
 
 
@@ -118,7 +124,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo bash -c  'command -v parity'")
         parity_install_check = ssh_stdout.read().decode('ascii')
-        logger.info(f"Log node {index} {parity_install_check}")
+        logger.debug(f"Log node {index} {parity_install_check}")
         i = 1
 
         while parity_install_check != "/usr/bin/parity\n":
@@ -133,8 +139,8 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
             #trying to install parity
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
                 "sudo bash -c  'bash <(curl https://get.parity.io -L) -r stable'")
-            logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-            logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
+            logger.debug(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
+            logger.debug(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
 
 
             #check if install was successful
@@ -223,7 +229,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         keystore_files = [f for f in glob.glob(acc_path + "**/*/UTC--*", recursive=True)
                           if verify_key(f, list(set(itertools.chain(*account_mapping.values()))))]
         keystore_files.sort(key=natural_keys)
-        logger.info(keystore_files)
+        logger.debug(keystore_files)
         for index_top, ip in enumerate(config['ips']):
 
             ssh_clients[index_top].exec_command("rm /data/parityNetwork/keys/DemoPoA/*")
@@ -366,7 +372,10 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
 
 def generate_node_dict(signers, unlock=None, reserved_peers= False):
     """
-    TODO
+    Generates node dictionary needed for creation of node.toml
+    :param signers: which account to be signer
+    :param unlock: which accounts to unlock
+    :param reserved_peers: which nodes are connected to each other
     :return:
     """
 
@@ -412,7 +421,6 @@ def generate_spec(accounts, config):
     :param accounts: accounts to be added to signers/added some balance
     :return: spec dictonary
     """
-    #config['parity_settings']['stepDuration']
 
     base_balances = {"0x0000000000000000000000000000000000000001": {"balance": "1", "builtin": {"name": "ecrecover", "pricing": {"linear": {"base": 3000, "word": 0}}}},
                      "0x0000000000000000000000000000000000000002": {"balance": "1", "builtin": {"name": "sha256", "pricing": {"linear": {"base": 60, "word": 12}}}},
@@ -458,7 +466,7 @@ def generate_spec(accounts, config):
                                            }
                          },
                  "difficulty": "0x20000",
-                 "gasLimit": "0x5B8D80"
+                 "gasLimit": config['parity_settings']['gaslimit']
                  },
                  "accounts": merged_balances
                 }
