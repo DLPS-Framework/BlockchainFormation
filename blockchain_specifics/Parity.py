@@ -113,10 +113,41 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
         logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
 
+
+
+
+        # check if install was successful
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
-             "sudo bash -c  'bash <(curl https://get.parity.io -L) -r stable'")
-        logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-        logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
+            "sudo bash -c  'command -v parity'")
+        parity_install_check = ssh_stdout.read().decode('ascii')
+        logger.info(f"Log node {index} {parity_install_check}")
+        i = 1
+
+        while parity_install_check != "/usr/bin/parity\n":
+            #FIXME find a stable way to install parity instead of this bruteforce approach
+
+            if i == 15:
+                raise ParityInstallFailed
+
+            logger.info(f"{i}. try to install parity on node {index}")
+
+            #trying to install parity
+            ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
+                "sudo bash -c  'bash <(curl https://get.parity.io -L) -r stable'")
+            logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
+            logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
+
+
+            #check if install was successful
+            ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
+                "sudo bash -c  'command -v parity'")
+            parity_install_check = ssh_stdout.read().decode('ascii')
+            logger.info(f"Log node {index} {parity_install_check}")
+            #logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
+
+            i +=1
+
+
         #"sudo bash -c  'bash <(wget -O - http://get.parity.io) -r stable'"
         # ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
         #     "sudo bash -c  'bash <(wget -O - http://get.parity.io) -r stable'")
@@ -132,8 +163,8 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         # create account
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo parity account new --config /data/parityNetwork/node.toml > /data/parityNetwork/account.txt")
-        logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-        logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
+        #logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
+        #logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
         #logger.info(ssh_stdin.read().decode('ascii'))
         time.sleep(1)
         # get accounts and keys
@@ -218,8 +249,8 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
 
         for _, acc in enumerate(account_mapping[ip]):
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("echo 'password' >> /data/parityNetwork/passwords.txt")
-            logger.debug(ssh_stdout)
-            logger.debug(ssh_stderr)
+            #logger.debug(ssh_stdout)
+            #logger.debug(ssh_stderr)
 
         scp_clients[index].put(f"{config['exp_dir']}/spec.json", f"~/spec.json")
 
@@ -231,21 +262,21 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         # remove old node.toml
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo rm /data/parityNetwork/node.toml")
-        logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-        logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
+        #logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
+        #logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo rm /data/parityNetwork/spec.json")
-        logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-        logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
+        #logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
+        #logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
         scp_clients[index].put(f"{config['exp_dir']}/node_node_{index}.toml", f"~/node.toml")
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo mv ~/spec.json /data/parityNetwork/spec.json")
-        logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-        logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
+        #logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
+        #logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo mv ~/node.toml /data/parityNetwork/node.toml")
-        logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-        logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
+        #logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
+        #logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
         # start service
         #ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
         #    "sudo parity daemon --config node.toml  --log-file /var/log/parity.log")
@@ -322,7 +353,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
             logger.info(str(web3_clients[index].toChecksumAddress(acc)) + ": " + str(
                 web3_clients[index].eth.getBalance(Web3.toChecksumAddress(acc))))
 
-    logger.info("Since parity takes ages for the first blocks, it is time to sleep for two minuted zZz")
+    logger.info("Since parity takes ages for the first blocks, it is time to sleep for two minutes zZz")
     time.sleep(120)
     logger.info("zZz Just one more minute zZz")
     time.sleep(60)
@@ -393,7 +424,7 @@ def generate_spec(accounts, config):
     #config['parity_settings']['stepDuration']
 
     base_balances = {"0x0000000000000000000000000000000000000001": {"balance": "1", "builtin": {"name": "ecrecover", "pricing": {"linear": {"base": 3000, "word": 0}}}},
-                     "0x0000000000000000000000000000000000000002": {"balance": "1", "builtin": {"name": "sha256", "pricing": {"linear": {"base": 60, "word": 12 }}}},
+                     "0x0000000000000000000000000000000000000002": {"balance": "1", "builtin": {"name": "sha256", "pricing": {"linear": {"base": 60, "word": 12}}}},
                      "0x0000000000000000000000000000000000000003": {"balance": "1", "builtin": {"name": "ripemd160", "pricing": {"linear": {"base": 600, "word": 120}}}},
                      "0x0000000000000000000000000000000000000004": {"balance": "1", "builtin": {"name": "identity", "pricing": {"linear": {"base": 15, "word": 3}}}}}
     if accounts != None:
@@ -404,13 +435,13 @@ def generate_spec(accounts, config):
         merged_balances = base_balances
         accounts = []
 
-    spec_dict ={
+    spec_dict = {
                  "name": "DemoPoA",
                  "engine": {
                          "authorityRound": {
                                      "params": {
                                                  "stepDuration": config['parity_settings']['step_duration'],
-                                                 "validators" : {
+                                                 "validators": {
                                                  "list": accounts
                                                                  }
                                                  }
@@ -442,3 +473,11 @@ def generate_spec(accounts, config):
                 }
 
     return spec_dict
+
+class Error(Exception):
+   """Base class for other exceptions"""
+   pass
+class ParityInstallFailed(Error):
+   """Parity could not be installed"""
+   pass
+

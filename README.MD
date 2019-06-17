@@ -1,7 +1,7 @@
 # EC2 Automation Script
 
-##Major Updates:
- * *June X 2019:* Added Parity Support
+## Major Updates:
+ * *June X 2019:* Added Parity Support (Still some proxy issues when installing parity)
 
 ## General Information
 
@@ -95,6 +95,14 @@ Explanation of specific geth flags:
 Explanation of specific parity flags:
 ```
  TBA
+ 
+  --step_duration STEP_DURATION, -sd STEP_DURATION
+                        specify step_duration  [default=5]
+  --num_acc NUM_ACC, -na NUM_ACC
+                        specify number of accounts added to each node [default=None -> every node gets a unique account]      
+  --balance BALANCE, -bal BALANCE
+                        specify start balance of account [default=0x200000000000000000000000000000000000000000000000000000000000000]
+
 ```
 
 __Note that you need to enter the password for your proxy user after starting the script__

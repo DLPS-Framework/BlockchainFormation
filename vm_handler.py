@@ -56,6 +56,7 @@ class VMHandler:
 
         self.aws_calculator = AWSCostCalculator(self.session)
 
+
     def create_user_data(self):
         """creates the user data script depending on experiment type. The user data is built out of base script and specific script depending on experiment type"""
 
@@ -274,14 +275,8 @@ class VMHandler:
             except:
                 pass
 
-            def yes_or_no(question):
-                reply = str(input(question + ' (y/n): ')).lower().strip()
-                if reply[0] == 'y':
-                    return 1
-                elif reply[0] == 'n':
-                    return 0
-                else:
-                    return yes_or_no("Please Enter (y/n) ")
+
+
 
             if yes_or_no("Do you want to shut down the VMs?"):
 
@@ -312,7 +307,18 @@ class VMHandler:
             geth_startup(self.config, self.logger, ssh_clients, scp_clients)
 
         elif self.config['blockchain_type'] == 'parity':
-            parity_startup(self.config, self.logger, ssh_clients, scp_clients)
+            try:
+                parity_startup(self.config, self.logger, ssh_clients, scp_clients)
+
+            except ParityInstallFailed:
+                if yes_or_no("Do you want to shut down the VMs?"):
+
+                    self.logger.info(f"Running the shutdown script now")
+                    self.run_general_shutdown()
+
+                else:
+                    self.logger.info(f"VMs are not being shutdown")
+
 
         elif self.config['blockchain_type'] == 'base':
             pass
@@ -402,3 +408,12 @@ class VMHandler:
         """Converter to make datetime objects json dumpable"""
         if isinstance(o, datetime.datetime):
             return o.__str__()
+
+def yes_or_no(question):
+    reply = str(input(question + ' (y/n): ')).lower().strip()
+    if reply[0] == 'y':
+        return 1
+    elif reply[0] == 'n':
+        return 0
+    else:
+        return yes_or_no("Please Enter (y/n) ")
