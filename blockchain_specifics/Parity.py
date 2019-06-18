@@ -51,6 +51,10 @@ web3.utils.request._get_session = _get_session_new
 def parity_shutdown(config, logger, ssh_clients, scp_clients):
     """
     runs the geth specific shutdown operations (e.g. pulling the geth logs from the VMs)
+    :param config: config dict
+    :param logger: logger
+    :param ssh_clients: ssh clients for all VMs in config
+    :param scp_clients: scp clients for all VMs in config
     :return:
     """
 
@@ -85,6 +89,10 @@ def verify_key(f, list):
 def parity_startup(config, logger, ssh_clients, scp_clients):
     """
     Runs the geth specific startup script
+    :param config: config dict
+    :param logger: logger
+    :param ssh_clients: ssh clients for all VMs in config
+    :param scp_clients: scp clients for all VMs in config
     :return:
     """
 
@@ -95,7 +103,6 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
     os.mkdir((f"{acc_path}/{config['exp_dir']}/parity_logs"))
 
     #generate basic spec and node.toml
-
     spec_dict = generate_spec(accounts=None, config=config)
     with open(f"{config['exp_dir']}/spec_basic.json", 'w') as outfile:
         json.dump(spec_dict, outfile)
@@ -128,7 +135,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         i = 1
 
         while parity_install_check != "/usr/bin/parity\n":
-            #FIXME find a stable way to install parity instead of this bruteforce approach
+            # FIXME find a stable way to install parity instead of this bruteforce approach
 
             if i == 15:
                 logger.debug("Parity installation failed at least 15 times on one of the nodes!")
@@ -150,7 +157,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
             logger.info(f"Log node {index} {parity_install_check}")
             #logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
 
-            i +=1
+            i += 1
 
         # create account
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
@@ -196,11 +203,6 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
     account_mapping = get_relevant_account_mapping(all_accounts, config)
 
     logger.info(f"Relevant acc: {str(account_mapping)}")
-
-    #get new spec and node.toml
-    #every node needs specific node.toml because of signers
-
-
 
     #get unique accounts from mapping
     spec_dict = generate_spec(accounts=list(set(itertools.chain(*account_mapping.values()))), config=config)
@@ -300,7 +302,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
             web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip_pub}:8545", request_kwargs={'timeout': 5})))
         else:
             web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 5})))
-        # print(web3.admin)
+
         enodes.append((ip, web3_clients[index].parity.enode()))
         #web3_clients[index].miner.stop()
         logger.info(f"Coinbase of {ip}: {web3_clients[index].eth.coinbase}")
@@ -326,7 +328,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         node_toml = toml.load(f"{config['exp_dir']}/node_node_{index}.toml")
         node_toml['network']['reserved_peers'] = "/data/parityNetwork/peers.txt"
         with open(f"{config['exp_dir']}/node_node_{index}.toml", 'w') as outfile:
-          toml.dump(node_toml, outfile)
+            toml.dump(node_toml, outfile)
 
         scp_clients[index].put(f"{config['exp_dir']}/node_node_{index}.toml", f"~/node.toml")
         scp_clients[index].put(f"{config['exp_dir']}/peers.txt", f"~/peers.txt")
@@ -402,15 +404,12 @@ def generate_node_dict(signers, unlock=None, reserved_peers= False):
                 'websockets': {'port': 8450}
          }
 
-    if unlock != None:
+    if unlock is not None:
         node_dict['account']['unlock'] = unlock
 
         node_dict['account']['password'] = ['/data/parityNetwork/passwords.txt']
     if reserved_peers:
         node_dict['network']['reserved_peers'] = "/data/parityNetwork/peers.txt"
-
-    #if signers != None:
-      #  node_dict['mining']['engine_signer'] = signers
 
     return node_dict
 
@@ -419,6 +418,7 @@ def generate_spec(accounts, config):
     #TODO make it more dynamic to user desires
     # https://web3py.readthedocs.io/en/stable/middleware.html#geth-style-proof-of-authority
     :param accounts: accounts to be added to signers/added some balance
+    :param config: config dict
     :return: spec dictonary
     """
 
@@ -426,7 +426,7 @@ def generate_spec(accounts, config):
                      "0x0000000000000000000000000000000000000002": {"balance": "1", "builtin": {"name": "sha256", "pricing": {"linear": {"base": 60, "word": 12}}}},
                      "0x0000000000000000000000000000000000000003": {"balance": "1", "builtin": {"name": "ripemd160", "pricing": {"linear": {"base": 600, "word": 120}}}},
                      "0x0000000000000000000000000000000000000004": {"balance": "1", "builtin": {"name": "identity", "pricing": {"linear": {"base": 15, "word": 3}}}}}
-    if accounts != None:
+    if accounts is not None:
         balances = [config['parity_settings']['balance'] for x in accounts]
         additional_balances = {str(x): {"balance": str(y)} for x, y in zip(accounts, balances)}
         merged_balances = {**base_balances, **additional_balances}

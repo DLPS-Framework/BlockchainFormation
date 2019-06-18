@@ -107,7 +107,7 @@ class VMHandler:
             return latest
 
         # If no specific image ID is given search for the newest ubuntu 18 image
-        if self.config['image']['image_id'] == None:
+        if self.config['image']['image_id'] is None:
             ec2 = self.session.client('ec2', region_name=self.config['aws_region'])
 
             # Find the latest official Ubuntu image from Canonical(owner = 099720109477)
@@ -192,7 +192,7 @@ class VMHandler:
                 public_ips.append(i.public_ip_address)
 
         # add no proxy for all VM IPs
-        if self.config['proxy_user'] != None:
+        if self.config['proxy_user'] is not None:
             os.environ["NO_PROXY"] = f"localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net,{','.join(str(ip) for ip in ips)}"
 
         self.logger.info(f"You can now access machines via: ssh -i \"path to {self.config['key_name']} key\" ubuntu@{ips} (if user is ubuntu) ")
