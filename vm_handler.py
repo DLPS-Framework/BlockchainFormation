@@ -11,6 +11,7 @@ from ec2_automation.cost_calculator import *
 from ec2_automation.cost_calculator import AWSCostCalculator
 from ec2_automation.blockchain_specifics.Geth import *
 from ec2_automation.blockchain_specifics.Parity import *
+from ec2_automation.lb_handler import *
 
 utc = pytz.utc
 
@@ -180,13 +181,15 @@ class VMHandler:
         )
         self.logger.info(f"Initiated the start of {self.config['vm_count']} {self.config['instance_type']} machines.")
         ips = []
-        public_ips =[]
+        public_ips = []
+        vpc_ids = []
         self.logger.info("Waiting until all VMs are up...")
         for i in self.ec2_instances:
             i.wait_until_running()
             i.load()
             self.logger.info(f"ID: {i.id}, State: {i.state['Name']}, IP: {i.private_ip_address}")
             ips.append(i.private_ip_address)
+            vpc_ids.append(i.vpc_id)
             if self.config['public_ip']:
                 self.logger.info(f"ID: {i.id}, PUBLIC IP: {i.public_ip_address}")
                 public_ips.append(i.public_ip_address)
@@ -200,6 +203,7 @@ class VMHandler:
 
         # add instance IPs and IDs to config
         self.config['ips'] = ips
+        self.config['vpc_ids'] = vpc_ids
         if self.config['public_ip']:
             self.config['public_ips'] = public_ips
         self.config['instance_ids'] = [instance.id for instance in self.ec2_instances]
@@ -237,7 +241,7 @@ class VMHandler:
             self.logger.error("Creation of the directories failed")
 
         with open(f"{self.config['exp_dir']}/config.json", 'w') as outfile:
-            json.dump(self.config, outfile, default=VMHandler._datetimeconverter)
+            json.dump(self.config, outfile, default=datetimeconverter, indent=4)
 
         # wait couple minutes until VMs are up
         # first connect ssh clients, then scp client
@@ -293,6 +297,13 @@ class VMHandler:
 
             self.logger.info(f"Setup of all VMs/Nodes was successful, to terminate them run run.py terminate --config {self.config['exp_dir']}/config.json")
 
+            if 'load_balancer_settings' in self.config and 'add_loadbalancer' in self.config['load_balancer_settings']:
+                if self.config['load_balancer_settings']['add_loadbalancer']:
+                    self.logger.info("Starting Load Balancer startup now")
+                    lb_handler = LBHandler(self.config,self.session)
+                    lb_handler.creation_routine()
+
+
         try:
             map(lambda client: client.close(), ssh_clients)
             map(lambda client: client.close(), scp_clients)
@@ -330,7 +341,7 @@ class VMHandler:
         :return:
         """
         #TODO: enable stopping and not only termination
-        if self.config['proxy_user'] != None:
+        if self.config['proxy_user'] is not None:
             os.environ["NO_PROXY"] = f"localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net,{','.join(str(ip) for ip in self.config['ips'])}"
 
         ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
@@ -353,6 +364,12 @@ class VMHandler:
 
             for instance in ec2_instances:
                 instance.stop()
+
+        if 'load_balancer_settings' in self.config and 'add_loadbalancer' in self.config['load_balancer_settings']:
+            if self.config['load_balancer_settings']['add_loadbalancer']:
+                self.logger.info("Starting Load Balancer termination now")
+                lb_handler = LBHandler(self.config, self.session)
+                lb_handler.shutdown_lb()
 
         #calculate aws costs
         self.aws_calculator.calculate_uptime_costs(self.config)
@@ -403,11 +420,11 @@ class VMHandler:
 
 
 
-    @staticmethod
-    def _datetimeconverter(o):
-        """Converter to make datetime objects json dumpable"""
-        if isinstance(o, datetime.datetime):
-            return o.__str__()
+
+def datetimeconverter(o):
+    """Converter to make datetime objects json dumpable"""
+    if isinstance(o, datetime.datetime):
+        return o.__str__()
 
 def yes_or_no(question):
     reply = str(input(question + ' (y/n): ')).lower().strip()

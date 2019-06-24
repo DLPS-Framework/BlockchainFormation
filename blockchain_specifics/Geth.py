@@ -116,7 +116,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
                 f"printf '%s\\n' '[Unit]' 'Description=Ethereum go client' '[Service]' 'Type=simple' "
                 f"'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 "
-                f"--port 30310 --rpc --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool"
+                f"--port 30310 --rpc --rpcvhosts='*' --rpccorsdomain='*' --wsorigins='*' --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool"
                 f" --nat=extip:{ip}  --syncmode full --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
                 f"--password /data/gethNetwork/passwords.txt --mine --etherbase {Web3.toChecksumAddress(account_mapping[ip][i])}'"
                 f" 'StandardOutput=file:/var/log/geth.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/geth.service")
@@ -144,7 +144,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
                 f"printf '%s\\n' '[Unit]' 'Description=Ethereum go client' '[Service]' 'Type=simple' "
                 f"'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 "
-                f"--port 30310 --rpc --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool"
+                f"--port 30310 --rpc --rpcvhosts='*' --rpccorsdomain='*' --wsorigins='*' --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool"
                 f" --nat=extip:{ip}  --syncmode full --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
                 f"--password /data/gethNetwork/passwords.txt --mine ' 'StandardOutput=file:/var/log/geth.log' '[Install]' "
                 f"'WantedBy=default.target' > /etc/systemd/system/geth.service")
@@ -165,7 +165,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
     #self.pprnt.pprint(genesis_dict)
 
     with open(f"{config['exp_dir']}/genesis.json", 'w') as outfile:
-        json.dump(genesis_dict, outfile)
+        json.dump(genesis_dict, outfile, indent=4)
 
     # push genesis from local to remote VMs
     for index, _ in enumerate(config['ips']):
@@ -210,7 +210,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
     logger.info([enode for (ip, enode) in enodes])
 
     with open(f"{config['exp_dir']}/static-nodes.json", 'w') as outfile:
-        json.dump([enode for (ip, enode) in enodes], outfile)
+        json.dump([enode for (ip, enode) in enodes], outfile, indent=4)
 
     # distribute collected enodes over network
     for index, ip in enumerate(config['ips']):
@@ -256,7 +256,8 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
     #     logger.info("---------------------------")
 
     logger.info("testing if new blocks are generated across all nodes; if latest block numbers are not changing over multiple cycles something is wrong")
-    for x in range(15):
+    #TODO change this back to 15 after LB tests
+    for x in range(3):
         for index, _ in enumerate(web3_clients):
             logger.info(web3_clients[index].eth.getBlock('latest')['number'])
 

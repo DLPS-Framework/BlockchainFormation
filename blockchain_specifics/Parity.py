@@ -105,7 +105,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
     #generate basic spec and node.toml
     spec_dict = generate_spec(accounts=None, config=config)
     with open(f"{config['exp_dir']}/spec_basic.json", 'w') as outfile:
-        json.dump(spec_dict, outfile)
+        json.dump(spec_dict, outfile, indent=4)
 
     with open(f"{config['exp_dir']}/node_basic.toml", 'w') as outfile:
         #dummy signer accounts, gets replaced later anyway with real signers
@@ -209,7 +209,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
     #self.pprnt.pprint(genesis_dict)
 
     with open(f"{config['exp_dir']}/spec.json", 'w') as outfile:
-        json.dump(spec_dict, outfile)
+        json.dump(spec_dict, outfile, indent=4)
 
 
 
@@ -314,7 +314,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
     logger.info([enode for (ip, enode) in enodes])
 
     with open(f"{config['exp_dir']}/static-nodes.json", 'w') as outfile:
-        json.dump([enode for (ip, enode) in enodes], outfile)
+        json.dump([enode for (ip, enode) in enodes], outfile, indent=4)
 
     #FIXME: addReservedPeer(enode) not in current web3.py package
 

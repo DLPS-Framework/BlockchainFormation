@@ -1,6 +1,7 @@
 # EC2 Automation Script
 
 ## Major Updates:
+ * *June X 2019:* Added Application LoadBalancer Support
  * *June 17 2019:* Added Parity Support
 
 ## General Information
@@ -11,6 +12,7 @@ The provided VMs then can used for example to evaluate the performance of a give
 If the network is not needed anymore, the script provides  a function to shutdown all started VMs after pulling log files.
 The shutdown script also calculates the aws costs caused by the uptime of the virtual machines using the aws pricing API.
 
+ *NOTE THAT THE CREATED BLOCKCHAIN NODES ARE NOT CONFIGURED WITH HIGH SECURITY SETTINGS* 
 ## How to run it
 
 ```run.py``` provides a argpass CLI for starting and terminating VMs. 
@@ -75,7 +77,7 @@ Explanation of common flags (needed for all blockchains, not only e.g. geth):
 
 Explanation of specific geth flags:
 ```
- --chainid CHAINID, -ci CHAINID
+  --chainid CHAINID, -ci CHAINID
                         specify chainID [default=11]
   --period PERIOD, -pd PERIOD
                         specify clique period [default=5]

@@ -1,6 +1,6 @@
 import sys, os, argparse
 import json
-import datetime
+import datetime, time
 import logging.config
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ec2_automation.vm_handler import VMHandler
@@ -50,12 +50,14 @@ class ArgParser:
         parser_geth = subparsers.add_parser('geth', help='Geth Network')
         parser_geth.set_defaults(blockchain_type='geth')
         ArgParser._add_common_args(parser_geth)
+        ArgParser._add_loadbalancer_args(parser_geth)
         ArgParser._add_geth_args(parser_geth)
 
         # parity parser
         parser_parity = subparsers.add_parser('parity', help='Parity Network')
         parser_parity.set_defaults(blockchain_type='parity')
         ArgParser._add_common_args(parser_parity)
+        ArgParser._add_loadbalancer_args(parser_parity)
         ArgParser._add_parity_args(parser_parity)
 
         # base parser
@@ -63,8 +65,27 @@ class ArgParser:
                                             help='Base Setup, only starts VM & installs basic packages, no blockchain')
         parser_base.set_defaults(blockchain_type='base')
         ArgParser._add_common_args(parser_base)
+        ArgParser._add_loadbalancer_args(parser_base)
         # base does no need any specific args
 
+
+    @staticmethod
+    def _add_loadbalancer_args(parser):
+        """
+        Add args needed to configure the loadbalancer
+        :return:
+        """
+
+        parser.add_argument('--add_loadbalancer', '-add_lb',
+                            help='True or False whether you want a application load balancer',
+                            default=False, type=bool)
+        parser.add_argument('--lb_subnet_ids', '-_lb_st',
+                            help='load balancer subnet ids (at least two from different availability zones)', default=['subnet-0ac7aeeec87150dd7','subnet-0af1a4489042c2d42'])
+        parser.add_argument('--lb_security_group_ids', '-lb_sg',
+                            help='security group, multiple values allowed', default=["sg-0db312b6f84d66889"], nargs='+')
+        parser.add_argument('--lb_port', '-lb_p', help='which port should load balancer listen AND hit', type=int, default=8545)
+        parser.add_argument('--hosted_zone_id', '-hzi',
+                            help='hosted zone id for route 53', default='Z1M5DW26LY28R0')
 
 
 
@@ -85,7 +106,7 @@ class ArgParser:
         """
 
         parser.add_argument('--vm_count', '-vmc', help='specify how many VM you want to start', type=int)
-        parser.add_argument('--instance_type', '-it',help='specify what type of instances you want to start',
+        parser.add_argument('--instance_type', '-it', help='specify what type of instances you want to start',
                                  default='t2.micro', choices=['t2.nano','t2.micro','t2.small','t2.medium','t2.large', 't2.xlarge','t2.2xlarge'])
         parser.add_argument('--aws_credentials', '-cred',
                                  help='path to aws credentials', default=os.path.expanduser('~/.aws/credentials'))
@@ -145,7 +166,7 @@ class ArgParser:
         :return: config for vm handler
         """
         config = {
-            "timestamp": datetime.datetime.utcnow(),
+            "timestamp": datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M'),
             "vm_count": namespace_dict['vm_count'],
             "instance_type": namespace_dict['instance_type'],
             "image": {
@@ -174,7 +195,9 @@ class ArgParser:
                 },
             ],
             "blockchain_type": blockchain_type,
-            f"{blockchain_type}_settings": ArgParser._add_blockchain_type_config(namespace_dict, blockchain_type)
+            f"{blockchain_type}_settings": ArgParser._add_blockchain_type_config(namespace_dict, blockchain_type),
+            "load_balancer_settings": ArgParser._add_load_balancer_config(namespace_dict)
+
 
         }
         return config
@@ -201,6 +224,25 @@ class ArgParser:
                 'Encrypted': True,
                 'KmsKeyId': namespace_dict['KmsKeyId']
                     }
+
+    @staticmethod
+    def _add_load_balancer_config(namespace_dict):
+
+
+        if namespace_dict['add_loadbalancer']:
+            return \
+                {
+                    "add_loadbalancer": namespace_dict['add_loadbalancer'],
+                    "lb_subnet_ids": namespace_dict['lb_subnet_ids'],
+                    "lb_security_group_ids": namespace_dict['lb_security_group_ids'],
+                    "lb_port": namespace_dict['lb_port'],
+                    "hosted_zone_id": namespace_dict['hosted_zone_id']
+                }
+        else:
+            return \
+                {
+                    "add_loadbalancer": namespace_dict['add_loadbalancer']
+                }
 
     @staticmethod
     def _add_blockchain_type_config(namespace_dict, blockchain_type):
