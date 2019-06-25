@@ -256,8 +256,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
     #     logger.info("---------------------------")
 
     logger.info("testing if new blocks are generated across all nodes; if latest block numbers are not changing over multiple cycles something is wrong")
-    #TODO change this back to 15 after LB tests
-    for x in range(3):
+    for x in range(10):
         for index, _ in enumerate(web3_clients):
             logger.info(web3_clients[index].eth.getBlock('latest')['number'])
 

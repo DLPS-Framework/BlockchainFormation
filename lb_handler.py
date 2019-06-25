@@ -168,7 +168,6 @@ class LBHandler:
                         'ResourceRecordSet': {
                             'Name': route53_dns_name , #random number to avoid the same dns names (better idea someone?)
                             'Type':  'A',
-                            'TTL': 172800,
                             # 'ResourceRecords': [
                             #     {
                             #         'Value': 'string'
@@ -190,7 +189,6 @@ class LBHandler:
 
     def delete_dns_mapping(self):
         """delete route 53 record"""
-        self.logger.info("Trying to delete route53 record now")
 
         route53_client = self.session.client('route53', region_name=self.config['aws_region'])
 
@@ -209,12 +207,11 @@ class LBHandler:
                         'ResourceRecordSet': {
                             'Name': self.config['load_balancer_settings']['route53_dns'], #random number to avoid the same dns names (better idea someone?)
                             'Type':  'A',
-                            'TTL':172800,
-                             'ResourceRecords': [
-                                 {
-                                     'Value': "dualstack."+self.config['load_balancer_settings']['DNSName']
-                                 },
-                             ],
+                            'AliasTarget': {
+                                'HostedZoneId': self.config['load_balancer_settings']['CanonicalHostedZoneId'],
+                                'DNSName': "dualstack." + self.config['load_balancer_settings']['DNSName'],
+                                'EvaluateTargetHealth': False
+                            },
                         }
                     },
                 ]
@@ -242,6 +239,8 @@ class LBHandler:
         dlb_response = self.lb_client.delete_load_balancer(
             LoadBalancerArn=self.config['load_balancer_settings']['LoadBalancerArn']
         )
+
+        self.logger.info("Deleting route53 record now")
         self.delete_dns_mapping()
 
 
