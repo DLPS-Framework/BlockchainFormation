@@ -41,5 +41,8 @@
     "timestamp": "0x00",
     "gaslimit": "0x2fefd8",
     "num_acc": null
+  },
+  "load_balancer_settings": {
+    "add_loadbalancer": false
   }
 }

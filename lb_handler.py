@@ -12,6 +12,11 @@ class LBHandler:
     """
 
     def __init__(self, config, session):
+        """
+        Constructor
+        :param config: config containing all info for creating LB
+        :param session: boto3 session
+        """
 
         self.config = config
 
@@ -22,7 +27,6 @@ class LBHandler:
         ch.setLevel(logging.DEBUG)
         # create formatter and add it to the handlers
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        # fh.setFormatter(formatter)
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
 
@@ -30,12 +34,19 @@ class LBHandler:
 
     def creation_routine(self):
         """creates lb, target group and add VMs as targets
-        CreateLB -> Create TargetGroup -> create listeners -> create targets (-> Kill LB/TargetGroup) -> route53 DNS record"""
+        CreateLB -> Create TargetGroup -> create listeners -> create targets  -> route53 DNS record (-> Kill LB/TargetGroup)"""
         try:
             self.create_lb()
+            # Wait until LB is ready
+            self.logger.info("Waiting for the Load Balancer to be available")
+            waiter = self.lb_client.get_waiter('load_balancer_available')
+            waiter.wait(LoadBalancerArns=[self.config['load_balancer_settings']['LoadBalancerArn']])
             self.create_target_group()
             self.create_listener()
             self.register_targets()
+            self.logger.info("Waiting for the targets to be in service")
+            waiter = self.lb_client.get_waiter('target_in_service')
+            waiter.wait(TargetGroupArn=self.config['load_balancer_settings']['TargetGroupArn'])
             self.create_dns_mapping()
         except Exception:
             raise Exception
@@ -46,7 +57,7 @@ class LBHandler:
 
     def create_lb(self):
         """
-        Creates Load Balancer
+        Creates the Load Balancer itself
         :return:
         """
 
@@ -98,7 +109,7 @@ class LBHandler:
             HealthCheckProtocol='HTTP',
             #HealthCheckPort=str(self.config['load_balancer_settings']['lb_port']),
             HealthCheckEnabled=True,
-            HealthCheckPath='/',
+            HealthCheckPath='/api/health' if self.config['blockchain_type'] == 'parity' else '/',
             #HealthCheckIntervalSeconds=123,
             #HealthCheckTimeoutSeconds=123,
             #HealthyThresholdCount=123,
@@ -147,7 +158,7 @@ class LBHandler:
             Targets=[{'Id': id, 'Port': self.config['load_balancer_settings']['lb_port']} for id in self.config['instance_ids']]
         )
 
-        self.logger.debug(rt_response)
+        #self.logger.debug(rt_response)
 
     def create_dns_mapping(self):
         """Map LB DNS name to route 53 dns record"""
@@ -155,11 +166,10 @@ class LBHandler:
         route53_client = self.session.client('route53', region_name=self.config['aws_region'])
         #TODO: Make dns name work for multiple profiles, not just experimental
 
-        route53_dns_name = self.config['blockchain_type'] + "exp" + random.choice(string.ascii_letters)+".blockchainlab.eu-central-1.aws.cloud.bmw."
-        #Z1M5DW26LY28R0
+        route53_dns_name = self.config['blockchain_type'] + "exp" + random.choice(string.ascii_letters).lower() + random.choice(string.ascii_letters).lower() +".blockchainlab.eu-central-1.aws.cloud.bmw."
         #https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/route53.html#Route53.Client.change_resource_record_sets
         response = route53_client.change_resource_record_sets(
-            HostedZoneId=self.config['load_balancer_settings']['hosted_zone_id'],
+            HostedZoneId=self.config['load_balancer_settings']['lb_hosted_zone_id'],
             ChangeBatch={
                 'Comment': "Create DNS record for load balancer of " + self.config['blockchain_type'] + " experiment",
                 'Changes': [
@@ -185,20 +195,18 @@ class LBHandler:
         )
 
         self.config['load_balancer_settings']['route53_dns'] = route53_dns_name
-        self.logger.info(f"route53 dns address which you can hit with web3 etc.: {self.config['load_balancer_settings']['route53_dns']}")
+        self.logger.info(f"Route53 dns address which you can hit with web3 etc.: {self.config['load_balancer_settings']['route53_dns']}")
 
     def delete_dns_mapping(self):
         """delete route 53 record"""
 
         route53_client = self.session.client('route53', region_name=self.config['aws_region'])
 
-        # Z1M5DW26LY28R0
         #hosted_zone_id: zone id for creating new route 53 record
         #CanonicalHostedZoneId: zone id of created load balancer
 
-
         response = route53_client.change_resource_record_sets(
-            HostedZoneId=self.config['load_balancer_settings']['hosted_zone_id'],
+            HostedZoneId=self.config['load_balancer_settings']['lb_hosted_zone_id'],
             ChangeBatch={
                 'Comment': 'string',
                 'Changes': [

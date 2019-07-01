@@ -1,7 +1,7 @@
 # EC2 Automation Script
 
 ## Major Updates:
- * *June X 2019:* Added Application LoadBalancer Support
+ * *July 1 2019:* Added Application LoadBalancer Support (so far only for private VPCs)
  * *June 17 2019:* Added Parity Support
 
 ## General Information
@@ -73,6 +73,22 @@ Explanation of common flags (needed for all blockchains, not only e.g. geth):
                         define correct subnet/security)) [default=False]                   
   --proxy_user PROXY_USER, -pu PROXY_USER
                         enter q number for proxy; None for no proxy [default=qqdpoc0]
+```
+Explanation of Load Balancer flags:
+```
+  --add_loadbalancer ADD_LOADBALANCER, -add_lb ADD_LOADBALANCER
+                        True or False whether you want a application load
+                        balancer [default=False]  
+  --lb_subnet_ids LB_SUBNET_IDS, -_lb_st LB_SUBNET_IDS
+                        load balancer subnet ids (at least two from different
+                        availability zones) [default=['subnet-0ac7aeeec87150dd7','subnet-0af1a4489042c2d42']]  
+  --lb_security_group_ids LB_SECURITY_GROUP_IDS [LB_SECURITY_GROUP_IDS ...], -lb_sg LB_SECURITY_GROUP_IDS [LB_SECURITY_GROUP_IDS ...]
+                        security group, multiple values allowed [default=["sg-0db312b6f84d66889"]]  
+  --lb_port LB_PORT, -lb_p LB_PORT
+                        which port should load balancer listen AND hit [default=8545]  
+  --lb_hosted_zone_id HOSTED_ZONE_ID, -hzi HOSTED_ZONE_ID
+                        hosted zone id for route 53 [default=Z1M5DW26LY28R0] 
+
 ```
 
 Explanation of specific geth flags:

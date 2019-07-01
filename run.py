@@ -79,12 +79,12 @@ class ArgParser:
         parser.add_argument('--add_loadbalancer', '-add_lb',
                             help='True or False whether you want a application load balancer',
                             default=False, type=bool)
-        parser.add_argument('--lb_subnet_ids', '-_lb_st',
-                            help='load balancer subnet ids (at least two from different availability zones)', default=['subnet-0ac7aeeec87150dd7','subnet-0af1a4489042c2d42'])
+        parser.add_argument('--lb_subnet_ids', '-lb_st',
+                            help='load balancer subnet ids (at least two from different availability zones)', default=['subnet-0ac7aeeec87150dd7','subnet-0af1a4489042c2d42'], nargs='+')
         parser.add_argument('--lb_security_group_ids', '-lb_sg',
                             help='security group, multiple values allowed', default=["sg-0db312b6f84d66889"], nargs='+')
         parser.add_argument('--lb_port', '-lb_p', help='which port should load balancer listen AND hit', type=int, default=8545)
-        parser.add_argument('--hosted_zone_id', '-hzi',
+        parser.add_argument('--lb_hosted_zone_id', '-hzi',
                             help='hosted zone id for route 53', default='Z1M5DW26LY28R0')
 
 
@@ -236,7 +236,7 @@ class ArgParser:
                     "lb_subnet_ids": namespace_dict['lb_subnet_ids'],
                     "lb_security_group_ids": namespace_dict['lb_security_group_ids'],
                     "lb_port": namespace_dict['lb_port'],
-                    "hosted_zone_id": namespace_dict['hosted_zone_id']
+                    "lb_hosted_zone_id": namespace_dict['lb_hosted_zone_id']
                 }
         else:
             return \

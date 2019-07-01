@@ -295,15 +295,17 @@ class VMHandler:
 
             self._run_specific_startup(ssh_clients, scp_clients)
 
-            self.logger.info(f"Setup of all VMs/Nodes was successful, to terminate them run run.py terminate --config {self.config['exp_dir']}/config.json")
+
 
             if 'load_balancer_settings' in self.config and 'add_loadbalancer' in self.config['load_balancer_settings']:
+                # Load Balancer
                 if self.config['load_balancer_settings']['add_loadbalancer']:
-                    self.logger.info("Starting Load Balancer startup now")
-                    lb_handler = LBHandler(self.config,self.session)
+                    self.logger.info("Load Balancer option was chosen, starting the creation routine now")
+                    lb_handler = LBHandler(self.config, self.session)
                     lb_handler.creation_routine()
 
-
+            self.logger.info(
+                f"Setup of all VMs/Nodes was successful, to terminate them run run.py terminate --config {self.config['exp_dir']}/config.json")
         try:
             map(lambda client: client.close(), ssh_clients)
             map(lambda client: client.close(), scp_clients)
@@ -366,6 +368,7 @@ class VMHandler:
                 instance.stop()
 
         if 'load_balancer_settings' in self.config and 'add_loadbalancer' in self.config['load_balancer_settings']:
+            # Load Balancer
             if self.config['load_balancer_settings']['add_loadbalancer']:
                 self.logger.info("Starting Load Balancer termination now")
                 lb_handler = LBHandler(self.config, self.session)
