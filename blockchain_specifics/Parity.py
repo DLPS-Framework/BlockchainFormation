@@ -15,8 +15,8 @@ from ec2_automation.blockchain_specifics.Geth import natural_keys, get_relevant_
 
 
 ########## U G L Y  M O N K E Y P A T C H ##################
-#web3 does not support request retry function, therefore we inject it ourselves
-#https://stackoverflow.com/questions/23013220/max-retries-exceeded-with-url-in-requests/47475019#47475019
+# web3 does not support request retry function, therefore we inject it ourselves
+# https://stackoverflow.com/questions/23013220/max-retries-exceeded-with-url-in-requests/47475019#47475019
 import lru
 import requests
 from requests.packages.urllib3.util.retry import Retry
@@ -80,7 +80,7 @@ def verify_key(f, list):
     with open(f) as json_file:
         data = json.load(json_file)
         #print(list)
-        #to checksum somehow makes capital letters
+        # to checksum makes capital letters
         if Web3.toChecksumAddress(data['address']).lower() in [x.lower() for x in list]:
             return True
         else:
@@ -102,16 +102,16 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
     # os.mkdir((f"{path}/{self.config['exp_dir']}/enodes"))
     os.mkdir((f"{acc_path}/{config['exp_dir']}/parity_logs"))
 
-    #generate basic spec and node.toml
+    # generate basic spec and node.toml
     spec_dict = generate_spec(accounts=None, config=config)
     with open(f"{config['exp_dir']}/spec_basic.json", 'w') as outfile:
         json.dump(spec_dict, outfile, indent=4)
 
     with open(f"{config['exp_dir']}/node_basic.toml", 'w') as outfile:
-        #dummy signer accounts, gets replaced later anyway with real signers
+        # dummy signer accounts, gets replaced later anyway with real signers
         toml.dump(generate_node_dict("0x50fc1dd12e1534704a375f3c9acb14eb5f1f3469"), outfile)
 
-    #put spec and node on VM
+    # put spec and node on VM
     for index, _ in enumerate(config['ips']):
         scp_clients[index].put(f"{config['exp_dir']}/spec_basic.json", f"~/spec.json")
         scp_clients[index].put(f"{config['exp_dir']}/node_basic.toml", f"~/node.toml")
@@ -143,14 +143,14 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
 
             logger.info(f"{i}. try to install parity on node {index}")
 
-            #trying to install parity
+            # trying to install parity
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
                 "sudo bash -c  'bash <(curl https://get.parity.io -L) -r stable'")
             logger.debug(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
             logger.debug(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
 
 
-            #check if install was successful
+            # check if install was successful
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
                 "sudo bash -c  'command -v parity'")
             parity_install_check = ssh_stdout.read().decode('ascii')
@@ -186,7 +186,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
 
     acc_path = f"{config['exp_dir']}/accounts"
     file_list = os.listdir(acc_path)
-    #Sorting to get matching accounts to ip
+    # Sorting to get matching accounts to ip
     file_list.sort(key=natural_keys)
     for file in file_list:
         try:
@@ -199,7 +199,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
     all_accounts = [x.rstrip() for x in all_accounts]
     logger.info(all_accounts)
 
-    #which node gets which account unlocked
+    # which node gets which account unlocked
     account_mapping = get_relevant_account_mapping(all_accounts, config)
 
     logger.info(f"Relevant acc: {str(account_mapping)}")
@@ -309,8 +309,6 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
 
 
 
-    #Does sleep fix the Max retries exceeded with url?
-    #time.sleep(3)
     logger.info([enode for (ip, enode) in enodes])
 
     with open(f"{config['exp_dir']}/static-nodes.json", 'w') as outfile:

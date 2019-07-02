@@ -294,7 +294,7 @@ if __name__ == '__main__':
 
     logging.basicConfig(filename='ec2_automation.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    #src: https://docs.python.org/3/howto/logging-cookbook.html
+    # src: https://docs.python.org/3/howto/logging-cookbook.html
     # create logger with
     logger = logging.getLogger(__name__)
     # create console handler with a higher log level
@@ -310,7 +310,7 @@ if __name__ == '__main__':
 
     if namespace.goal == 'start':
 
-        #if no config file is given, a config file is created with the passed argpass commands
+        # if no config file is given, a config file is created with the passed argpass commands
         if namespace.config is not None:
             logger.info(f"Given config file ({namespace.config}) will be used")
             config = argparser.load_config(vars(namespace))

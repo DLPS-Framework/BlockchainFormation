@@ -14,8 +14,8 @@ from web3.middleware import geth_poa_middleware
 
 
 ########## U G L Y  M O N K E Y P A T C H ##################
-#web3 does not support request retry function, therefore we inject it ourselves
-#https://stackoverflow.com/questions/23013220/max-retries-exceeded-with-url-in-requests/47475019#47475019
+# web3 does not support request retry function, therefore we inject it ourselves
+# https://stackoverflow.com/questions/23013220/max-retries-exceeded-with-url-in-requests/47475019#47475019
 import lru
 import requests
 from requests.packages.urllib3.util.retry import Retry
@@ -88,7 +88,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
 
     acc_path = f"{config['exp_dir']}/accounts"
     file_list = os.listdir(acc_path)
-    #Sorting to get matching accounts to ip
+    # Sorting to get matching accounts to ip
     file_list.sort(key=natural_keys)
     for file in file_list:
         try:
@@ -101,7 +101,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
     all_accounts = [x.rstrip() for x in all_accounts]
     logger.info(all_accounts)
 
-    #which node gets which account unlocked
+    # which node gets which account unlocked
     account_mapping = get_relevant_account_mapping(all_accounts, config)
 
     logger.info(f"Relevant acc: {str(account_mapping)}")
@@ -112,7 +112,8 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
                 i = 0
             else:
                 i += 1
-            #create service file on each machine
+            # create service file on each machine
+            # --rpcvhosts='*' --rpccorsdomain='*' --wsorigins='*' neeeded for the load balancer to work
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
                 f"printf '%s\\n' '[Unit]' 'Description=Ethereum go client' '[Service]' 'Type=simple' "
                 f"'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 "
@@ -140,7 +141,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
 
 
         else:
-            #create service file on each machine
+            # create service file on each machine
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
                 f"printf '%s\\n' '[Unit]' 'Description=Ethereum go client' '[Service]' 'Type=simple' "
                 f"'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 "
@@ -159,10 +160,9 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
 
 
 
-    #create genesis json
-    #get unique accounts from mapping
+    # create genesis json
+    # get unique accounts from mapping
     genesis_dict = generate_genesis(accounts=list(set(itertools.chain(*account_mapping.values()))), config=config)
-    #self.pprnt.pprint(genesis_dict)
 
     with open(f"{config['exp_dir']}/genesis.json", 'w') as outfile:
         json.dump(genesis_dict, outfile, indent=4)
@@ -204,9 +204,6 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
         logger.info(f"Coinbase of {ip}: {web3_clients[index].eth.coinbase}")
 
 
-
-    #Does sleep fix the Max retries exceeded with url?
-    #time.sleep(3)
     logger.info([enode for (ip, enode) in enodes])
 
     with open(f"{config['exp_dir']}/static-nodes.json", 'w') as outfile:
@@ -240,20 +237,6 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
             web3_clients[index].middleware_stack.inject(geth_poa_middleware, layer=0)
         except:
             logger.info("Middleware already injected")
-    #
-    # logger.info("Tx from " + str(Web3.toChecksumAddress(all_accounts[0])) + " to " + str(
-    #     Web3.toChecksumAddress(all_accounts[1])))
-    # web3_clients[0].personal.sendTransaction({'from': Web3.toChecksumAddress(all_accounts[0]),
-    #                                           'to': Web3.toChecksumAddress(all_accounts[1]),
-    #                                           'value': web3_clients[0].toWei(23456, 'ether'), 'gas': '0x5208',
-    #                                           'gasPrice': web3_clients[0].toWei(5, 'gwei')}, "password")
-    # time.sleep(30)
-    # for index, ip in enumerate(config['ips']):
-    #     # web3 = Web3(Web3.HTTPProvider(f"http://{i.private_ip_address}:8545"))
-    #     for acc in all_accounts:
-    #         logger.info(str(Web3.toChecksumAddress(acc)) + ": " + str(
-    #             web3_clients[index].eth.getBalance(Web3.toChecksumAddress(acc))))
-    #     logger.info("---------------------------")
 
     logger.info("testing if new blocks are generated across all nodes; if latest block numbers are not changing over multiple cycles something is wrong")
     for x in range(10):
@@ -282,7 +265,7 @@ def get_relevant_account_mapping(accounts, config):
 
 def generate_genesis(accounts, config):
     """
-    #TODO make it more dynamic to user desires
+    # TODO make it more dynamic to user desires
     # https://web3py.readthedocs.io/en/stable/middleware.html#geth-style-proof-of-authority
     :param accounts: accounts to be added to signers/added some balance
     :return: genesis dictonary
@@ -332,9 +315,11 @@ def atoi(text):
     return int(text) if text.isdigit() else text
 
 def natural_keys(text):
-    '''
+    """
     alist.sort(key=natural_keys) sorts in human order
     http://nedbatchelder.com/blog/200712/human_sorting.html
     (See Toothy's implementation in the comments)
-    '''
+    :param text:
+    :return:
+    """
     return [ atoi(c) for c in re.split(r'(\d+)', text) ]

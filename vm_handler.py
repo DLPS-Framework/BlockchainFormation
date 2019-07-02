@@ -37,7 +37,7 @@ class VMHandler:
 
 
 
-        #no proxy if no proxy user
+        # no proxy if no proxy user
         if self.config['proxy_user'] != "None":
             password = getpass.getpass(prompt=f"Enter proxy password for {self.config['proxy_user']}:")
             os.environ["HTTPS_PROXY"] = f"http://{self.config['proxy_user']}:{password}@proxy.muc:8080"
@@ -62,7 +62,7 @@ class VMHandler:
         """creates the user data script depending on experiment type. The user data is built out of base script and specific script depending on experiment type"""
 
 
-        #If VM is hosted in public the VMs do not need the internal proxy settings
+        # If VM is hosted in public the VMs do not need the internal proxy settings
         if self.config['public_ip']:
             with open("UserDataScripts/EC2_instance_bootstrap_base_no_proxy.sh", 'r') as content_file:
                 user_data_base = content_file.read()
@@ -70,7 +70,7 @@ class VMHandler:
             with open("UserDataScripts/EC2_instance_bootstrap_base.sh", 'r') as content_file:
                 user_data_base = content_file.read()
 
-        # if blockchain type is base, no specific startup script is needed
+        # If blockchain type is base, no specific startup script is needed
         if self.config['blockchain_type'] == 'base':
 
             user_data_specific = "\n  # =======  Create success indicator at end of this script ==========\n  touch /var/log/user_data_success.log"
@@ -374,7 +374,7 @@ class VMHandler:
                 lb_handler = LBHandler(self.config, self.session)
                 lb_handler.shutdown_lb()
 
-        #calculate aws costs
+        # calculate aws costs
         self.aws_calculator.calculate_uptime_costs(self.config)
 
         for instance in ec2_instances:
