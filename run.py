@@ -3,7 +3,7 @@ import json
 import datetime, time
 import logging.config
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ec2_automation.vm_handler import VMHandler
+from vm_handler import VMHandler
 
 
 class ArgParser:

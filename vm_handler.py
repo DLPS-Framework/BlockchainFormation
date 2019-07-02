@@ -7,11 +7,11 @@ import paramiko
 from scp import SCPClient
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ec2_automation.cost_calculator import *
-from ec2_automation.cost_calculator import AWSCostCalculator
-from ec2_automation.blockchain_specifics.Geth import *
-from ec2_automation.blockchain_specifics.Parity import *
-from ec2_automation.lb_handler import *
+from cost_calculator import *
+from cost_calculator import AWSCostCalculator
+from blockchain_specifics.Geth import *
+from blockchain_specifics.Parity import *
+from lb_handler import *
 
 utc = pytz.utc
 
