@@ -333,7 +333,7 @@ class VMHandler:
                     self.logger.info(f"VMs are not being shutdown")
 
 
-        elif self.config['blockchain_type'] == 'base':
+        else:
             pass
 
 
@@ -392,8 +392,9 @@ class VMHandler:
         elif self.config['blockchain_type'] == 'parity':
             parity_shutdown(self.config, self.logger, ssh_clients, scp_clients)
 
-        elif self.config['blockchain_type'] == 'base':
+        else:
             pass
+
 
     @staticmethod
     def create_ssh_scp_clients(config):
