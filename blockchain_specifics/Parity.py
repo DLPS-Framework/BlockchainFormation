@@ -397,9 +397,21 @@ def generate_node_dict(signers, unlock=None, reserved_peers= False):
                 'rpc': {
                     'apis': ['web3', 'eth', 'net', 'personal', 'parity', 'parity_set', 'traces', 'rpc', 'parity_accounts'],
                     'port': 8545,
-                    'interface': '0.0.0.0'
+                    'interface': '0.0.0.0',
+                    'hosts': ['all'],
+                    'cors': ['all']
                        },
-                'websockets': {'port': 8450}
+                'websockets': {
+                    'port': 8450,
+                    'interface' : "0.0.0.0",
+                    'origins' : ["all"],
+                    'apis' : ["web3", "eth", "pubsub", "net", "parity", "parity_pubsub", "traces", "rpc", "shh", "shh_pubsub"],
+                    'hosts' : ["all"]
+    },
+                'footprint': {
+                    'pruning': 'archive'
+                }
+
          }
 
     if unlock is not None:

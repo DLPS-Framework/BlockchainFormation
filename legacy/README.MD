@@ -1,1 +1,1 @@
-# This directory contains legacy code that will be delted in the near future
+# This directory contains legacy code that will be deleted in the near future
