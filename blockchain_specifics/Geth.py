@@ -113,13 +113,14 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
             else:
                 i += 1
             # create service file on each machine
+            # --targetgaslimit config['geth_settings']['gaslimit']--targetgaslimit '30000000'
             # --rpcvhosts='*' --rpccorsdomain='*' --wsorigins='*' neeeded for the load balancer to work
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
                 f"printf '%s\\n' '[Unit]' 'Description=Ethereum go client' '[Service]' 'Type=simple' "
                 f"'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 "
                 f"--port 30310 --rpc --rpcvhosts='*' --rpccorsdomain='*' --wsorigins='*' --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool"
-                f" --nat=extip:{ip}  --syncmode full --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
-                f"--password /data/gethNetwork/passwords.txt --mine --etherbase {Web3.toChecksumAddress(account_mapping[ip][i])}'"
+                f" --nat=extip:{ip}  --syncmode full --allow-insecure-unlock --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
+                f"--password /data/gethNetwork/passwords.txt --mine  --etherbase {Web3.toChecksumAddress(account_mapping[ip][i])}'"
                 f" 'StandardOutput=file:/var/log/geth.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/geth.service")
             #logger.debug(ssh_stdout)
             #logger.debug(ssh_stderr)
@@ -127,8 +128,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
 
             # add the keyfiles from all relevant accounts to the VMs keystores
             keystore_files = [f for f in glob.glob(acc_path + "**/*/UTC--*", recursive=True) if
-                              re.match("(.*--.*--)(.*)", f).group(2) in list(
-                                  set(itertools.chain(*account_mapping.values())))]
+                              re.match("(.*--.*--)(.*)", f).group(2) in list(set(itertools.chain(*account_mapping.values())))]
             keystore_files.sort(key=natural_keys)
             logger.info(keystore_files)
             for index_top, ip in enumerate(config['ips']):
@@ -142,11 +142,12 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
 
         else:
             # create service file on each machine
+            # --targetgaslimit '30000000'
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
                 f"printf '%s\\n' '[Unit]' 'Description=Ethereum go client' '[Service]' 'Type=simple' "
                 f"'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 "
                 f"--port 30310 --rpc --rpcvhosts='*' --rpccorsdomain='*' --wsorigins='*' --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool"
-                f" --nat=extip:{ip}  --syncmode full --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
+                f" --nat=extip:{ip}  --syncmode full --allow-insecure-unlock --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
                 f"--password /data/gethNetwork/passwords.txt --mine ' 'StandardOutput=file:/var/log/geth.log' '[Install]' "
                 f"'WantedBy=default.target' > /etc/systemd/system/geth.service")
             #logger.debug(ssh_stdout)

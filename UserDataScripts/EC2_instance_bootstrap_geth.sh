@@ -19,7 +19,11 @@
   PWD="password"
   echo $PWD > password.txt
   ACC=$( geth --datadir node/ account new --password password.txt )
-  FORMATTED_ACC_ID=$(echo $ACC|cut -d "{" -f2 | cut -d "}" -f1 )
+  #FORMATTED_ACC_ID=$(echo $ACC|cut -d "{" -f2 | cut -d "}" -f1 )
+  #Geth 1.9.0 changed the format of account creation
+  re="(.*--.*--)([[:alnum:]]+)([[:space:]])"
+  if [[ $ACC =~ $re ]]; then echo ${BASH_REMATCH[2]}; fi
+  FORMATTED_ACC_ID=${BASH_REMATCH[2]}
   echo $FORMATTED_ACC_ID > account.txt
   echo $FORMATTED_ACC_ID
 
