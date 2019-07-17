@@ -292,7 +292,7 @@ if __name__ == '__main__':
     argparser = ArgParser()
     namespace = argparser.parser.parse_args()
 
-    logging.basicConfig(filename='ec2_automation.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(filename='logger.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     # src: https://docs.python.org/3/howto/logging-cookbook.html
     # create logger with

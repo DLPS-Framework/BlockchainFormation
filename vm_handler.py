@@ -1,16 +1,14 @@
 import sys, os, pprint
-import boto3
 import getpass
-import pytz, time
+import pytz
 from dateutil import parser
 import paramiko
 from scp import SCPClient
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from cost_calculator import *
 from cost_calculator import AWSCostCalculator
-from blockchain_specifics.Geth import *
-from blockchain_specifics.Parity import *
+from blockchain_specifics.Geth.Geth import *
+from blockchain_specifics.Parity.Parity import *
 from lb_handler import *
 
 utc = pytz.utc
@@ -74,7 +72,8 @@ class VMHandler:
         if self.config['blockchain_type'] == 'base':
 
             user_data_specific = "\n  # =======  Create success indicator at end of this script ==========\n  touch /var/log/user_data_success.log"
-            user_data_combined = user_data_base + user_data_specific
+            eof = "\nEOF"
+            user_data_combined = user_data_base + user_data_specific + eof
 
         else:
             with open(f"UserDataScripts/EC2_instance_bootstrap_{self.config['blockchain_type']}.sh", 'r') as content_file:
@@ -235,7 +234,8 @@ class VMHandler:
         path = os.getcwd()
         try:
 
-            os. makedirs((f"{path}/{self.config['exp_dir']}/user_data_logs"))
+            os.makedirs((f"{path}/{self.config['exp_dir']}/user_data_logs"))
+            os.makedirs((f"{path}/{self.config['exp_dir']}/setup"))
             self.logger.info(f"Created {str(self.config['exp_dir'])} directory")
         except OSError:
             self.logger.error("Creation of the directories failed")

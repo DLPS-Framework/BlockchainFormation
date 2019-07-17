@@ -73,7 +73,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
     :return:
     """
     acc_path = os.getcwd()
-    os.mkdir(f"{acc_path}/{config['exp_dir']}/accounts")
+    os.mkdir(f"{acc_path}/{config['exp_dir']}/setup/accounts")
     # enodes dir not needed anymore since enodes are saved in static-nodes file
     # os.mkdir((f"{path}/{self.config['exp_dir']}/enodes"))
     os.mkdir((f"{acc_path}/{config['exp_dir']}/geth_logs"))
@@ -81,12 +81,12 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
 
     for index, _ in enumerate(config['ips']):
         scp_clients[index].get("/data/gethNetwork/account.txt",
-                               f"{config['exp_dir']}/accounts/account_node_{index}.txt")
+                               f"{config['exp_dir']}/setup/accounts/account_node_{index}.txt")
         scp_clients[index].get("/data/keystore",
-                               f"{config['exp_dir']}/accounts/keystore_node_{index}", recursive=True)
+                               f"{config['exp_dir']}/setup/accounts/keystore_node_{index}", recursive=True)
     all_accounts = []
 
-    acc_path = f"{config['exp_dir']}/accounts"
+    acc_path = f"{config['exp_dir']}/setup/accounts"
     file_list = os.listdir(acc_path)
     # Sorting to get matching accounts to ip
     file_list.sort(key=natural_keys)
@@ -165,12 +165,12 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
     # get unique accounts from mapping
     genesis_dict = generate_genesis(accounts=list(set(itertools.chain(*account_mapping.values()))), config=config)
 
-    with open(f"{config['exp_dir']}/genesis.json", 'w') as outfile:
+    with open(f"{config['exp_dir']}/setup/genesis.json", 'w') as outfile:
         json.dump(genesis_dict, outfile, indent=4)
 
     # push genesis from local to remote VMs
     for index, _ in enumerate(config['ips']):
-        scp_clients[index].put(f"{config['exp_dir']}/genesis.json", f"~/genesis.json")
+        scp_clients[index].put(f"{config['exp_dir']}/setup/genesis.json", f"~/genesis.json")
 
         #TODO: How to log the execution of the ssh commands in a good way?
         # get account from all instances
@@ -207,7 +207,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info([enode for (ip, enode) in enodes])
 
-    with open(f"{config['exp_dir']}/static-nodes.json", 'w') as outfile:
+    with open(f"{config['exp_dir']}/setup/static-nodes.json", 'w') as outfile:
         json.dump([enode for (ip, enode) in enodes], outfile, indent=4)
 
     # distribute collected enodes over network

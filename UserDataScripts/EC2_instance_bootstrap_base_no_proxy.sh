@@ -3,6 +3,8 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
   # Settings -> enable tracing for commands
   set -x
 
+
+
   # hosts file fix for localhost naming issue with sudo commands on ubuntu 18
   #127.0.0.1 localhost ip-10-6-57-68
   export hsname=$(cat /etc/hostname)
@@ -31,6 +33,10 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
   DISKUUID=`sudo file -s /dev/xvdb | awk '{print $8}'`
   bash -c  "echo '$DISKUUID       /data   ext4    defaults,nofail        0       2' >> /etc/fstab"
   bash -c  "sudo chown -R ubuntu:ubuntu /data"
+
+  # switch to normal user
+  cat << EOF | su ubuntu
+  cd ~
 
   #echo "Initial Script finished, Starting more advanced installs now"
 

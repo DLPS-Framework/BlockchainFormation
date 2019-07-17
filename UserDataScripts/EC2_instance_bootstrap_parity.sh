@@ -9,13 +9,13 @@
 
   # ======== Parity Network Setup ======== (https://wiki.parity.io/Demo-PoA-tutorial)
   cd /data
-  mkdir parityNetwork
+  sudo mkdir parityNetwork
   cd parityNetwork
   PWD="password"
-  echo $PWD > password.txt
-  chown -R ubuntu /data/parityNetwork/
-  chown -R ubuntu /data
-  chown -R ubuntu /etc/systemd/system/
+  sudo bash -c "echo $PWD > password.txt"
+  sudo chown -R ubuntu /data/parityNetwork/
+  sudo chown -R ubuntu /data
+  sudo chown -R ubuntu /etc/systemd/system/
 
   #Parity Service
   bash -c  "sudo printf '%s\n' '[Unit]' 'Description=Parity Ethereum client' '[Service]' 'Type=simple' 'ExecStart=/usr/bin/parity --config /data/parityNetwork/node.toml ' 'StandardOutput=file:/var/log/parity.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/parity.service"
@@ -23,12 +23,14 @@
   #add log rotate
 
 
-  apt install chrony -y || apt install chrony -y || apt install chrony -y
-  echo 'server 169.254.169.123 prefer iburst' >> /etc/chrony/chrony.conf
-  /etc/init.d/chrony restart
+  sudo apt install chrony -y || apt install chrony -y || apt install chrony -y
+  sudo bash -c "echo 'server 169.254.169.123 prefer iburst' >> sudo /etc/chrony/chrony.conf"
+  sudo /etc/init.d/chrony restart
 
   # =======  Create success indicator at end of this script ==========
-  touch /var/log/user_data_success.log
+  sudo touch /var/log/user_data_success.log
+
+EOF
 
 
 

@@ -8,7 +8,7 @@ import web3
 from web3.middleware import geth_poa_middleware
 import toml
 
-from blockchain_specifics.Geth import natural_keys, get_relevant_account_mapping
+from blockchain_specifics.Geth.Geth import natural_keys, get_relevant_account_mapping
 
 #TODO: Make code more efficient and nicer
 #TODO: improve natural sorting stuff
@@ -97,24 +97,24 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
     """
 
     acc_path = os.getcwd()
-    os.mkdir(f"{acc_path}/{config['exp_dir']}/accounts")
+    os.mkdir(f"{acc_path}/{config['exp_dir']}/setup/accounts")
     # enodes dir not needed anymore since enodes are saved in static-nodes file
     # os.mkdir((f"{path}/{self.config['exp_dir']}/enodes"))
     os.mkdir((f"{acc_path}/{config['exp_dir']}/parity_logs"))
 
     # generate basic spec and node.toml
     spec_dict = generate_spec(accounts=None, config=config)
-    with open(f"{config['exp_dir']}/spec_basic.json", 'w') as outfile:
+    with open(f"{config['exp_dir']}/setup/spec_basic.json", 'w') as outfile:
         json.dump(spec_dict, outfile, indent=4)
 
-    with open(f"{config['exp_dir']}/node_basic.toml", 'w') as outfile:
+    with open(f"{config['exp_dir']}/setup/node_basic.toml", 'w') as outfile:
         # dummy signer accounts, gets replaced later anyway with real signers
         toml.dump(generate_node_dict("0x50fc1dd12e1534704a375f3c9acb14eb5f1f3469"), outfile)
 
     # put spec and node on VM
     for index, _ in enumerate(config['ips']):
-        scp_clients[index].put(f"{config['exp_dir']}/spec_basic.json", f"~/spec.json")
-        scp_clients[index].put(f"{config['exp_dir']}/node_basic.toml", f"~/node.toml")
+        scp_clients[index].put(f"{config['exp_dir']}/setup/spec_basic.json", f"~/spec.json")
+        scp_clients[index].put(f"{config['exp_dir']}/setup/node_basic.toml", f"~/node.toml")
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo mv ~/spec.json /data/parityNetwork/spec.json")
         logger.debug(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
@@ -177,14 +177,14 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
 
 
         scp_clients[index].get("/data/parityNetwork/account.txt",
-                               f"{config['exp_dir']}/accounts/account_node_{index}.txt")
+                               f"{config['exp_dir']}/setup/accounts/account_node_{index}.txt")
         scp_clients[index].get("/data/DemoPoA",
-                               f"{config['exp_dir']}/accounts/keystore_node_{index}", recursive=True)
+                               f"{config['exp_dir']}/setup/accounts/keystore_node_{index}", recursive=True)
 
         time.sleep(0.5)
     all_accounts = []
 
-    acc_path = f"{config['exp_dir']}/accounts"
+    acc_path = f"{config['exp_dir']}/setup/accounts"
     file_list = os.listdir(acc_path)
     # Sorting to get matching accounts to ip
     file_list.sort(key=natural_keys)
@@ -208,7 +208,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
     spec_dict = generate_spec(accounts=list(set(itertools.chain(*account_mapping.values()))), config=config)
     #self.pprnt.pprint(genesis_dict)
 
-    with open(f"{config['exp_dir']}/spec.json", 'w') as outfile:
+    with open(f"{config['exp_dir']}/setup/spec.json", 'w') as outfile:
         json.dump(spec_dict, outfile, indent=4)
 
 
@@ -222,7 +222,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
             i += 1
         # create service file on each machine
 
-        with open(f"{config['exp_dir']}/node_node_{index}.toml", 'w') as outfile:
+        with open(f"{config['exp_dir']}/setup/node_node_{index}.toml", 'w') as outfile:
 
             toml.dump(generate_node_dict(signers=Web3.toChecksumAddress(account_mapping[ip][i]),
                                          unlock=[Web3.toChecksumAddress(x).lower() for x in account_mapping[ip]]), outfile)
@@ -246,11 +246,11 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
             #logger.debug(ssh_stdout)
             #logger.debug(ssh_stderr)
 
-        scp_clients[index].put(f"{config['exp_dir']}/spec.json", f"~/spec.json")
+        scp_clients[index].put(f"{config['exp_dir']}/setup/spec.json", f"~/spec.json")
 
         # TODO: How to log the execution of the ssh commands in a good way?
         # get account from all instances
-        scp_clients[index].put(f"{config['exp_dir']}/spec.json", f"~/spec.json")
+        scp_clients[index].put(f"{config['exp_dir']}/setup/spec.json", f"~/spec.json")
 
         # replace spec and node on VMs
         # remove old node.toml
@@ -262,7 +262,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
             "sudo rm /data/parityNetwork/spec.json")
         #logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
         #logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
-        scp_clients[index].put(f"{config['exp_dir']}/node_node_{index}.toml", f"~/node.toml")
+        scp_clients[index].put(f"{config['exp_dir']}/setup/node_node_{index}.toml", f"~/node.toml")
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo mv ~/spec.json /data/parityNetwork/spec.json")
         #logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
@@ -311,25 +311,25 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info([enode for (ip, enode) in enodes])
 
-    with open(f"{config['exp_dir']}/static-nodes.json", 'w') as outfile:
+    with open(f"{config['exp_dir']}/setup/static-nodes.json", 'w') as outfile:
         json.dump([enode for (ip, enode) in enodes], outfile, indent=4)
 
     #FIXME: addReservedPeer(enode) not in current web3.py package
 
-    with open(f"{config['exp_dir']}/peers.txt", 'w') as filehandle:
+    with open(f"{config['exp_dir']}/setup/peers.txt", 'w') as filehandle:
         filehandle.writelines("%s\n" % enode for (ip, enode) in enodes)
 
 
 
     for index, ip in enumerate(config['ips']):
 
-        node_toml = toml.load(f"{config['exp_dir']}/node_node_{index}.toml")
+        node_toml = toml.load(f"{config['exp_dir']}/setup/node_node_{index}.toml")
         node_toml['network']['reserved_peers'] = "/data/parityNetwork/peers.txt"
-        with open(f"{config['exp_dir']}/node_node_{index}.toml", 'w') as outfile:
+        with open(f"{config['exp_dir']}/setup/node_node_{index}.toml", 'w') as outfile:
             toml.dump(node_toml, outfile)
 
-        scp_clients[index].put(f"{config['exp_dir']}/node_node_{index}.toml", f"~/node.toml")
-        scp_clients[index].put(f"{config['exp_dir']}/peers.txt", f"~/peers.txt")
+        scp_clients[index].put(f"{config['exp_dir']}/setup/node_node_{index}.toml", f"~/node.toml")
+        scp_clients[index].put(f"{config['exp_dir']}/setup/peers.txt", f"~/peers.txt")
 
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo mv ~/node.toml /data/parityNetwork/node.toml")
