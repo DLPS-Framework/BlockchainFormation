@@ -57,6 +57,8 @@ Explanation of common flags (needed for all blockchains, not only e.g. geth):
                         path to ssh key [default=~.ssh/blockchain]
   --image_id IMAGE_ID, -img_id IMAGE_ID
                         image ID for vm, note that images other than ubuntu are not supported by startup script [default=None (the script then pulls newest ubuntu 18 img)]
+  --image_version IMAGE_VERSION, -img_v IMAGE_VERSION
+                        ubuntu version (default = 18)                                               
   --VolumeSize VOLUMESIZE, -s VOLUMESIZE
                         amount of extra storage in GB: min 8, max 1024 [default=32]
   --KmsKeyId KMSKEYID, -KId KMSKEYID

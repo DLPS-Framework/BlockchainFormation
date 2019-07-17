@@ -60,6 +60,11 @@ class ArgParser:
         ArgParser._add_loadbalancer_args(parser_parity)
         ArgParser._add_parity_args(parser_parity)
 
+        # client parser
+        parser_client = subparsers.add_parser('client', help='Set up Clients')
+        parser_client.set_defaults(blockchain_type='client')
+        ArgParser._add_common_args(parser_client)
+
         # base parser
         parser_base = subparsers.add_parser('base',
                                             help='Base Setup, only starts VM & installs basic packages, no blockchain')
@@ -120,6 +125,8 @@ class ArgParser:
                                  help='path to  ssh key', default=os.path.expanduser('~/.ssh/blockchain'))
         parser.add_argument('--image_id', '-img_id',
                                        help='image ID for vm (default is to get newest ubuntu 18 build)', default=None)
+        parser.add_argument('--image_version', '-img_v',
+                            help='ubuntu version (default = 18)', default=18, type=int)
         parser.add_argument('--VolumeSize', '-s',
                                  help='amount of VolumeSize in GB: min 8, max 1024', type=ArgParser.storage_type, default=32)
         parser.add_argument('--KmsKeyId', '-KId',
@@ -172,7 +179,7 @@ class ArgParser:
             "image": {
                 "image_id": namespace_dict['image_id'],
                 "os": "ubuntu",
-                "version": 18,
+                "version": namespace_dict['image_version'],
                 "permissions": "default"
             },
             "subnet_id": namespace_dict['subnet_id'],
@@ -229,7 +236,7 @@ class ArgParser:
     def _add_load_balancer_config(namespace_dict):
 
 
-        if namespace_dict['add_loadbalancer']:
+        if 'add_loadbalancer' in namespace_dict and namespace_dict['add_loadbalancer']:
             return \
                 {
                     "add_loadbalancer": namespace_dict['add_loadbalancer'],
@@ -241,7 +248,7 @@ class ArgParser:
         else:
             return \
                 {
-                    "add_loadbalancer": namespace_dict['add_loadbalancer']
+                    "add_loadbalancer": False
                 }
 
     @staticmethod
