@@ -143,6 +143,8 @@ class ArgParser:
                             help='True or False if public IP is needed (remember to define correct subnet/security))', default=False, type=bool)
         parser.add_argument('--proxy_user', '-pu',
                                  help='enter q number for proxy; None for NO proxy ', default='qqdpoc0')
+        parser.add_argument('--exp_dir', '-exp_d',
+                            help='Directory where experiment folder is created (default=os.getcwd())', default=os.getcwd())
 
 
 
@@ -194,6 +196,7 @@ class ArgParser:
             "priv_key_path": os.path.expanduser(namespace_dict['priv_key_path']),
             "public_ip": namespace_dict['public_ip'],
             "tag_name": namespace_dict['tag_name'],
+            "exp_dir": namespace_dict["exp_dir"],
             "storage_settings": [
                 {
                     'DeviceName': "/dev/sdb",

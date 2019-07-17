@@ -71,7 +71,7 @@ class VMHandler:
         # If blockchain type is base, no specific startup script is needed
         if self.config['blockchain_type'] == 'base':
 
-            user_data_specific = "\n  # =======  Create success indicator at end of this script ==========\n  touch /var/log/user_data_success.log"
+            user_data_specific = "\n  # =======  Create success indicator at end of this script ==========\n  sudo touch /var/log/user_data_success.log"
             eof = "\nEOF"
             user_data_combined = user_data_base + user_data_specific + eof
 
@@ -230,12 +230,13 @@ class VMHandler:
 
         #create experiment directory structure
         self.config['launch_times'] = self.launch_times
-        self.config['exp_dir'] = f"experiments/exp_{st}_{self.config['blockchain_type']}"
-        path = os.getcwd()
+        #path = os.getcwd()
+        self.config['exp_dir'] = f"{self.config['exp_dir']}/experiments/exp_{st}_{self.config['blockchain_type']}"
+
         try:
 
-            os.makedirs((f"{path}/{self.config['exp_dir']}/user_data_logs"))
-            os.makedirs((f"{path}/{self.config['exp_dir']}/setup"))
+            os.makedirs((f"{self.config['exp_dir']}/user_data_logs"))
+            os.makedirs((f"/{self.config['exp_dir']}/setup"))
             self.logger.info(f"Created {str(self.config['exp_dir'])} directory")
         except OSError:
             self.logger.error("Creation of the directories failed")

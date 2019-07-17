@@ -1,4 +1,6 @@
+EOF
 
+  sudo su
   #only contains stuff needed for geth, base installation are in base shell script
   # ======== Install Ethereum Parity ========
   # try http for get parity instead of https
@@ -30,7 +32,7 @@
   # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log
 
-EOF
+
 
 
 

@@ -96,11 +96,11 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
     :return:
     """
 
-    acc_path = os.getcwd()
-    os.mkdir(f"{acc_path}/{config['exp_dir']}/setup/accounts")
+    #acc_path = os.getcwd()
+    os.mkdir(f"{config['exp_dir']}/setup/accounts")
     # enodes dir not needed anymore since enodes are saved in static-nodes file
     # os.mkdir((f"{path}/{self.config['exp_dir']}/enodes"))
-    os.mkdir((f"{acc_path}/{config['exp_dir']}/parity_logs"))
+    os.mkdir((f"{config['exp_dir']}/parity_logs"))
 
     # generate basic spec and node.toml
     spec_dict = generate_spec(accounts=None, config=config)

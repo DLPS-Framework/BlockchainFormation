@@ -66,6 +66,9 @@ Explanation of common flags (needed for all blockchains, not only e.g. geth):
   --profile PROFILE, -p PROFILE
                         name of aws profile [default=block_exp]
   --tag_name TAG_NAME, -t TAG_NAME     tag for aws [default=blockchain_experiment]
+  --exp_dir EXP_DIR, -exp_d EXP_DIR
+                        Directory where experiment folder is created
+                        (default=os.getcwd())
   --subnet_id SUBNET_ID, -st SUBNET_ID
                         subnet id [default=subnet-0ac7aeeec87150dd7]
   --security_group_id SECURITY_GROUP_ID [SECURITY_GROUP_ID ...], -sg SECURITY_GROUP_ID [SECURITY_GROUP_ID ...]

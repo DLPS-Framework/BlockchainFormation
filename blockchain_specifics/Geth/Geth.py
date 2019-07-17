@@ -72,11 +72,11 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
     Runs the geth specific startup script
     :return:
     """
-    acc_path = os.getcwd()
-    os.mkdir(f"{acc_path}/{config['exp_dir']}/setup/accounts")
+    #acc_path = os.getcwd()
+    os.mkdir(f"{config['exp_dir']}/setup/accounts")
     # enodes dir not needed anymore since enodes are saved in static-nodes file
     # os.mkdir((f"{path}/{self.config['exp_dir']}/enodes"))
-    os.mkdir((f"{acc_path}/{config['exp_dir']}/geth_logs"))
+    os.mkdir((f"{config['exp_dir']}/geth_logs"))
 
 
     for index, _ in enumerate(config['ips']):
