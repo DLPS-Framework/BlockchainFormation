@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from cost_calculator import AWSCostCalculator
 from blockchain_specifics.Geth.Geth import *
 from blockchain_specifics.Parity.Parity import *
+from blockchain_specifics.Client.Client import *
 from lb_handler import *
 
 utc = pytz.utc
@@ -332,7 +333,8 @@ class VMHandler:
 
                 else:
                     self.logger.info(f"VMs are not being shutdown")
-
+        if self.config['blockchain_type'] == 'client':
+            client_startup(self.config, self.logger, ssh_clients, scp_clients)
 
         else:
             pass

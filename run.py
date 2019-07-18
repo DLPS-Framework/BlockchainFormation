@@ -64,6 +64,7 @@ class ArgParser:
         parser_client = subparsers.add_parser('client', help='Set up Clients')
         parser_client.set_defaults(blockchain_type='client')
         ArgParser._add_common_args(parser_client)
+        ArgParser._add_client_args(parser_client)
 
         # base parser
         parser_base = subparsers.add_parser('base',
@@ -166,6 +167,10 @@ class ArgParser:
                             default=None)
         parser.add_argument('--gaslimit', '-gl', help='specify gasLimit', default="0x5B8D80")
         parser.add_argument('--balance', '-bal', help='specify start balance of account', default="0x200000000000000000000000000000000000000000000000000000000000000")
+
+    @staticmethod
+    def _add_client_args(parser):
+        parser.add_argument('--target_network_conf', '-gl', help='Config where client IPs are attached to', default=None)
 
 
     def create_config(self, namespace_dict, blockchain_type):
@@ -277,6 +282,10 @@ class ArgParser:
                 "gaslimit": namespace_dict['gaslimit'],
                 "balance": namespace_dict['balance']
 
+            }
+        elif blockchain_type =="client":
+            return {
+                "target_network_conf": namespace_dict["target_network_conf"]
             }
 
 
