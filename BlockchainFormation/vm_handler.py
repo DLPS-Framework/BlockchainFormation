@@ -22,13 +22,14 @@ class VMHandler:
     def __init__(self, config):
 
         self.logger = logging.getLogger(__name__)
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-        # create formatter and add it to the handlers
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        # fh.setFormatter(formatter)
-        ch.setFormatter(formatter)
-        self.logger.addHandler(ch)
+        if not self.logger.handlers:
+            ch = logging.StreamHandler()
+            ch.setLevel(logging.DEBUG)
+            # create formatter and add it to the handlers
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            # fh.setFormatter(formatter)
+            ch.setFormatter(formatter)
+            self.logger.addHandler(ch)
 
         self.config = config
 
@@ -399,7 +400,8 @@ class VMHandler:
         else:
             pass
 
-
+    def get_config_path(self):
+        return f"{self.config['exp_dir']}/config.json"
     @staticmethod
     def create_ssh_scp_clients(config):
         """
