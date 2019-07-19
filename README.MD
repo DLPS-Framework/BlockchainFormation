@@ -174,3 +174,24 @@ To add another blockchain 4 things need to be added:
 * pytz     
 * numpy 
 * toml
+
+# Install BlockFormation via pip
+
+The first step is to generate distribution packages for the package:
+(you need to be in the directory of setup.py)
+```
+python setup.py sdist bdist_wheel
+
+```
+If this was successful you can install the package with pip. The following is a example if you want to install a pip package for your anaconda env:
+
+
+```
+/anaconda3/envs/aws_automisation/bin/pip install dist/BlockchainFormation-0.0.1.tar.gz 
+
+```
+
+Now you can import the modules like vm_handler:
+```
+from BlockchainFormation import vm_handler
+```

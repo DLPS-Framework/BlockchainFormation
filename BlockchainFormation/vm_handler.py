@@ -6,11 +6,11 @@ import paramiko
 from scp import SCPClient
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from cost_calculator import AWSCostCalculator
-from blockchain_specifics.Geth.Geth import *
-from blockchain_specifics.Parity.Parity import *
-from blockchain_specifics.Client.Client import *
-from lb_handler import *
+from BlockchainFormation.cost_calculator import AWSCostCalculator
+from BlockchainFormation.blockchain_specifics.Geth.Geth import *
+from BlockchainFormation.blockchain_specifics.Parity.Parity import *
+from BlockchainFormation.blockchain_specifics.Client.Client import *
+from BlockchainFormation.lb_handler import *
 
 utc = pytz.utc
 
@@ -60,13 +60,14 @@ class VMHandler:
     def create_user_data(self):
         """creates the user data script depending on experiment type. The user data is built out of base script and specific script depending on experiment type"""
 
+        dir_name = os.path.dirname(os.path.realpath(__file__))
 
         # If VM is hosted in public the VMs do not need the internal proxy settings
         if self.config['public_ip']:
-            with open("UserDataScripts/EC2_instance_bootstrap_base_no_proxy.sh", 'r') as content_file:
+            with open(f"{dir_name}/UserDataScripts/EC2_instance_bootstrap_base_no_proxy.sh", 'r') as content_file:
                 user_data_base = content_file.read()
         else:
-            with open("UserDataScripts/EC2_instance_bootstrap_base.sh", 'r') as content_file:
+            with open(f"{dir_name}/UserDataScripts/EC2_instance_bootstrap_base.sh", 'r') as content_file:
                 user_data_base = content_file.read()
 
         # If blockchain type is base, no specific startup script is needed
@@ -77,7 +78,7 @@ class VMHandler:
             user_data_combined = user_data_base + user_data_specific + eof
 
         else:
-            with open(f"UserDataScripts/EC2_instance_bootstrap_{self.config['blockchain_type']}.sh", 'r') as content_file:
+            with open(f"{dir_name}/UserDataScripts/EC2_instance_bootstrap_{self.config['blockchain_type']}.sh", 'r') as content_file:
                 user_data_specific = content_file.read()
 
             user_data_combined = user_data_base + user_data_specific

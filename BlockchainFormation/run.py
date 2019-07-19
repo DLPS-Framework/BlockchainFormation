@@ -3,7 +3,7 @@ import json
 import datetime, time
 import logging.config
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from vm_handler import VMHandler
+from BlockchainFormation.vm_handler import VMHandler
 
 
 class ArgParser:
@@ -313,7 +313,7 @@ if __name__ == '__main__':
 
     logging.basicConfig(filename='logger.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    # src: https://docs.python.org/3/howto/logging-cookbook.html
+    # BlockchainFormation: https://docs.python.org/3/howto/logging-cookbook.html
     # create logger with
     logger = logging.getLogger(__name__)
     # create console handler with a higher log level

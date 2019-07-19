@@ -8,7 +8,7 @@ import web3
 from web3.middleware import geth_poa_middleware
 import toml
 
-from blockchain_specifics.Geth.Geth import natural_keys, get_relevant_account_mapping
+from BlockchainFormation.blockchain_specifics.Geth.Geth import natural_keys, get_relevant_account_mapping
 
 #TODO: Make code more efficient and nicer
 #TODO: improve natural sorting stuff
