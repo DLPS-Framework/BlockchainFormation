@@ -210,7 +210,9 @@ class VMHandler:
         self.config['ips'] = ips
         self.config['vpc_ids'] = vpc_ids
         if self.config['public_ip']:
-            self.config['public_ips'] = public_ips
+            self.config['ips'] = public_ips
+            self.config['pub_ips'] = public_ips
+            self.config['priv_ips'] = ips
         self.config['instance_ids'] = [instance.id for instance in self.ec2_instances]
 
         # Give launched instances tag with time/type of experiment/number of node
@@ -275,9 +277,9 @@ class VMHandler:
                     try:
                         sftp.stat('/var/log/user_data_success.log')
                         status_flags[index] = True
-                        self.logger.info(f"{ips[index]} is ready")
+                        self.logger.info(f"{self.config['ips'][index]} is ready")
                     except IOError:
-                        self.logger.info(f"{ips[index]} not ready")
+                        self.logger.info(f"{self.config['ips'][index]} not ready")
 
         if (False in status_flags):
             self.logger.error('Boot up NOT successful')
@@ -428,7 +430,7 @@ class VMHandler:
         for index, ip in enumerate(config['ips']):
             if config['public_ip']:
                 #use public ip if exists, else it wont work
-                ip = config['public_ips'][index]
+                ip = config['pub_ips'][index]
             ssh_clients.append(paramiko.SSHClient())
             ssh_clients[index].set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh_clients[index].connect(hostname=ip, username=config['user'], pkey=ssh_key_priv)

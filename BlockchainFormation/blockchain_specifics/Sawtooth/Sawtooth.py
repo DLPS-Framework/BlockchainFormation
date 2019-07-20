@@ -23,11 +23,11 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
     """
 
     logger.info("Creating directories for saving data and logs locally")
-    os.mkdir(f"/home/user/ec2_automation/automation/{config['exp_dir']}/sawtooth_logs")
+    os.mkdir(f"{config['exp_dir']}/sawtooth_logs")
 
     logger.info("Changing permissions of log directory such that logs can be pulled via scp later")
     for index, _ in enumerate(config['priv_ips']):
-        os.mkdir(f"/home/user/ec2_automation/automation/{config['exp_dir']}/sawtooth_logs/sawtooth_logs_node_{index}")
+        os.mkdir(f"{config['exp_dir']}/sawtooth_logs/sawtooth_logs_node_{index}")
         stdin, stdout, stderr = ssh_clients[index].exec_command("sudo chown -R sawtooth:ubuntu /var/log/sawtooth")
         # logger.debug("".join(stdout.readlines()))
         # logger.debug("".join(stderr.readlines()))
@@ -208,6 +208,7 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info("Done")
 
+""" THIS IS CLIENT-STUFF
     # setting up api stuff on first node
     scp_clients[0].put("/home/user/ec2_automation/blockchain_specifics/Sawtooth/api", "/home/ubuntu", recursive=True)
     stdin, stdout, stderr = ssh_clients[0].exec_commnand("nvm install node")
@@ -224,3 +225,4 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
     logger.debug(stderr.readlines())
 
     logger.info("Done")
+"""

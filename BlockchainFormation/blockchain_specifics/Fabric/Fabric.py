@@ -23,9 +23,8 @@ def fabric_shutdown(config, logger, ssh_clients, scp_clients):
 
 def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     # create directories for the fabric logs and all the setup data (crypto-stuff, config files and scripts which are exchanged with the VMs)
-    os.mkdir(f"/home/user/ec2_automation/automation/{config['exp_dir']}/fabric_logs")
-    os.mkdir(f"/home/user/ec2_automation/automation/{config['exp_dir']}/setup")
-    os.mkdir(f"/home/user/ec2_automation/automation/{config['exp_dir']}/api")
+    os.mkdir(f"{config['exp_dir']}/fabric_logs")
+    os.mkdir(f"{config['exp_dir']}/api")
 
     # Rebooting all machines
     ssh_clients, scp_clients = reboot_all(ec2_instances, config, logger, ssh_clients, scp_clients)
@@ -92,12 +91,12 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         "rm -f /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/configtx.yaml")
     logger.debug("".join(stdout.readlines()))
     logger.debug("".join(stderr.readlines()))
-    scp_clients[0].put(f"/home/user/ec2_automation/automation/{config['exp_dir']}/setup/configtx.yaml",
+    scp_clients[0].put(f"{config['exp_dir']}/setup/configtx.yaml",
                        "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/configtx.yaml")
 
     logger.info("Creating bmhn.sh and pushing it to first node")
     os.system(
-        f"cp /home/user/ec2_automation/blockchain_specifics/Fabric/setup/bmhn.sh /home/user/ec2_automation/automation/{config['exp_dir']}/setup/bmhn.sh")
+        f"cp blockchain_specifics/Fabric/setup/bmhn.sh {config['exp_dir']}/setup/bmhn.sh")
     stdin, stdout, stderr = ssh_clients[0].exec_command(
         "rm -f /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/bmhn.sh")
     logger.debug("".join(stdout.readlines()))
@@ -141,14 +140,14 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
     logger.info("Pushing chaincode to all nodes")
     for index, _ in enumerate(config['pub_ips']):
-        scp_clients[index].put("/home/user/ec2_automation/blockchain_specifics/Fabric/chaincode/benchmarking",
+        scp_clients[index].put("blockchain_specifics/Fabric/chaincode/benchmarking",
                                "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode",
                                recursive=True)
 
     # Starting Certificate Authorities
     peer_orgs_secret_keys = []
     logger.info(f"Starting Certificate Authorities")
-    for org in range(1, config['org_count'] + 1):
+    for org in range(1, config['fabric_specifics']['org_count'] + 1):
         # get the names of the secret keys for each peer Organizations
         stdin, stdout, stderr = ssh_clients[org - 1].exec_command(
             f"ls -a /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/peerOrganizations/org{org}.example.com/ca")
@@ -162,7 +161,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         # set up configurations of Certificate Authorities like with docker compose
         string_ca_base = f" --network={my_net} --name ca.org{org}.example.com -p 7054:7054"
         string_ca_base = string_ca_base + f" -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE={my_net}"
-        string_ca_base = string_ca_base + f" -e FABRIC_LOGGING_SPEC={config['log_level']}"
+        string_ca_base = string_ca_base + f" -e FABRIC_LOGGING_SPEC={config['fabric_specifics']['log_level']}"
 
         string_ca_ca = ""
         string_ca_ca = string_ca_ca + f" -e FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server"
@@ -171,7 +170,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         string_ca_ca = string_ca_ca + f" -e FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/{peer_orgs_secret_keys[org - 1]}"
 
         string_ca_tls = ""
-        if config['tls_enabled'] == 1:
+        if config['fabric_specifics']['tls_enabled'] == 1:
             logger.debug("    --> TLS environment variables set")
             string_ca_tls = string_ca_tls + f" -e FABRIC_CA_SERVER_TLS_ENABLED=true"
             string_ca_tls = string_ca_tls + f" -e FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.org{org}.example.com-cert.pem"
@@ -190,11 +189,11 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
     # starting orderer
     logger.info(f"Starting orderers")
-    for orderer in range(1, config['orderer_count'] + 1):
+    for orderer in range(1, config['fabric_specifics']['orderer_count'] + 1):
         # set up configurations of orderers like with docker compose
         string_orderer_base = ""
         string_orderer_base = string_orderer_base + f" --network={my_net} --name orderer{orderer}.example.com -p 7050:7050"
-        string_orderer_base = string_orderer_base + f" -e FABRIC_LOGGING_SPEC={config['log_level']}"
+        string_orderer_base = string_orderer_base + f" -e FABRIC_LOGGING_SPEC={config['fabric_specifics']['log_level']}"
         # string_orderer_base = string_orderer_base + f" -e ORDERER_HOME=/var/hyperledger/orderer"
         string_orderer_base = string_orderer_base + f" -e ORDERER_GENERAL_LISTENADDRESS=0.0.0.0"
         string_orderer_base = string_orderer_base + f" -e ORDERER_GENERAL_LISTENPORT=7050"
@@ -205,7 +204,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         string_orderer_base = string_orderer_base + f" -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE={my_net}"
 
         string_orderer_tls = ""
-        if config['tls_enabled'] == 1:
+        if config['fabric_specifics']['tls_enabled'] == 1:
             logger.debug("    --> TLS environment variables set")
             string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_TLS_ENABLED=true"
             string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key"
@@ -221,20 +220,20 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         string_orderer_v = string_orderer_v + f" -w /opt/gopath/src/github.com/hyperledger/fabric"
 
         # Starting the orderers
-        logger.debug(f" - Starting orderer{orderer} on {config['pub_ips'][config['org_count'] - 1 + orderer]}")
-        channel = ssh_clients[config['org_count'] + orderer - 1].get_transport().open_session()
+        logger.debug(f" - Starting orderer{orderer} on {config['pub_ips'][config['fabric_specifics']['org_count'] - 1 + orderer]}")
+        channel = ssh_clients[config['fabric_specifics']['org_count'] + orderer - 1].get_transport().open_session()
         channel.exec_command(
             f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_orderer_base + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /home/ubuntu/orderer{orderer}.log)")
-        ssh_clients[config['org_count'] + orderer - 1].exec_command(
+        ssh_clients[config['fabric_specifics']['org_count'] + orderer - 1].exec_command(
             f"echo \"docker run -it --rm" + string_orderer_v + " hyperledger/fabric-tools /bin/bash\" >> cli.sh")
 
     link_string = ""
     # starting peers and databases
     logger.info(f"Starting databases and peers")
-    for org in range(1, config['org_count'] + 1):
+    for org in range(1, config['fabric_specifics']['org_count'] + 1):
         for peer, ip in enumerate(config['pub_ips'][
-                                  config['org_count'] + config['orderer_count'] + config['peer_count'] * (org - 1):
-                                  config['org_count'] + config['orderer_count'] + config['peer_count'] * org]):
+                                  config['fabric_specifics']['org_count'] + config['fabric_specifics']['orderer_count'] + config['fabric_specifics']['peer_count'] * (org - 1):
+                                  config['fabric_specifics']['org_count'] + config['fabric_specifics']['orderer_count'] + config['fabric_specifics']['peer_count'] * org]):
             # set up configuration of database like with docker compose
             string_database_base = ""
             string_database_base = string_database_base + f" --network='{my_net}' --name couchdb{peer}.org{org} -p 5984:5984"
@@ -243,19 +242,19 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
             # Starting the couchdbs
             logger.debug(f" - Starting database couchdb{peer}.org{org} on {ip}")
-            channel = ssh_clients[config['org_count'] + config['orderer_count'] + config['peer_count'] * (
+            channel = ssh_clients[config['fabric_specifics']['org_count'] + config['fabric_specifics']['orderer_count'] + config['fabric_specifics']['peer_count'] * (
                         org - 1) + peer].get_transport().open_session()
             channel.exec_command(
                 f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_database_base + f" hyperledger/fabric-couchdb &> /home/ubuntu/couchdb{peer}.org{org}.log)")
 
             # Setting up configuration of peer like with docker compose
 
-            for orderer in range(1, config['orderer_count'] + 1):
+            for orderer in range(1, config['fabric_specifics']['orderer_count'] + 1):
                 link_string = link_string + f" --link orderer{orderer}.example.com:orderer{orderer}.example.com"
 
             for peer_org2 in range(1, org + 1):
                 if peer_org2 < org:
-                    end = config['org_count']
+                    end = config['fabric_specifics']['org_count']
                 else:
                     end = peer
 
@@ -274,8 +273,8 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
             string_peer_database = string_peer_database + f" -e CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD="
 
             string_peer_core = ""
-            string_peer_core = string_peer_core + f" -e FABRIC_LOGGING_SPEC={config['log_level']}"
-            string_peer_core = string_peer_core + f" -e CORE_LOGGING_MSP={config['log_level']}"
+            string_peer_core = string_peer_core + f" -e FABRIC_LOGGING_SPEC={config['fabric_specifics']['log_level']}"
+            string_peer_core = string_peer_core + f" -e CORE_LOGGING_MSP={config['fabric_specifics']['log_level']}"
             string_peer_core = string_peer_core + f" -e CORE_PEER_ADDRESSAUTODETECT=true"
             string_peer_core = string_peer_core + f" -e CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock"
             string_peer_core = string_peer_core + f" -e CORE_PEER_NETWORKID=peer{peer}.org{org}.example.com"
@@ -295,7 +294,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
                 string_peer_core = string_peer_core + f" -e CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org{org}.example.com:7051"
 
             string_peer_tls = ""
-            if config['tls_enabled'] == 1:
+            if config['fabric_specifics']['tls_enabled'] == 1:
                 logger.debug("    --> TLS environment variables set")
                 string_peer_tls = string_peer_tls + f" -e CORE_PEER_TLS_ENABLED=true"
                 string_peer_tls = string_peer_tls + f" -e CORE_PEER_TLS_CLIENTAUTHREQUIRED=false"
@@ -311,12 +310,12 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
             # Starting the peers
             logger.debug(f" - Starting peer{peer}.org{org} on {ip}")
-            channel = ssh_clients[config['org_count'] + config['orderer_count'] + config['peer_count'] * (
+            channel = ssh_clients[config['fabric_specifics']['org_count'] + config['fabric_specifics']['orderer_count'] + config['fabric_specifics']['peer_count'] * (
                         org - 1) + peer].get_transport().open_session()
             channel.exec_command(
                 f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_peer_base + string_peer_link + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + f" hyperledger/fabric-peer peer node start &> /home/ubuntu/peer{peer}.org{org}.log)")
             ssh_clients[
-                config['org_count'] + config['orderer_count'] + config['peer_count'] * (org - 1) + peer].exec_command(
+                config['fabric_specifics']['org_count'] + config['fabric_specifics']['orderer_count'] + config['fabric_specifics']['peer_count'] * (org - 1) + peer].exec_command(
                 f"echo \"docker run -it --rm" + string_peer_v + " hyperledger/fabric-tools /bin/bash\" >> cli.sh")
 
     # Waiting for a few seconds until all has started
@@ -330,14 +329,14 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         "rm -f /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/script.sh")
     logger.debug(stdout.readlines())
     logger.debug(stdout.readlines())
-    scp_clients[config["vm_count"] - 1].put(f"/home/user/ec2_automation/automation/{config['exp_dir']}/setup/script.sh",
+    scp_clients[config["vm_count"] - 1].put(f"{config['exp_dir']}/setup/script.sh",
                                             "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/script.sh")
 
     # Setting up configuration of cli like with docker compose
     string_cli_base = ""
     string_cli_base = string_cli_base + f" --network='{my_net}' --name cli -p 12051:7051 -p 12053:7053"
     string_cli_base = string_cli_base + f" -e GOPATH=/opt/gopath"
-    string_cli_base = string_cli_base + f" -e FABRIC_LOGGING_SPEC={config['log_level']}"
+    string_cli_base = string_cli_base + f" -e FABRIC_LOGGING_SPEC={config['fabric_specifics']['log_level']}"
 
     string_cli_link = link_string
     string_cli_link = string_cli_link + f" --link peer{peer}.org{org}.example.com:peer{peer}.org{org}.example.com"
@@ -352,7 +351,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     string_cli_core = string_cli_core + f" -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE={my_net}"
 
     string_cli_tls = ""
-    if config['tls_enabled'] == 1:
+    if config['fabric_specifics']['tls_enabled'] == 1:
         logger.debug("    --> TLS environment variables set")
         string_cli_tls = string_cli_tls + f" -e CORE_PEER_TLS_ENABLED=true"
         string_cli_tls = string_cli_tls + f" -e CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org{org}.example.com/peers/peer{peer}.org{org}.example.com/tls/server.crt"
@@ -378,7 +377,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     ssh_clients[config['vm_count'] - 1].exec_command(
         f"echo \"docker run -it --rm" + string_cli_base + string_cli_link + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash\" >> cli2.sh")
     scp_clients[config['vm_count'] - 1].get(f"/home/ubuntu/cli.sh",
-                                            f"/home/user/ec2_automation/automation/{config['exp_dir']}/setup")
+                                            f"{config['exp_dir']}/setup")
 
     logger.debug("".join(stderr.readlines()))
 
@@ -396,21 +395,22 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     logger.debug("Writing replacement script")
     write_replacement(config)
     logger.debug("Finalizing network.json")
-    os.system(f"bash /home/user/ec2_automation/automation/{config['exp_dir']}/api/replacement.sh")
+    os.system(f"bash {config['exp_dir']}/api/replacement.sh")
     logger.debug("Copying User-specific credentials")
-    os.system(f"mkdir /home/user/ec2_automation/automation/{config['exp_dir']}/api/creds")
-    for org in range(1, config['org_count'] + 1):
-        os.system(f"cp -r /home/user/ec2_automation/automation/{config['exp_dir']}/setup/crypto-config/peerOrganizations/org{org}.example.com/users/User1@org{org}.example.com /home/user/ec2_automation/automation/{config['exp_dir']}/api/creds")
+    os.system(f"mkdir {config['exp_dir']}/api/creds")
+    for org in range(1, config['fabric_specifics']['org_count'] + 1):
+        os.system(f"cp -r {config['exp_dir']}/setup/crypto-config/peerOrganizations/org{org}.example.com/users/User1@org{org}.example.com {config['exp_dir']}/api/creds")
 
     logger.debug("Setting up wallet")
     os.system(
-        f"cp /home/user/ec2_automation/blockchain_specifics/Fabric/api/* /home/user/ec2_automation/automation/{config['exp_dir']}/api")
+        f"cp blockchain_specifics/Fabric/api/* {config['exp_dir']}/api")
 
+""" THIS IS CLIENT-STUFF
     # push api-stuff to ca-nodes
-    for org in range(1, config['org_count'] + 1):
-        scp_clients[org - 1].put(f"/home/user/ec2_automation/automation/{config['exp_dir']}/api", "/home/ubuntu",
+    for org in range(1, config['fabric_specifics']['org_count'] + 1):
+        scp_clients[org - 1].put(f"{config['exp_dir']}/api", "/home/ubuntu",
                                  recursive=True)
-        sk_name_user = subprocess.Popen(f"ls /home/user/ec2_automation/automation/{config['exp_dir']}/api/creds/User1@org{org}.example.com/msp/keystore/", shell=True,
+        sk_name_user = subprocess.Popen(f"ls {config['exp_dir']}/api/creds/User1@org{org}.example.com/msp/keystore/", shell=True,
                                         stdout=subprocess.PIPE).stdout.readlines()[0].decode("utf8").replace("\n", "")
         stdin, stdout, stderr = ssh_clients[org - 1].exec_command(
             f"sed -i -e 's/sk_name_user/{sk_name_user}/g' /home/ubuntu/api/addToWallet_raw.js && sed -i -e 's/id_name_user/User1@org{org}.example.com/g' /home/ubuntu/api/addToWallet_raw.js && sed -i -e 's/id_name_msp/Org{org}MSP.example.com/g' /home/ubuntu/api/addToWallet_raw.js && sed -i -e 's/user_name/User1@org{org}.example.com/g' /home/ubuntu/api/benchmarking.js")
@@ -426,7 +426,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         logger.debug(stdout.readlines())
         logger.debug(stderr.readlines())
 
-    for org in range(1, config['org_count'] + 1):
+    for org in range(1, config['fabric_specifics']['org_count'] + 1):
         channel = ssh_clients[org - 1].get_transport().open_session()
         channel.exec_command(
             "source /home/ubuntu/.profile && cd /home/ubuntu/api && node benchmarking.js >> benchmarking.log")
@@ -460,8 +460,9 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     # instantiate cc on any node with <<< peer chaincode instantiate -o orderer.example.com:7050 -C mychannel -n mycc -v 1.0 -c '{"Args":["init","a","100","b","200"]}' -P "OR ('Org1MSP.member','Org2MSP.member')" >>>
     # invoke cc on any node with <<< peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["invoke","a","b","10"]}' >>>
     # query cc on any node with <<< peer chaincode query -C mychannel -n mycc -c '{"Args":["query","a"]}' >>>
+"""
 
-    logger.info("\n !!! Network started successfully !!! \n")
+    # logger.info("\n !!! Network started successfully !!! \n")
 
 
 def reboot_all(ec2_instances, config, logger, ssh_clients, scp_clients):
@@ -494,17 +495,17 @@ def reboot_all(ec2_instances, config, logger, ssh_clients, scp_clients):
 
 def write_configtx(config):
     os.system(
-        f"cp /home/user/ec2_automation/blockchain_specifics/Fabric/setup/configtx_raw_1.yaml /home/user/ec2_automation/automation/{config['exp_dir']}/setup/configtx.yaml")
+        f"cp blockchain_specifics/Fabric/setup/configtx_raw_1.yaml {config['exp_dir']}/setup/configtx.yaml")
     os.system(
-        f"cp /home/user/ec2_automation/blockchain_specifics/Fabric/setup/configtx_raw_3.yaml /home/user/ec2_automation/automation/{config['exp_dir']}/setup/configtx3.yaml")
+        f"cp blockchain_specifics/Fabric/setup/configtx_raw_3.yaml {config['exp_dir']}/setup/configtx3.yaml")
 
-    f = open(f"/home/user/ec2_automation/automation/{config['exp_dir']}/setup/configtx2.yaml", "w+")
+    f = open(f"{config['exp_dir']}/setup/configtx2.yaml", "w+")
 
     f.write("\n    OrdererType: etcdraft\n\n")
 
     f.write("    EtcdRaft:\n")
     f.write("        Consenters:\n")
-    for orderer in range(1, config['orderer_count'] + 1):
+    for orderer in range(1, config['fabric_specifics']['orderer_count'] + 1):
         f.write(f"            - Host: orderer{orderer}.example.com\n")
         f.write(f"              Port: 7050\n")
         f.write(
@@ -514,40 +515,40 @@ def write_configtx(config):
 
     f.write("\n")
     f.write("    Addresses:\n")
-    for orderer in range(1, config['orderer_count'] + 1):
+    for orderer in range(1, config['fabric_specifics']['orderer_count'] + 1):
         f.write(f"        - orderer{orderer}.example.com:7050\n")
 
     f.close()
 
     # append the parts of configtx to the final configtx
-    os.system(f"cat /home/user/ec2_automation/automation/{config['exp_dir']}/setup/configtx2.yaml >> /home/user/ec2_automation/automation/{config['exp_dir']}/setup/configtx.yaml")
-    os.system(f"cat /home/user/ec2_automation/automation/{config['exp_dir']}/setup/configtx3.yaml >> /home/user/ec2_automation/automation/{config['exp_dir']}/setup/configtx.yaml")
+    os.system(f"cat {config['exp_dir']}/setup/configtx2.yaml >> {config['exp_dir']}/setup/configtx.yaml")
+    os.system(f"cat {config['exp_dir']}/setup/configtx3.yaml >> {config['exp_dir']}/setup/configtx.yaml")
 
     # substitute remaining parameters
     os.system(
-        f"sed -i -e 's/substitute_batch_timeout/{config['batch_timeout']}/g' /home/user/ec2_automation/automation/{config['exp_dir']}/setup/configtx.yaml")
-    os.system(f"sed -i -e 's/substitute_max_message_count/{config['max_message_count']}/g' /home/user/ec2_automation/automation/{config['exp_dir']}/setup/configtx.yaml")
-    os.system(f"sed -i -e 's/substitute_absolute_max_bytes/{config['absolute_max_bytes']}/g' /home/user/ec2_automation/automation/{config['exp_dir']}/setup/configtx.yaml")
-    os.system(f"sed -i -e 's/substitute_preferred_max_bytes/{config['preferred_max_bytes']}/g' /home/user/ec2_automation/automation/{config['exp_dir']}/setup/configtx.yaml")
+        f"sed -i -e 's/substitute_batch_timeout/{config['batch_timeout']}/g' {config['exp_dir']}/setup/configtx.yaml")
+    os.system(f"sed -i -e 's/substitute_max_message_count/{config['fabric_specifics']['max_message_count']}/g' {config['exp_dir']}/setup/configtx.yaml")
+    os.system(f"sed -i -e 's/substitute_absolute_max_bytes/{config['fabric_specifics']['absolute_max_bytes']}/g' {config['exp_dir']}/setup/configtx.yaml")
+    os.system(f"sed -i -e 's/substitute_preferred_max_bytes/{config['fabric_specifics']['preferred_max_bytes']}/g' {config['exp_dir']}/setup/configtx.yaml")
 
 
 def write_crypto_config(config):
     os.system(
-        f"cp /home/user/ec2_automation/blockchain_specifics/Fabric/setup/crypto-config_raw.yaml /home/user/ec2_automation/automation/{config['exp_dir']}/setup/crypto-config.yaml")
+        f"cp blockchain_specifics/Fabric/setup/crypto-config_raw.yaml {config['exp_dir']}/setup/crypto-config.yaml")
 
     os.system(
-        f"sed -i -e 's/substitute_orderer_count/{config['orderer_count']}/g' /home/user/ec2_automation/automation/{config['exp_dir']}/setup/crypto-config.yaml")
+        f"sed -i -e 's/substitute_orderer_count/{config['fabric_specifics']['orderer_count']}/g' {config['exp_dir']}/setup/crypto-config.yaml")
 
-    for org_count in range(1, config['org_count'] + 1):
-        os.system(f"sed -i -e 's/substitute_peer_count_org{org_count}/{config['peer_count']}/g' /home/user/ec2_automation/automation/{config['exp_dir']}/setup/crypto-config.yaml")
-        os.system(f"sed -i -e 's/substitute_user_count_org{org_count}/1/g' /home/user/ec2_automation/automation/{config['exp_dir']}/setup/crypto-config.yaml")
+    for org_count in range(1, config['fabric_specifics']['org_count'] + 1):
+        os.system(f"sed -i -e 's/substitute_peer_count_org{org_count}/{config['fabric_specifics']['peer_count']}/g' {config['exp_dir']}/setup/crypto-config.yaml")
+        os.system(f"sed -i -e 's/substitute_user_count_org{org_count}/1/g' {config['exp_dir']}/setup/crypto-config.yaml")
 
 
 def write_script(config, logger):
     os.system(
-        f"cp /home/user/ec2_automation/blockchain_specifics/Fabric/setup/script_raw_1.sh /home/user/ec2_automation/automation/{config['exp_dir']}/setup/script.sh")
+        f"cp blockchain_specifics/Fabric/setup/script_raw_1.sh {config['exp_dir']}/setup/script.sh")
 
-    f = open(f"/home/user/ec2_automation/automation/{config['exp_dir']}/setup/script2.sh", "w+")
+    f = open(f"{config['exp_dir']}/setup/script2.sh", "w+")
 
     f.write("\n\nsetGlobals() {\n\n")
 
@@ -557,17 +558,17 @@ def write_script(config, logger):
     f.write(
         "    CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org$2.example.com/users/Admin@org$2.example.com/msp\n")
 
-    if config['peer_count'] == 1:
+    if config['fabric_specifics']['peer_count'] == 1:
         f.write("    CORE_PEER_ADDRESS=peer0.org$2.example.com:7051\n")
     else:
         f.write("    if [ $1 -eq 0 ]; then\n        CORE_PEER_ADDRESS=peer0.org$2.example.com:7051\n")
-        for peer in range(1, config['peer_count']):
+        for peer in range(1, config['fabric_specifics']['peer_count']):
             f.write(f"    elif [ $1 -eq {peer} ]; then\n")
             f.write(f"        CORE_PEER_ADDRESS=peer$1.org$2.example.com:7051\n")
             f.write(
                 f"        CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org$2.example.com/users/Admin@org$2.example.com/msp\n")
 
-            if config['tls_enabled'] == 1:
+            if config['fabric_specifics']['tls_enabled'] == 1:
                 f.write("        # setting TLS environment variables")
                 f.write(f"        CORE_PEER_TLS_ENABLED=true\n")
                 f.write(f"        CORE_PEER_TLS_CLIENTAUTHREQUIRED=false\n")
@@ -586,31 +587,31 @@ def write_script(config, logger):
     f.close()
 
     os.system(
-        f"cp /home/user/ec2_automation/blockchain_specifics/Fabric/setup/script_raw_3.sh /home/user/ec2_automation/automation/{config['exp_dir']}/setup/script3.sh")
-    if config['tls_enabled'] == 1:
+        f"cp blockchain_specifics/Fabric/setup/script_raw_3.sh {config['exp_dir']}/setup/script3.sh")
+    if config['fabric_specifics']['tls_enabled'] == 1:
         logger.debug("    --> TLS environment variables set")
         string_tls = f"--tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem"
     else:
         string_tls = f""
 
     # append the parts of script to the final script
-    os.system(f"cat /home/user/ec2_automation/automation/{config['exp_dir']}/setup/script2.sh >> /home/user/ec2_automation/automation/{config['exp_dir']}/setup/script.sh")
-    os.system(f"cat /home/user/ec2_automation/automation/{config['exp_dir']}/setup/script3.sh >> /home/user/ec2_automation/automation/{config['exp_dir']}/setup/script.sh")
+    os.system(f"cat {config['exp_dir']}/setup/script2.sh >> {config['exp_dir']}/setup/script.sh")
+    os.system(f"cat {config['exp_dir']}/setup/script3.sh >> {config['exp_dir']}/setup/script.sh")
 
     # substitute the enumeration of peers
     enum_peers = "0"
-    for peer in range(1, config['peer_count']):
+    for peer in range(1, config['fabric_specifics']['peer_count']):
         enum_peers = enum_peers + f" {peer}"
 
-    endorsement = config['endorsement_policy']
+    endorsement = config['fabric_specifics']['endorsement_policy']
 
-    os.system(f"sed -i -e 's/substitute_enum_peers/{enum_peers}/g' /home/user/ec2_automation/automation/{config['exp_dir']}/setup/script.sh")
-    os.system(f"sed -i -e 's#substitute_tls#{string_tls}#g' /home/user/ec2_automation/automation/{config['exp_dir']}/setup/script.sh")
-    os.system(f"sed -i -e 's/substitute_endorsement/{endorsement}/g' /home/user/ec2_automation/automation/{config['exp_dir']}/setup/script.sh")
+    os.system(f"sed -i -e 's/substitute_enum_peers/{enum_peers}/g' {config['exp_dir']}/setup/script.sh")
+    os.system(f"sed -i -e 's#substitute_tls#{string_tls}#g' {config['exp_dir']}/setup/script.sh")
+    os.system(f"sed -i -e 's/substitute_endorsement/{endorsement}/g' {config['exp_dir']}/setup/script.sh")
 
 
 def write_network(config):
-    with open(f"/home/user/ec2_automation/automation/{config['exp_dir']}/api/network.json", "w+") as file:
+    with open(f"{config['exp_dir']}/api/network.json", "w+") as file:
         network = {}
         network["name"] = "my-net"
         network["x-type"] = "hlfv1"
@@ -656,10 +657,10 @@ def write_network(config):
             }
         }
 
-        for org in range(1, config['org_count'] + 1):
+        for org in range(1, config['fabric_specifics']['org_count'] + 1):
             for peer, ip in enumerate(config['pub_ips'][
-                                      config['org_count'] + config['orderer_count'] + config['peer_count'] * (org - 1):
-                                      config['org_count'] + config['orderer_count'] + config['peer_count'] * org]):
+                                      config['fabric_specifics']['org_count'] + config['fabric_specifics']['orderer_count'] + config['fabric_specifics']['peer_count'] * (org - 1):
+                                      config['fabric_specifics']['org_count'] + config['fabric_specifics']['orderer_count'] + config['fabric_specifics']['peer_count'] * org]):
                 network["channels"]["mychannel"]["peers"][f"peer{peer}.org{org}.example.com"] = {
                     "endorsingPeer": True,
                     "chaincodeQuery": True,
@@ -678,8 +679,8 @@ def write_network(config):
                     }
                 }
 
-        for orderer in range(1, config['orderer_count'] + 1):
-            ip = config['pub_ips'][config['org_count'] + orderer - 1]
+        for orderer in range(1, config['fabric_specifics']['orderer_count'] + 1):
+            ip = config['pub_ips'][config['fabric_specifics']['org_count'] + orderer - 1]
 
             network["channels"]["mychannel"]["orderers"].append(f"orderer{orderer}.example.com")
 
@@ -697,29 +698,29 @@ def write_network(config):
 
 
 def write_replacement(config):
-    f = open(f"/home/user/ec2_automation/automation/{config['exp_dir']}/api/replacement.sh", "w+")
+    f = open(f"{config['exp_dir']}/api/replacement.sh", "w+")
 
     f.write("#!/bin/bash\n\n")
 
     f.write("NETWORK=$1\nVERSION=$2\n\n")
 
-    for peer_org in range(1, config['org_count'] + 1):
+    for peer_org in range(1, config['fabric_specifics']['org_count'] + 1):
         f.write(
-            f"ORG{peer_org}" + """_CERT=$(awk 'NF {sub(/\\r/, ""); printf "%s\\\\\\\\n",$0;}'""" + f" /home/user/ec2_automation/automation/{config['exp_dir']}/setup/crypto-config/peerOrganizations/org{peer_org}.example.com/peers/peer0.org{peer_org}.example.com/tls/ca.crt )\n")
+            f"ORG{peer_org}" + """_CERT=$(awk 'NF {sub(/\\r/, ""); printf "%s\\\\\\\\n",$0;}'""" + f" {config['exp_dir']}/setup/crypto-config/peerOrganizations/org{peer_org}.example.com/peers/peer0.org{peer_org}.example.com/tls/ca.crt )\n")
 
-    for orderer in range(1, config['orderer_count'] + 1):
+    for orderer in range(1, config['fabric_specifics']['orderer_count'] + 1):
         f.write(
-            f"ORDERER_CERT{orderer}" + """=$(awk 'NF {sub(/\\r/, ""); printf "%s\\\\\\\\n",$0;}'""" + f" /home/user/ec2_automation/automation/{config['exp_dir']}/setup/crypto-config/ordererOrganizations/example.com/orderers/orderer{orderer}.example.com/tls/ca.crt )\n")
+            f"ORDERER_CERT{orderer}" + """=$(awk 'NF {sub(/\\r/, ""); printf "%s\\\\\\\\n",$0;}'""" + f" {config['exp_dir']}/setup/crypto-config/ordererOrganizations/example.com/orderers/orderer{orderer}.example.com/tls/ca.crt )\n")
         f.write("\n")
 
     f.write("\n\n\n")
 
-    for peer_org in range(1, config['org_count'] + 1):
+    for peer_org in range(1, config['fabric_specifics']['org_count'] + 1):
         f.write(
-            f'sed -i "s~INSERT_ORG{peer_org}_CA_CERT~$ORG{peer_org}_CERT~g"' + f" /home/user/ec2_automation/automation/{config['exp_dir']}/api/network.json\n")
+            f'sed -i "s~INSERT_ORG{peer_org}_CA_CERT~$ORG{peer_org}_CERT~g"' + f" {config['exp_dir']}/api/network.json\n")
 
-    for orderer in range(1, config['orderer_count'] + 1):
+    for orderer in range(1, config['fabric_specifics']['orderer_count'] + 1):
         f.write(
-            f'sed -i "s~INSERT_ORDERER{orderer}_CA_CERT~$ORDERER_CERT{orderer}~g"' + f" /home/user/ec2_automation/automation/{config['exp_dir']}/api/network.json\n")
+            f'sed -i "s~INSERT_ORDERER{orderer}_CA_CERT~$ORDERER_CERT{orderer}~g"' + f" {config['exp_dir']}/api/network.json\n")
 
     f.close()

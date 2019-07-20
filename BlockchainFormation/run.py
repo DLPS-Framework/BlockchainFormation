@@ -348,9 +348,17 @@ class ArgParser:
 
             }
         elif blockchain_type == "quorum":
-            return {"raftblocktime": namespace_dict['raftblocktime']}
+            return\
+            {
+                "raftblocktime": namespace_dict['raftblocktime']
+
+            }
         elif blockchain_type =="client":
-            return {"target_network_conf": namespace_dict["target_network_conf"]}
+            return\
+            {
+                "target_network_conf": namespace_dict["target_network_conf"]
+
+            }
         elif blockchain_type == "sawtooth":
             return {}
 

@@ -23,10 +23,10 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
     :return:
     """
     logger.info("Create directories for saving data and logs locally")
-    path = os.getcwd()
-    os.mkdir((f"{path}/{config['exp_dir']}/quorum_logs"))
-    os.mkdir((f"{path}/{config['exp_dir']}/tessera_logs"))
-    os.mkdir((f"{path}/{config['exp_dir']}/api"))
+    # path = os.getcwd()
+    os.mkdir((f"{config['exp_dir']}/quorum_logs"))
+    os.mkdir((f"{config['exp_dir']}/tessera_logs"))
+    os.mkdir((f"{config['exp_dir']}/api"))
 
     # for saving the enodes and addresses of the nodes resp. wallets (each node has one wallet at the moment)
     addresses = []
@@ -182,7 +182,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
         if index == 0:
             logger.info(f"Starting node {index} and wait for 5s until it is running")
             channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --raftport 50000 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip} --raftblocktime {config['raftblocktime']} >>node.log 2>&1")
+            channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --raftport 50000 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip} --raftblocktime {config['quorum_settings']['raftblocktime']} >>node.log 2>&1")
             time.sleep(5)
 
         else:
@@ -195,7 +195,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
             logger.info(f"raftID: {raftID}")
 
             channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --raftport 50000 --raftjoinexisting {raftID} --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip} --raftblocktime {config['raftblocktime']} >>node.log 2>&1")
+            channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --raftport 50000 --raftjoinexisting {raftID} --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip} --raftblocktime {config['quorum_settings']['raftblocktime']} >>node.log 2>&1")
 
     logger.info("Waiting until all quorum nodes have started")
     # TODO: write general function which waits until nodes/new-node-1/geth.ipc exists on all nodes
@@ -264,6 +264,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info("Done")
 
+""" THIS IS CLIENT_STUFF
     os.system(f"cp -r /home/user/ec2_automation/blockchain_specifics/Quorum/api /home/user/ec2_automation/automation/{config['exp_dir']}")
     write_truffle_config(config)
 
@@ -294,6 +295,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
         logger.debug(stderr.readlines())
 
 
+
 def write_truffle_config(config):
 
     f = open(f"/home/user/ec2_automation/automation/{config['exp_dir']}/api/truffle-config.js", "w+")
@@ -320,3 +322,4 @@ def write_truffle_config(config):
     f.write("};\n")
 
     f.close()
+"""
