@@ -1,0 +1,34 @@
+# Copyright IBM Corp. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# Orderer organizations
+OrdererOrgs:
+
+  - Name: Orderer
+    Domain: example.com
+
+    Template:
+      Count: substitute_orderer_count
+      Start: 1
+
+# Peer Organizations
+PeerOrgs:
+  - Name: Org1
+    Domain: org1.example.com
+    Template:
+      # The number of peers in this organization
+      Count: substitute_peer_count_org1
+    Users:
+      # The number of users in this organization
+      Count: substitute_user_count_org1
+
+  - Name: Org2
+    Domain: org2.example.com
+    Template:
+      # The number of peers in this organization
+      Count: substitute_peer_count_org2
+    Users:
+      # The number of users in this organization
+      Count: substitute_user_count_org2
