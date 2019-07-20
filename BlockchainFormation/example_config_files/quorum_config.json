@@ -1,0 +1,40 @@
+{
+  "vm_count": 5,
+  "instance_type": "t2.small",
+  "image": {
+            "image_id": null,
+            "os": "ubuntu",
+            "version": 18,
+            "permissions": "default"
+  },
+  "subnet_id": "subnet-0fa70db2bd49231db",
+  "security_group_id": "sg-0ca45822daf371316",
+  "proxy_user": "None",
+  "user": "ubuntu",
+  "profile": "default",
+  "key_name": "Johannes_test_pub",
+  "aws_credentials": "/home/user/.aws/credentials",
+  "aws_config": "/home/user/.aws/config",
+  "aws_region": "eu-central-1",
+  "priv_key_path": "/home/user/.aws/Johannes_test_pub.pem",
+  "tag_name": "blclab_quorum",
+  "public_ip": true,
+  "storage_settings": [
+    {
+      "DeviceName": "/dev/sdb",
+      "VirtualName": "string",
+      "Ebs": {
+        "DeleteOnTermination": true,
+        "VolumeSize": 32,
+        "VolumeType": "gp2",
+        "Encrypted": true,
+        "KmsKeyId": "arn:aws:kms:eu-central-1:731899578576:key/a808826d-e460-4271-a23b-29e1e0807c1d"
+      }
+    }
+  ],
+  "blockchain_type": "quorum",
+  "quorum_settings": {
+    "chain_id": "tbd",
+    "raftblocktime": 50
+  }
+}

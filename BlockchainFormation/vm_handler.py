@@ -7,8 +7,11 @@ from scp import SCPClient
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from BlockchainFormation.cost_calculator import AWSCostCalculator
+from BlockchainFormation.blockchain_specifics.Fabric.Fabric import *
 from BlockchainFormation.blockchain_specifics.Geth.Geth import *
 from BlockchainFormation.blockchain_specifics.Parity.Parity import *
+from BlockchainFormation.blockchain_specifics.Quorum.Quorum import *
+from BlockchainFormation.blockchain_specifics.Sawtooth.Sawtooth import *
 from BlockchainFormation.blockchain_specifics.Client.Client import *
 from BlockchainFormation.lb_handler import *
 
@@ -319,8 +322,10 @@ class VMHandler:
     def _run_specific_startup(self, ssh_clients, scp_clients):
         """starts startup for given config (geth, parity, etc....)"""
 
+        if self.config['blockchain_type'] == 'fabric':
+            fabric_startup(self.ec2_instances, self.config, self.logger, ssh_clients, scp_clients)
 
-        if self.config['blockchain_type'] == 'geth':
+        elif self.config['blockchain_type'] == 'geth':
             geth_startup(self.config, self.logger, ssh_clients, scp_clients)
 
         elif self.config['blockchain_type'] == 'parity':
@@ -337,6 +342,12 @@ class VMHandler:
                     self.logger.info(f"VMs are not being shutdown")
         if self.config['blockchain_type'] == 'client':
             client_startup(self.config, self.logger, ssh_clients, scp_clients)
+
+        elif self.config['blockchain_type'] == 'quorum':
+            quorum_startup(self.config, self.logger, ssh_clients, scp_clients)
+
+        elif self.config['blockchain_type'] == 'sawtooth':
+            sawtooth_startup(self.config, self.logger, ssh_clients, scp_clients)
 
         else:
             pass

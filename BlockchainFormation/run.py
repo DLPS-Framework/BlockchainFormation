@@ -46,6 +46,12 @@ class ArgParser:
 
         subparsers = superparser.add_subparsers(help='Choose a blockchain type')
 
+        # fabric parser
+        parser_fabric = subparsers.add_parser('fabric', help='Fabric Network')
+        parser_fabric.set_defaults(blockchain_type='fabric')
+        ArgParser._add_common_args(parser_fabric)
+        ArgParser._add_fabric_args(parser_fabric)
+
         # geth parser
         parser_geth = subparsers.add_parser('geth', help='Geth Network')
         parser_geth.set_defaults(blockchain_type='geth')
@@ -59,6 +65,18 @@ class ArgParser:
         ArgParser._add_common_args(parser_parity)
         ArgParser._add_loadbalancer_args(parser_parity)
         ArgParser._add_parity_args(parser_parity)
+
+        # quorum parser
+        parser_quorum = subparsers.add_parser('quorum', help='Quorum Network')
+        parser_quorum.set_defaults(blockchain_type='quorum')
+        ArgParser._add_common_args(parser_quorum)
+        ArgParser._add_quorum_args(parser_quorum)
+
+        # sawtooth parser
+        parser_sawtooth = subparsers.add_parser('sawtooth', help='Sawtooth Network')
+        parser_sawtooth.set_defaults(blockchain_type='sawtooth')
+        ArgParser._add_common_args(parser_sawtooth)
+        ArgParser._add_sawtooth_args(parser_sawtooth)
 
         # client parser
         parser_client = subparsers.add_parser('client', help='Set up Clients')
@@ -151,6 +169,29 @@ class ArgParser:
 
 
     @staticmethod
+    def _add_fabric_args(parser):
+        parser.add_argument('--org_count', help='specify number of organizations', type=int, default=2)
+        parser.add_argument('--peer_count', help='specify number of peers per organization', type=int, default=3)
+        parser.add_argument('--orderer_count', help='specify number of orderers', type=int, default=1)
+        parser.add_argument('--batch_timeout', help='spefify the amount of seconds to wait before creating a batch',
+                            type=int, default=2)
+        parser.add_argument('--max_message_count', help='speficy the maximum number of messages to permit in a batch',
+                            type=int, default=10)
+        parser.add_argument('--absolute_max_bytes',
+                            help='specify the absolute maximum number of MB allowed for the serialized messages in a batch',
+                            type=int, default=99)
+        parser.add_argument('--preferred_max_bytes',
+                            help='specify the preferred maximum number of KB allowed for the serialized messages in a batch',
+                            type=int, default=512)
+        parser.add_argument('--tls_enabled',
+                            help='specify whether communication in the network is encrypted; chosse between 0 (tls disables) and 1 (tls enabled)',
+                            type=int, default=1)
+        parser.add_argument('--endorsement_policy',
+                            help='specify the endorsement policy for the benchmarking test; choose between "AND" and "OR" (currently two organizations), default="OR"')
+        parser.add_argument('--log_level',
+                            help='the logging severity levels are specified using case-insensitive strings chosen from << FATAL | PANIC | ERROR | WARNING | INFO | DEBUG >>',
+                            default="debug")
+
     def _add_geth_args(parser):
         parser.add_argument('--chainid', '-ci', help='specify chainID', type=int, default=11)
         parser.add_argument('--period', '-pd', help='specify clique period', type=int, default=5)
@@ -167,6 +208,13 @@ class ArgParser:
                             default=None)
         parser.add_argument('--gaslimit', '-gl', help='specify gasLimit', default="0x5B8D80")
         parser.add_argument('--balance', '-bal', help='specify start balance of account', default="0x200000000000000000000000000000000000000000000000000000000000000")
+
+    def _add_quorum_args(parser):
+        parser.add_argument('--raftblocktime', help='amount of time between raft block creations in milliseconds',
+                            type=int, default=50)
+
+    def _add_sawtooth_args(parser):
+        pass
 
     @staticmethod
     def _add_client_args(parser):
@@ -262,7 +310,23 @@ class ArgParser:
     @staticmethod
     def _add_blockchain_type_config(namespace_dict, blockchain_type):
 
-        if blockchain_type == "geth":
+        if blockchain_type == "fabric":
+            return\
+            {
+                "org_count": namespace_dict['org_count'],
+                "peer_count": namespace_dict['peer_count'],
+                "orderer_count": namespace_dict['orderer_count'],
+                "batch_timeout": namespace_dict['batch_timeout'],
+                "max_message_count": namespace_dict['max_message_count'],
+                "absolute_max_bytes": namespace_dict['absolute_max_bytes'],
+                "preferred_max_bytes": namespace_dict['preferred_max_bytes'],
+                "tls_enabled": namespace_dict['tls_enabled'],
+                "endorsement_policy": namespace_dict['endorsement_policy'],
+                "log_level": namespace_dict['log_level']
+
+            }
+
+        elif blockchain_type == "geth":
             return\
             {
                 "chain_id": namespace_dict['chainid'],
@@ -283,10 +347,12 @@ class ArgParser:
                 "balance": namespace_dict['balance']
 
             }
+        elif blockchain_type == "quorum":
+            return {"raftblocktime": namespace_dict['raftblocktime']}
         elif blockchain_type =="client":
-            return {
-                "target_network_conf": namespace_dict["target_network_conf"]
-            }
+            return {"target_network_conf": namespace_dict["target_network_conf"]}
+        elif blockchain_type == "sawtooth":
+            return {}
 
 
     def load_config(self, namespace_dict):
