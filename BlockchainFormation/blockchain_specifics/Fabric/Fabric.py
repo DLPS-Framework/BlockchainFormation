@@ -368,7 +368,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
     # execute script.sh on last node
     stdin, stdout, stderr = ssh_clients[config["vm_count"] - 1].exec_command(
-        f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_link + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c './scripts/script.sh' |& tee /home/ubuntu/setup.log)")
+        f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_link + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 script.sh && ls -la && cd .. && ./scripts/script.sh)' |& tee /home/ubuntu/setup.log)")
     out = stdout.readlines()
     for index, _ in enumerate(out):
         logger.debug(out[index].replace("\n", ""))
@@ -389,6 +389,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         logger.info("")
         logger.info("********!!! ERROR: Fabric network formation failed !!! ********")
 
+    """ THIS IS CLIENT-STUFF
     logger.info("Creating network setup for API stuff")
     logger.debug("Writing raw network.json")
     write_network(config)
@@ -405,7 +406,6 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     os.system(
         f"cp blockchain_specifics/Fabric/api/* {config['exp_dir']}/api")
 
-""" THIS IS CLIENT-STUFF
     # push api-stuff to ca-nodes
     for org in range(1, config['fabric_settings']['org_count'] + 1):
         scp_clients[org - 1].put(f"{config['exp_dir']}/api", "/home/ubuntu",
@@ -526,7 +526,7 @@ def write_configtx(config):
 
     # substitute remaining parameters
     os.system(
-        f"sed -i -e 's/substitute_batch_timeout/{config['batch_timeout']}/g' {config['exp_dir']}/setup/configtx.yaml")
+        f"sed -i -e 's/substitute_batch_timeout/{config['fabric_settings']['batch_timeout']}/g' {config['exp_dir']}/setup/configtx.yaml")
     os.system(f"sed -i -e 's/substitute_max_message_count/{config['fabric_settings']['max_message_count']}/g' {config['exp_dir']}/setup/configtx.yaml")
     os.system(f"sed -i -e 's/substitute_absolute_max_bytes/{config['fabric_settings']['absolute_max_bytes']}/g' {config['exp_dir']}/setup/configtx.yaml")
     os.system(f"sed -i -e 's/substitute_preferred_max_bytes/{config['fabric_settings']['preferred_max_bytes']}/g' {config['exp_dir']}/setup/configtx.yaml")
