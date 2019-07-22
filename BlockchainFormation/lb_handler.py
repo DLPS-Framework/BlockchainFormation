@@ -21,14 +21,14 @@ class LBHandler:
         self.config = config
 
         self.session = session
-
-        self.logger = logging.getLogger(__name__)
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-        # create formatter and add it to the handlers
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        ch.setFormatter(formatter)
-        self.logger.addHandler(ch)
+        if not self.logger.handlers:
+            self.logger = logging.getLogger(__name__)
+            ch = logging.StreamHandler()
+            ch.setLevel(logging.DEBUG)
+            # create formatter and add it to the handlers
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            ch.setFormatter(formatter)
+            self.logger.addHandler(ch)
 
         self.lb_client = self.session.client('elbv2', region_name=self.config['aws_region'])
 
