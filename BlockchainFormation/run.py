@@ -385,7 +385,7 @@ if __name__ == '__main__':
     argparser = ArgParser()
     namespace = argparser.parser.parse_args()
 
-    logging.basicConfig(filename='logger.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(filename='logger.log', level=logging.DEBUG, format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
 
     # BlockchainFormation: https://docs.python.org/3/howto/logging-cookbook.html
     # create logger with
@@ -394,7 +394,7 @@ if __name__ == '__main__':
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
     # create formatter and add it to the handlers
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(threadName) - %(name)s - %(levelname)s - %(message)s')
     ch.setFormatter(formatter)
     # add the handlers to the logger
     logger.addHandler(ch)

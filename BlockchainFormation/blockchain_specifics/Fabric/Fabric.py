@@ -385,86 +385,26 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
     if out[len(out) - 1] == "========= All GOOD, BMHN execution completed =========== \n":
         logger.info("")
-        logger.info("********************* !!! Successful !!! *********************")
+        logger.info("**************** !!! Fabric network formation was successful !!! *********************")
         logger.info("")
     else:
         logger.info("")
-        logger.info("********!!! ERROR: Fabric network formation failed !!! ********")
+        logger.info("******************!!! ERROR: Fabric network formation failed !!! *********************")
 
-    """ THIS IS CLIENT-STUFF
-    logger.info("Creating network setup for API stuff")
-    logger.debug("Writing raw network.json")
-    write_network(config)
-    logger.debug("Writing replacement script")
-    write_replacement(config)
-    logger.debug("Finalizing network.json")
-    os.system(f"bash {config['exp_dir']}/api/replacement.sh")
-    logger.debug("Copying User-specific credentials")
-    os.system(f"mkdir {config['exp_dir']}/api/creds")
-    for org in range(1, config['fabric_settings']['org_count'] + 1):
-        os.system(f"cp -r {config['exp_dir']}/setup/crypto-config/peerOrganizations/org{org}.example.com/users/User1@org{org}.example.com {config['exp_dir']}/api/creds")
-
-    logger.debug("Setting up wallet")
-    os.system(
-        f"cp {dir_name}/api/* {config['exp_dir']}/api")
-
-    # push api-stuff to ca-nodes
-    for org in range(1, config['fabric_settings']['org_count'] + 1):
-        scp_clients[org - 1].put(f"{config['exp_dir']}/api", "/home/ubuntu",
-                                 recursive=True)
-        sk_name_user = subprocess.Popen(f"ls {config['exp_dir']}/api/creds/User1@org{org}.example.com/msp/keystore/", shell=True,
-                                        stdout=subprocess.PIPE).stdout.readlines()[0].decode("utf8").replace("\n", "")
-        stdin, stdout, stderr = ssh_clients[org - 1].exec_command(
-            f"sed -i -e 's/sk_name_user/{sk_name_user}/g' /home/ubuntu/api/addToWallet_raw.js && sed -i -e 's/id_name_user/User1@org{org}.example.com/g' /home/ubuntu/api/addToWallet_raw.js && sed -i -e 's/id_name_msp/Org{org}MSP.example.com/g' /home/ubuntu/api/addToWallet_raw.js && sed -i -e 's/user_name/User1@org{org}.example.com/g' /home/ubuntu/api/benchmarking.js")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
-
-        stdin, stdout, stderr = ssh_clients[org - 1].exec_command(
-            f"mv /home/ubuntu/api/addToWallet_raw.js /home/ubuntu/api/addToWallet.js")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
-        stdin, stdout, stderr = ssh_clients[org - 1].exec_command(
-            "cd /home/ubuntu/api && bash ./script.sh &> install.log")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
-
-    for org in range(1, config['fabric_settings']['org_count'] + 1):
-        channel = ssh_clients[org - 1].get_transport().open_session()
-        channel.exec_command(
-            "source /home/ubuntu/.profile && cd /home/ubuntu/api && node benchmarking.js >> benchmarking.log")
+    logger.info("Getting logs from vms")
 
     for index, ip in enumerate(config['pub_ips']):
         scp_clients[index].get("/var/log/user_data.log",
                                f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
-        try:
-            scp_clients[index].get("/home/ubuntu/*.log", f"{config['exp_dir']}/fabric_logs")
-            scp_clients[index].get("")
-        except:
-            logger.info("No logs available on {ip}")
 
-    # set environment variables on last node
-    # string_env = 'CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp; CORE_PEER_LOCALMSPID="Org1MSP"; CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt; CORE_PEER_ADDRESS=peer0.org1.example.com:7051; HALLO=nope'
-    # string_cc = 'peer chaincode instantiate -o orderer.example.com:7050 -C mychannel -n mycc -v 1.0 -c \'{"Args":["init","a","100","b","200"]}\' -P "OR (\'Org1MSP.member\',\'Org2MSP.member\')"'
-    # stdin, stdout, stderr = ssh_clients[index].exec_command(string_cli + " -c '" + string_env + "; " + string_cc + "')")
-    # logger.debug("".join(stdout.readlines()))
-    # logger.debug("".join(stderr.readlines()))
+    try:
+        scp_clients[index].get("/home/ubuntu/*.log", f"{config['exp_dir']}/fabric_logs")
+        logger.info("Logs fetched successfully")
+    except:
+        logger.info(f"No logs available on {ip}")
 
-    # string_cc = 'peer chaincode instantiate -o orderer.example.com:7050 -C mychannel -n mycc -v 1.0 -c \'{"Args":["init","a","100","b","200"]}\' -P "OR (\'Org1MSP.member\',\'Org2MSP.member\')'
-    # stdin, stdout, stderr = ssh_clients[index].exec_command(string_cli + " -c '" + string_cc + "')")
-    # logger.debug("".join(stdout.readlines()))
-    # logger.debug("".join(stderr.readlines()))
+    logger.info("")
 
-    # on the ith node, access couchDB with
-    # string_couchDB = f"http://{config['pub_ips'][0]}:5984/_utils/#database/mychannel_/_all_docs"
-    # string_cli_it = "(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && " + f"docker run -it --rm --network='{my_net}' --name cli --link orderer.example.com:orderer.example.com" + link_string + f" -p 12051:7051 -p 12053:7053 -e GOPATH=/opt/gopath -e CORE_PEER_LOCALMSPID=Org1MSP -e CORE_PEER_TLS_ENABLED=false -e CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock -e CORE_PEER_ID=cli -e CORE_PEER_ADDRESS=peer0.org1.example.com:7051 -e CORE_PEER_NETWORKID=cli -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE={my_net} -v /var/run/:/host/var/run/ -v $(pwd)/chaincode/:/opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/go -v $(pwd)/crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ -v $(pwd)/scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts/ -v $(pwd)/channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts -w /opt/gopath/src/github.com/hyperledger/fabric/peer hyperledger/fabric-tools /bin/bash)"
-    # logger.info("# on every node, start cli with " + string_cli_it)
-    # put environment with <<< CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp; CORE_PEER_LOCALMSPID="Org1MSP"; CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt; CORE_PEER_ADDRESS=peer1.org1.example.com:7051 >>>
-    # instantiate cc on any node with <<< peer chaincode instantiate -o orderer.example.com:7050 -C mychannel -n mycc -v 1.0 -c '{"Args":["init","a","100","b","200"]}' -P "OR ('Org1MSP.member','Org2MSP.member')" >>>
-    # invoke cc on any node with <<< peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["invoke","a","b","10"]}' >>>
-    # query cc on any node with <<< peer chaincode query -C mychannel -n mycc -c '{"Args":["query","a"]}' >>>
-"""
-
-    # logger.info("\n !!! Network started successfully !!! \n")
 
 
 def reboot_all(ec2_instances, config, logger, ssh_clients, scp_clients):
@@ -493,6 +433,23 @@ def reboot_all(ec2_instances, config, logger, ssh_clients, scp_clients):
 
     logger.info("Rebooting completed")
     return ssh_clients, scp_clients
+
+
+def write_crypto_config(config, logger):
+    dir_name = os.path.dirname(os.path.realpath(__file__))
+    logger.debug(f"copying {dir_name}/setup/crypto-config_raw.yaml to {config['exp_dir']}/setup/crypto-config.yaml")
+
+    os.system(
+        f"cp {dir_name}/setup/crypto-config_raw.yaml {config['exp_dir']}/setup/crypto-config.yaml")
+
+    os.system(
+        f"sed -i -e 's/substitute_orderer_count/{config['fabric_settings']['orderer_count']}/g' {config['exp_dir']}/setup/crypto-config.yaml")
+
+    for org_count in range(1, config['fabric_settings']['org_count'] + 1):
+        os.system(f"sed -i -e 's/substitute_peer_count_org{org_count}/{config['fabric_settings']['peer_count']}/g' {config['exp_dir']}/setup/crypto-config.yaml")
+        os.system(f"sed -i -e 's/substitute_user_count_org{org_count}/1/g' {config['exp_dir']}/setup/crypto-config.yaml")
+
+
 
 
 def write_configtx(config):
@@ -535,20 +492,6 @@ def write_configtx(config):
     os.system(f"sed -i -e 's/substitute_absolute_max_bytes/{config['fabric_settings']['absolute_max_bytes']}/g' {config['exp_dir']}/setup/configtx.yaml")
     os.system(f"sed -i -e 's/substitute_preferred_max_bytes/{config['fabric_settings']['preferred_max_bytes']}/g' {config['exp_dir']}/setup/configtx.yaml")
 
-
-def write_crypto_config(config, logger):
-    dir_name = os.path.dirname(os.path.realpath(__file__))
-    logger.debug(f"copying {dir_name}/setup/crypto-config_raw.yaml to {config['exp_dir']}/setup/crypto-config.yaml")
-
-    os.system(
-        f"cp {dir_name}/setup/crypto-config_raw.yaml {config['exp_dir']}/setup/crypto-config.yaml")
-
-    os.system(
-        f"sed -i -e 's/substitute_orderer_count/{config['fabric_settings']['orderer_count']}/g' {config['exp_dir']}/setup/crypto-config.yaml")
-
-    for org_count in range(1, config['fabric_settings']['org_count'] + 1):
-        os.system(f"sed -i -e 's/substitute_peer_count_org{org_count}/{config['fabric_settings']['peer_count']}/g' {config['exp_dir']}/setup/crypto-config.yaml")
-        os.system(f"sed -i -e 's/substitute_user_count_org{org_count}/1/g' {config['exp_dir']}/setup/crypto-config.yaml")
 
 
 def write_script(config, logger):
@@ -616,119 +559,3 @@ def write_script(config, logger):
     os.system(f"sed -i -e 's/substitute_enum_peers/{enum_peers}/g' {config['exp_dir']}/setup/script.sh")
     os.system(f"sed -i -e 's#substitute_tls#{string_tls}#g' {config['exp_dir']}/setup/script.sh")
     os.system(f"sed -i -e 's/substitute_endorsement/{endorsement}/g' {config['exp_dir']}/setup/script.sh")
-
-
-def write_network(config):
-    with open(f"{config['exp_dir']}/api/network.json", "w+") as file:
-        network = {}
-        network["name"] = "my-net"
-        network["x-type"] = "hlfv1"
-        network["version"] = "1.0.0"
-        network["channels"] = {
-            "mychannel": {
-                "orderers": [],
-                "peers": {}
-            }
-        }
-        network["organizations"] = {
-            "Org1": {
-                "mspid": "Org1MSP",
-                "peers": [],
-                "certificateAuthorities": [
-                    "ca_org1"
-                ]
-            },
-            "Org2": {
-                "mspid": "Org2MSP",
-                "peers": [],
-                "certificateAuthorities": [
-                    "ca_org2"
-                ]
-            }
-        }
-        network["orderers"] = {}
-        network["peers"] = {}
-        network["certificateAuthorities"] = {
-            "ca_org1": {
-                "url": f"https://{config['pub_ips'][0]}:7054",
-                "name": "ca_org1",
-                "httpOptions": {
-                    "verify": False
-                }
-            },
-            "ca_org2": {
-                "url": f"https://{config['pub_ips'][1]}:7054",
-                "name": "ca_org2",
-                "httpOptions": {
-                    "verify": False
-                }
-            }
-        }
-
-        for org in range(1, config['fabric_settings']['org_count'] + 1):
-            for peer, ip in enumerate(config['pub_ips'][
-                                      config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * (org - 1):
-                                      config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * org]):
-                network["channels"]["mychannel"]["peers"][f"peer{peer}.org{org}.example.com"] = {
-                    "endorsingPeer": True,
-                    "chaincodeQuery": True,
-                    "eventSource": True
-                }
-
-                network["organizations"][f"Org{org}"]["peers"].append(f"peer{peer}.org{org}.example.com")
-
-                network["peers"][f"peer{peer}.org{org}.example.com"] = {
-                    "url": f"grpcs://{ip}:7051",
-                    "grpcOptions": {
-                        "ssl-target-override": f"peer{peer}.org{org}.example.com"
-                    },
-                    "tlsCACerts": {
-                        "pem": f"INSERT_ORG{org}_CA_CERT"
-                    }
-                }
-
-        for orderer in range(1, config['fabric_settings']['orderer_count'] + 1):
-            ip = config['pub_ips'][config['fabric_settings']['org_count'] + orderer - 1]
-
-            network["channels"]["mychannel"]["orderers"].append(f"orderer{orderer}.example.com")
-
-            network["orderers"][f"orderer{orderer}.example.com"] = {
-                "url": f"grpcs://{ip}:7050",
-                "grpcOptions": {
-                    "ssl-target-name-override": f"orderer{orderer}.example.com"
-                },
-                "tlsCACerts": {
-                    "pem": f"INSERT_ORDERER{orderer}_CA_CERT"
-                }
-            }
-
-        json.dump(network, file, indent=4)
-
-
-def write_replacement(config):
-    f = open(f"{config['exp_dir']}/api/replacement.sh", "w+")
-
-    f.write("#!/bin/bash\n\n")
-
-    f.write("NETWORK=$1\nVERSION=$2\n\n")
-
-    for peer_org in range(1, config['fabric_settings']['org_count'] + 1):
-        f.write(
-            f"ORG{peer_org}" + """_CERT=$(awk 'NF {sub(/\\r/, ""); printf "%s\\\\\\\\n",$0;}'""" + f" {config['exp_dir']}/setup/crypto-config/peerOrganizations/org{peer_org}.example.com/peers/peer0.org{peer_org}.example.com/tls/ca.crt )\n")
-
-    for orderer in range(1, config['fabric_settings']['orderer_count'] + 1):
-        f.write(
-            f"ORDERER_CERT{orderer}" + """=$(awk 'NF {sub(/\\r/, ""); printf "%s\\\\\\\\n",$0;}'""" + f" {config['exp_dir']}/setup/crypto-config/ordererOrganizations/example.com/orderers/orderer{orderer}.example.com/tls/ca.crt )\n")
-        f.write("\n")
-
-    f.write("\n\n\n")
-
-    for peer_org in range(1, config['fabric_settings']['org_count'] + 1):
-        f.write(
-            f'sed -i "s~INSERT_ORG{peer_org}_CA_CERT~$ORG{peer_org}_CERT~g"' + f" {config['exp_dir']}/api/network.json\n")
-
-    for orderer in range(1, config['fabric_settings']['orderer_count'] + 1):
-        f.write(
-            f'sed -i "s~INSERT_ORDERER{orderer}_CA_CERT~$ORDERER_CERT{orderer}~g"' + f" {config['exp_dir']}/api/network.json\n")
-
-    f.close()

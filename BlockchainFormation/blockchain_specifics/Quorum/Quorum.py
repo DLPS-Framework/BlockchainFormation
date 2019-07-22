@@ -3,6 +3,7 @@ import sys
 import json
 import time
 from web3 import Web3
+import numpy as np
 
 def quorum_shutdown(config, logger, ssh_clients, scp_clients):
     """
@@ -26,7 +27,6 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
     # path = os.getcwd()
     os.mkdir((f"{config['exp_dir']}/quorum_logs"))
     os.mkdir((f"{config['exp_dir']}/tessera_logs"))
-    os.mkdir((f"{config['exp_dir']}/api"))
 
     # for saving the enodes and addresses of the nodes resp. wallets (each node has one wallet at the moment)
     addresses = []
@@ -169,9 +169,30 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
         channel.exec_command("java -jar tessera/tessera-app-0.9.2-app.jar -configfile qdata/tm/config.json >> tessera.log 2>&1")
 
     logger.info("Waiting until all tessera nodes have started")
-    # TODO: write general function which waits until qdata/tm/tm.ipc exists on all nodes
-    # config.wait_until_exists("/home/ubuntu/qdata/tm/tm.ipc")
-    time.sleep(15)
+    status_flags = np.zeros(config['vm_count'], dtype=bool)
+    timer = 0
+    while (False in status_flags and timer < 10):
+        time.sleep(10)
+        timer += 1
+        logger.info(f" --> Waited {timer*10} seconds so far, {100 - timer*10} seconds left before abort (it usually takes around 10 seconds)")
+        for index, ip in enumerate(config['pub_ips']):
+
+            if (status_flags[index] == False):
+                sftp = ssh_clients[index].open_sftp()
+                try:
+                    sftp.stat('/home/ubuntu/qdata/tm/tm.ipc')
+                    status_flags[index] = True
+                    logger.info(f"Tessera node on {ip} is ready")
+                except IOError:
+                    logger.info(f"Tessera node on {ip} not ready")
+
+    if (False in status_flags):
+        logger.error('Boot up NOT successful')
+        exit -1
+        try:
+            logger.error(f"Failed Tessera nodes: {[config['pub_ips'][x] for x in np.where(status_flags != True)]}")
+        except:
+            pass
 
     config['tessera_public_keys'] = tessera_public_keys
     config['tessera_private_keys'] = tessera_private_keys
@@ -197,10 +218,33 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
             channel = ssh_clients[index].get_transport().open_session()
             channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --raftport 50000 --raftjoinexisting {raftID} --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip} --raftblocktime {config['quorum_settings']['raftblocktime']} >>node.log 2>&1")
 
+
     logger.info("Waiting until all quorum nodes have started")
-    # TODO: write general function which waits until nodes/new-node-1/geth.ipc exists on all nodes
-    # config.wait_until_exists("/home/ubuntu/nodes/new-node-1/geth.ipc")
-    time.sleep(15)
+    status_flags = np.zeros(config['vm_count'], dtype=bool)
+    timer = 0
+    while (False in status_flags and timer < 10):
+        time.sleep(10)
+        timer += 1
+        logger.info(f" --> Waited {timer*10} seconds so far, {100 - timer*10} seconds left before abort (it usually takes around 10 seconds)")
+        for index, ip in enumerate(config['pub_ips']):
+
+            if (status_flags[index] == False):
+                sftp = ssh_clients[index].open_sftp()
+                try:
+                    sftp.stat('/home/ubuntu/nodes/new-node-1/geth.ipc')
+                    status_flags[index] = True
+                    logger.info(f"Quorum node on {ip} is ready")
+                except IOError:
+                    logger.info(f"Quorum node on {ip} not ready")
+
+    if (False in status_flags):
+        logger.error('Boot up NOT successful')
+        exit -1
+        try:
+            logger.error(f"Failed Quorum nodes: {[config['pub_ips'][x] for x in np.where(status_flags != True)]}")
+        except:
+            pass
+
 
     logger.info("Testing whether the system has started successfully")
     boo = True
@@ -233,93 +277,26 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
     if boo == True:
         logger.info("All accounts unlocked")
 
-
-    """
-    stdin, stdout, stderr = ssh_clients[len(config['pub_ips']) - 1].exec_command("geth --exec " + '\"' + "eth.accounts[0]" + '\"' + " attach /home/ubuntu/nodes/new-node-1/geth.ipc")
-    receiver = stdout.readlines()[0].replace('\n', "")
-    value = 10000000
-    # string = "geth --exec " + '\"' + "eth.sendTransaction({" + f"from: {sender}, " + f"to: {receiver}, " + f"amount: {amount}" + "})" + '\"' + " attach /home/ubuntu/nodes/new-node-1/geth.ipc"
-    string = "geth --exec " + "'" + "eth.sendTransaction({" + f"from: {sender}, " + f"to: {receiver}, " + f"value: {value}" + "})" + "\'" + " attach /home/ubuntu/nodes/new-node-1/geth.ipc"
-    stdin, stdout, stderr = ssh_clients[0].exec_command(string)
-    logger.debug("".join(stdout.readlines()))
-    logger.debug("".join(stderr.readlines()))
-    # string = "geth --exec " + "\'" + "eth.getBlock(1)" + "\'" + " attach /home/ubuntu/nodes/new-node-1/geth.ipc"
-    stdin, stdout, stderr = ssh_clients[2].exec_command(
-        "geth --exec " + "\'" + "eth.getBlock(1)" + "\'" + " attach /home/ubuntu/nodes/new-node-1/geth.ipc")
-    logger.debug("".join(stdout.readlines()))
-    logger.debug("".join(stderr.readlines()))
-    stdin, stdout, stderr = ssh_clients[0].exec_command(
-        "geth --exec " + "\'" + "eth.getBalance(eth.accounts[0])" + "\'" + " attach /home/ubuntu/nodes/new-node-1/geth.ipc")
-    logger.debug("".join(stdout.readlines()))
-    logger.debug("".join(stderr.readlines()))
-    stdin, stdout, stderr = ssh_clients[2].exec_command(
-        "geth --exec " + "\'" + f"eth.getBalance({receiver})" + "\'" + " attach /home/ubuntu/nodes/new-node-1/geth.ipc")
-    logger.debug("".join(stdout.readlines()))
-    logger.debug("".join(stderr.readlines()))
-    stdin, stdout, stderr = ssh_clients[3].exec_command(
-        "geth --exec " + "\'" + "eth.blockNumber" + "\'" + " attach /home/ubuntu/nodes/new-node-1/geth.ipc")
-    logger.debug("".join(stdout.readlines()))
-    logger.debug("".join(stderr.readlines()))
-    """
-
-    logger.info("Done")
-
-""" THIS IS CLIENT_STUFF
-    os.system(f"cp -r /home/user/ec2_automation/blockchain_specifics/Quorum/api /home/user/ec2_automation/automation/{config['exp_dir']}")
-    write_truffle_config(config)
+    logger.info("Getting logs from vms")
 
     for index, ip in enumerate(config['pub_ips']):
+        scp_clients[index].get("/var/log/user_data.log",
+                               f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
 
-        scp_clients[0].put(f"/home/user/ec2_automation/automation/{config['exp_dir']}/api", "/home/ubuntu/api", recursive=True)
 
-        # benchmarking
-        stdin, stdout, stderr = ssh_clients[index].exec_command(f"mv /home/ubuntu/api/benchmarking_raw.js /home/ubuntu/api/benchmarking.js")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
-        stdin, stdout, stderr = ssh_clients[index].exec_command(f"sed -i -e 's#substitute_private_for_tessera_public_key#{tessera_public_keys[1]}#g' /home/ubuntu/api/benchmarking.js")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
-
-        # migrations
-        stdin, stdout, stderr = ssh_clients[index].exec_command(f"mv /home/ubuntu/api/migrations/2_deploy_simplestorage.js /home/ubuntu/api/migrations/2_deploy_simplestorage.js")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
-        stdin, stdout, stderr = ssh_clients[index].exec_command(f"sed -i -e 's#substitute_private_for_tessera_public_key#{tessera_public_keys[1]}#g' /home/ubuntu/api/migrations/2_deploy_simplestorage.js")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
-
-        stdin, stdout, stderr = ssh_clients[0].exec_command("(cd api && bash script.sh >> install.log && node benchmarking.js >> benchmarking.log)")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
+    try:
+        scp_clients[index].get("/home/ubuntu/tessera.log", f"{config['exp_dir']}/tessera_logs/tessera_node{index}.log")
+        logger.info("Logs fetched successfully")
+    except:
+        logger.info(f"Not all tessera logs available on {ip}")
 
 
 
-def write_truffle_config(config):
+    try:
+        scp_clients[index].get("/home/ubuntu/node.log", f"{config['exp_dir']}/quorum_logs/quorum_node{index}.log")
+        logger.info("Logs fetched successfully")
+    except:
+        logger.info(f"Not all quorum logs available on {ip}")
 
-    f = open(f"/home/user/ec2_automation/automation/{config['exp_dir']}/api/truffle-config.js", "w+")
+    logger.info("")
 
-    f.write("module.exports = {\n")
-    f.write("  networks: {\n")
-
-    for index, ip in enumerate(config['pub_ips']):
-        if index < len(config['pub_ips']) - 1:
-            finish = ","
-        else:
-            finish = ""
-
-        f.write(f"    node{index}: " + "{\n")
-        f.write(f"      host: \"{ip}\",\n")
-        f.write("      port: 22000,\n")
-        f.write("      network_id: \"*\",\n")
-        f.write("      gasPrice: 0,\n")
-        f.write("      gas: 4500000,\n")
-        f.write("      type: \"quorum\"\n")
-        f.write("    }" + finish + "\n")
-
-    f.write("  }\n")
-    f.write("};\n")
-
-    f.close()
-"""

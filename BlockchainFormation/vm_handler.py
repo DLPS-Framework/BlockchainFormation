@@ -29,7 +29,7 @@ class VMHandler:
             ch = logging.StreamHandler()
             ch.setLevel(logging.DEBUG)
             # create formatter and add it to the handlers
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            formatter = logging.Formatter('%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
             # fh.setFormatter(formatter)
             ch.setFormatter(formatter)
             self.logger.addHandler(ch)
@@ -261,7 +261,7 @@ class VMHandler:
         ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
 
         # convert to timedelta for nicer waiting time calcs
-        status_flags = np.zeros((self.config['vm_count']), dtype=bool)
+        status_flags = np.zeros(self.config['vm_count'], dtype=bool)
         # how many minutes to wait
         timer = 0
         self.logger.info("Waiting for all VMs to finish the userData setup...")
