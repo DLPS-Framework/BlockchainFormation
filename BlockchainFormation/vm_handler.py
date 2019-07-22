@@ -41,13 +41,15 @@ class VMHandler:
 
 
         # no proxy if no proxy user
-        if self.config['proxy_user'] != "None":
+        # TODO: check if "HTTP_PROXY" not in os.environ is failsafe
+        if self.config['proxy_user'] != "None" and "HTTP_PROXY" not in os.environ:
+
             password = getpass.getpass(prompt=f"Enter proxy password for {self.config['proxy_user']}:")
             os.environ["HTTPS_PROXY"] = f"http://{self.config['proxy_user']}:{password}@proxy.muc:8080"
             os.environ["HTTP_PROXY"] = f"http://{self.config['proxy_user']}:{password}@proxy.muc:8080"
             os.environ["NO_PROXY"] = "localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net"
         else:
-            self.logger.info("No proxy sets since proxy user is None")
+            self.logger.info("No proxy sets since proxy user is None or proxy already set")
 
         os.environ["AWS_SHARED_CREDENTIALS_FILE"] = self.config['aws_credentials']
         os.environ["AWS_CONFIG_FILE"] = self.config['aws_config']

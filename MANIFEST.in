@@ -1,1 +1,2 @@
 include BlockchainFormation/UserDataScripts/*
+include BlockchainFormation/blockchain_specifics/*
