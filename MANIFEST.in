@@ -1,2 +1,5 @@
 include BlockchainFormation/UserDataScripts/*
 include BlockchainFormation/blockchain_specifics/*
+include BlockchainFormation/blockchain_specifics/Fabric/chaincode/benchmarking/*
+include BlockchainFormation/blockchain_specifics/Fabric/setup/*
+include BlockchainFormation/blockchain_specifics/Quorum/contracts/*
