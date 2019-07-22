@@ -342,6 +342,11 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
 
     time.sleep(10)
 
+
+    # Save parity version
+    ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[0].exec_command("parity --version > /data/parity_version.txt")
+    scp_clients[0].get("/data/parity_version.txt", f"{config['exp_dir']}/setup/parity_version.txt")
+
     #TODO: move this to unit test section
     for index, ip in enumerate(config['ips']):
         # web3 = Web3(Web3.HTTPProvider(f"http://{i.private_ip_address}:8545"))

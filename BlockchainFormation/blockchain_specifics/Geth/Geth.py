@@ -222,6 +222,11 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
 
     time.sleep(3)
 
+
+    # Save geth version
+    ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[0].exec_command("geth version > /data/geth_version.txt")
+    scp_clients[0].get("/data/geth_version.txt", f"{config['exp_dir']}/setup/geth_version.txt")
+
     #TODO: move this to unit test section
     for index, ip in enumerate(config['ips']):
         # web3 = Web3(Web3.HTTPProvider(f"http://{i.private_ip_address}:8545"))
