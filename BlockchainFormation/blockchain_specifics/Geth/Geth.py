@@ -220,11 +220,10 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
 
         logger.info(web3_clients[index].admin.peers)
 
-    time.sleep(3)
-
 
     # Save geth version
-    ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[0].exec_command("geth version > /data/geth_version.txt")
+    ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[0].exec_command("sudo geth version >> /data/geth_version.txt")
+    time.sleep(3)
     scp_clients[0].get("/data/geth_version.txt", f"{config['exp_dir']}/setup/geth_version.txt")
 
     #TODO: move this to unit test section

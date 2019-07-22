@@ -1,6 +1,7 @@
-# EC2 Automation Script
+# BlockchainFormation
 
 ## Major Updates:
+ * *July 22 2019:* Added Quorum/Fabric/Sawtooth Support (WIP)
  * *July 1 2019:* Added Application LoadBalancer Support (so far only for private VPCs)
  * *June 17 2019:* Added Parity Support
 
@@ -14,6 +15,7 @@ The shutdown script also calculates the aws costs caused by the uptime of the vi
 
  *NOTE THAT THE CREATED BLOCKCHAIN NODES ARE NOT CONFIGURED WITH HIGH SECURITY SETTINGS* 
 ## How to run it
+This script can either be started by using the argpass CLI or by installing the pip package (see end of this README)
 
 ```run.py``` provides a argpass CLI for starting and terminating VMs. 
 
