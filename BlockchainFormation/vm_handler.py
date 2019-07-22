@@ -417,6 +417,21 @@ class VMHandler:
 
     def get_config_path(self):
         return f"{self.config['exp_dir']}/config.json"
+
+    def get_config(self):
+        return self.config
+
+    def set_target_network_conf(self, dir_name):
+        """
+        Needed by ChainLab project to set network_config after parallelism is finished
+        :param dir_name: Name of target_network_conf
+        :return:
+        """
+        self.config['client_settings']['target_network_conf'] = dir_name
+
+        with open(f"{self.config['exp_dir']}/config.json", 'w') as outfile:
+            json.dump(self.config, outfile, default=datetimeconverter, indent=4)
+
     @staticmethod
     def create_ssh_scp_clients(config):
         """
