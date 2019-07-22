@@ -22,6 +22,8 @@ def fabric_shutdown(config, logger, ssh_clients, scp_clients):
 
 
 def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
+    dir_name = os.path.dirname(os.path.realpath(__file__))
+    
     # create directories for the fabric logs and all the setup data (crypto-stuff, config files and scripts which are exchanged with the VMs)
     os.mkdir(f"{config['exp_dir']}/fabric_logs")
     os.mkdir(f"{config['exp_dir']}/api")
@@ -75,7 +77,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         sys.exit("Fatal error when performing docker swarm setup")
 
     logger.info("Creating crypto-config.yaml and pushing it to first node")
-    write_crypto_config(config)
+    write_crypto_config(config, logger)
 
     stdin, stdout, stderr = ssh_clients[0].exec_command(
         "rm -f /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config.yaml")
@@ -96,7 +98,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
     logger.info("Creating bmhn.sh and pushing it to first node")
     os.system(
-        f"cp blockchain_specifics/Fabric/setup/bmhn.sh {config['exp_dir']}/setup/bmhn.sh")
+        f"cp {dir_name}/setup/bmhn.sh {config['exp_dir']}/setup/bmhn.sh")
     stdin, stdout, stderr = ssh_clients[0].exec_command(
         "rm -f /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/bmhn.sh")
     logger.debug("".join(stdout.readlines()))
@@ -140,7 +142,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
     logger.info("Pushing chaincode to all nodes")
     for index, _ in enumerate(config['pub_ips']):
-        scp_clients[index].put("blockchain_specifics/Fabric/chaincode/benchmarking",
+        scp_clients[index].put(f"{dir_name}/chaincode/benchmarking",
                                "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode",
                                recursive=True)
 
@@ -404,7 +406,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
     logger.debug("Setting up wallet")
     os.system(
-        f"cp blockchain_specifics/Fabric/api/* {config['exp_dir']}/api")
+        f"cp {dir_name}/api/* {config['exp_dir']}/api")
 
     # push api-stuff to ca-nodes
     for org in range(1, config['fabric_settings']['org_count'] + 1):
@@ -494,10 +496,12 @@ def reboot_all(ec2_instances, config, logger, ssh_clients, scp_clients):
 
 
 def write_configtx(config):
+    dir_name = os.path.dirname(os.path.realpath(__file__))
+
     os.system(
-        f"cp blockchain_specifics/Fabric/setup/configtx_raw_1.yaml {config['exp_dir']}/setup/configtx.yaml")
+        f"cp {dir_name}/setup/configtx_raw_1.yaml {config['exp_dir']}/setup/configtx.yaml")
     os.system(
-        f"cp blockchain_specifics/Fabric/setup/configtx_raw_3.yaml {config['exp_dir']}/setup/configtx3.yaml")
+        f"cp {dir_name}/setup/configtx_raw_3.yaml {config['exp_dir']}/setup/configtx3.yaml")
 
     f = open(f"{config['exp_dir']}/setup/configtx2.yaml", "w+")
 
@@ -532,9 +536,12 @@ def write_configtx(config):
     os.system(f"sed -i -e 's/substitute_preferred_max_bytes/{config['fabric_settings']['preferred_max_bytes']}/g' {config['exp_dir']}/setup/configtx.yaml")
 
 
-def write_crypto_config(config):
+def write_crypto_config(config, logger):
+    dir_name = os.path.dirname(os.path.realpath(__file__))
+    logger.debug(f"copying {dir_name}/setup/crypto-config_raw.yaml to {config['exp_dir']}/setup/crypto-config.yaml")
+
     os.system(
-        f"cp blockchain_specifics/Fabric/setup/crypto-config_raw.yaml {config['exp_dir']}/setup/crypto-config.yaml")
+        f"cp {dir_name}/setup/crypto-config_raw.yaml {config['exp_dir']}/setup/crypto-config.yaml")
 
     os.system(
         f"sed -i -e 's/substitute_orderer_count/{config['fabric_settings']['orderer_count']}/g' {config['exp_dir']}/setup/crypto-config.yaml")
@@ -545,8 +552,9 @@ def write_crypto_config(config):
 
 
 def write_script(config, logger):
+    dir_name = os.path.dirname(os.path.realpath(__file__))
     os.system(
-        f"cp blockchain_specifics/Fabric/setup/script_raw_1.sh {config['exp_dir']}/setup/script.sh")
+        f"cp {dir_name}/setup/script_raw_1.sh {config['exp_dir']}/setup/script.sh")
 
     f = open(f"{config['exp_dir']}/setup/script2.sh", "w+")
 
@@ -587,7 +595,7 @@ def write_script(config, logger):
     f.close()
 
     os.system(
-        f"cp blockchain_specifics/Fabric/setup/script_raw_3.sh {config['exp_dir']}/setup/script3.sh")
+        f"cp {dir_name}/setup/script_raw_3.sh {config['exp_dir']}/setup/script3.sh")
     if config['fabric_settings']['tls_enabled'] == 1:
         logger.debug("    --> TLS environment variables set")
         string_tls = f"--tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem"
