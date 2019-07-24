@@ -11,7 +11,7 @@ def quorum_shutdown(config, logger, ssh_clients, scp_clients):
     :return:
     """
 
-    for index, _ in enumerate(config['pub_ips']):
+    for index, _ in enumerate(config['priv_ips']):
         # get account from all instances
         scp_clients[index].get("/home/ubuntu/node.log", f"{config['exp_dir']}/quorum_logs/quorum_log_node_{index}.log")
         scp_clients[index].get("/home/ubuntu/tessera.log", f"{config['exp_dir']}/tessera_logs/tessera_log_node_{index}.log")
@@ -36,7 +36,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
     # ssh_clients, scp_clients = reboot()
 
     logger.info("Get the addresses of each node's wallet (which have been generated during bootstrapping) and store it in the corresponding array <addresses>")
-    for index, _ in enumerate(config['pub_ips']):
+    for index, _ in enumerate(config['priv_ips']):
 
         stdin, stdout, stderr = ssh_clients[index].exec_command("cat /home/ubuntu/nodes/address")
         out = stdout.readlines()
@@ -45,7 +45,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
         logger.debug("".join(stderr.readlines()))
 
     logger.info("Replace the genesis_raw.json on each node by genesis_raw where the first two nodes have some ether")
-    for index, _ in enumerate(config['pub_ips']):
+    for index, _ in enumerate(config['priv_ips']):
 
         stdin, stdout, stderr = ssh_clients[index].exec_command("sed -i -e 's/substitute_first_address/'" + f"'{addresses[0]}'" + "'/g' /home/ubuntu/genesis_raw.json")
         logger.debug("".join(stdout.readlines()))
@@ -62,7 +62,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
     config['addresses'] = addresses
 
     logger.info("Generate the enode on each node and store it in enodes")
-    for index, _ in enumerate(config['pub_ips']):
+    for index, _ in enumerate(config['priv_ips']):
 
         stdin, stdout, stderr = ssh_clients[index].exec_command("bootnode --genkey=nodekey")
         logger.debug("".join(stdout.readlines()))
@@ -81,16 +81,16 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
     config['enodes'] = enodes
 
     logger.info("Generate static-nodes on each node and initialize the genesis block afterwards")
-    for index1, _ in enumerate(config['pub_ips']):
+    for index1, _ in enumerate(config['priv_ips']):
 
         stdin, stdout, stderr = ssh_clients[index1].exec_command("echo '[' > /home/ubuntu/nodes/new-node-1/static-nodes.json")
         logger.debug("".join(stdout.readlines()))
         logger.debug("".join(stderr.readlines()))
 
-        for index2, ip2 in enumerate(config['pub_ips'][0:index1 + 1]):
-            # for index2, _ in enumerate(config['pub_ips']):
+        for index2, ip2 in enumerate(config['priv_ips'][0:index1 + 1]):
+            # for index2, _ in enumerate(config['priv_ips']):
             if (index2 < index1):
-                # if index2 < len(config['pub_ips'])-1:
+                # if index2 < len(config['priv_ips'])-1:
                 string = "echo '  " + '\"' + "enode://" + f"{enodes[index2]}" + "@" + f"{ip2}" + ":21000?discport=0&raftport=50000'" + '\\",' + " >> /home/ubuntu/nodes/new-node-1/static-nodes.json"
                 stdin, stdout, stderr = ssh_clients[index1].exec_command(string)
                 logger.debug("".join(stdout.readlines()))
@@ -115,7 +115,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
     tessera_private_keys = []
 
     logger.info("Get tessera-data from each node and create config-file for tessera on each node")
-    for index1, ip1 in enumerate(config['pub_ips']):
+    for index1, ip1 in enumerate(config['priv_ips']):
 
         # get tessera public and private keys (which have been generated during bootstrapping) and store them in the corresponding arrays <tessera_public_keys> resp. <tessera_private_keys>
         stdin, stdout, stderr = ssh_clients[index1].exec_command("cat /home/ubuntu/qdata/tm/tm.pub")
@@ -134,9 +134,9 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
         # in particular the peers / tessera-nodes which will participate in the (private) quorum network
         peer_string = '\\"peer\\":\ ['
 
-        for index2, ip2 in enumerate(config['pub_ips']):
+        for index2, ip2 in enumerate(config['priv_ips']):
 
-            if index2 < len(config['pub_ips']) - 1:
+            if index2 < len(config['priv_ips']) - 1:
                 peer_string = peer_string + '{\\"url\\":\ \\"http://' + f'{ip2}' + ':9000\\"},'
             else:
                 peer_string = peer_string + '{\\"url\\":\ \\"http://' + f'{ip2}' + ':9000\\"}'
@@ -175,7 +175,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
         time.sleep(10)
         timer += 1
         logger.info(f" --> Waited {timer*10} seconds so far, {100 - timer*10} seconds left before abort (it usually takes around 10 seconds)")
-        for index, ip in enumerate(config['pub_ips']):
+        for index, ip in enumerate(config['priv_ips']):
 
             if (status_flags[index] == False):
                 sftp = ssh_clients[index].open_sftp()
@@ -190,7 +190,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
         logger.error('Boot up NOT successful')
         exit -1
         try:
-            logger.error(f"Failed Tessera nodes: {[config['pub_ips'][x] for x in np.where(status_flags != True)]}")
+            logger.error(f"Failed Tessera nodes: {[config['priv_ips'][x] for x in np.where(status_flags != True)]}")
         except:
             pass
 
@@ -198,7 +198,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
     config['tessera_private_keys'] = tessera_private_keys
 
     logger.info("Starting the quorum network...")
-    for index, ip in enumerate(config['pub_ips']):
+    for index, ip in enumerate(config['priv_ips']):
 
         if index == 0:
             logger.info(f"Starting node {index} and wait for 5s until it is running")
@@ -226,7 +226,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
         time.sleep(10)
         timer += 1
         logger.info(f" --> Waited {timer*10} seconds so far, {100 - timer*10} seconds left before abort (it usually takes around 10 seconds)")
-        for index, ip in enumerate(config['pub_ips']):
+        for index, ip in enumerate(config['priv_ips']):
 
             if (status_flags[index] == False):
                 sftp = ssh_clients[index].open_sftp()
@@ -241,14 +241,14 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
         logger.error('Boot up NOT successful')
         exit -1
         try:
-            logger.error(f"Failed Quorum nodes: {[config['pub_ips'][x] for x in np.where(status_flags != True)]}")
+            logger.error(f"Failed Quorum nodes: {[config['priv_ips'][x] for x in np.where(status_flags != True)]}")
         except:
             pass
 
 
     logger.info("Testing whether the system has started successfully")
     boo = True
-    for index, ip in enumerate(config['pub_ips']):
+    for index, ip in enumerate(config['priv_ips']):
 
         stdin, stdout, stderr = ssh_clients[index].exec_command("geth --exec " + '\"' + "admin.peers.length" + '\"' + " attach /home/ubuntu/nodes/new-node-1/geth.ipc")
         out = stdout.readlines()
@@ -262,7 +262,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info("Unlocking all accounts forever")
     boo = True
-    for index, ip in enumerate(config['pub_ips']):
+    for index, ip in enumerate(config['priv_ips']):
 
         stdin, stdout, stderr = ssh_clients[index].exec_command("geth --exec eth.accounts attach /home/ubuntu/nodes/new-node-1/geth.ipc")
         out = stdout.readlines()
@@ -279,7 +279,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info("Getting logs from vms")
 
-    for index, ip in enumerate(config['pub_ips']):
+    for index, ip in enumerate(config['priv_ips']):
         scp_clients[index].get("/var/log/user_data.log",
                                f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
 

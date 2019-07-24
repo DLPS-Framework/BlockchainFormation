@@ -117,6 +117,7 @@ exampleChaincodeQuery () {
         cat log.txt
         if test $rc -eq 0 ; then
            echo "===================== Example chaincode query on PEER$p.org$1 on channel '$CHANNEL_NAME' was successful ===================== "
+           echo
         else
             echo "!!!!!!!!!!!!!!! Example chaincode query result on PEER$p.org$1 is INVALID !!!!!!!!!!!!!!!!"
             echo "================== ERROR !!! FAILED to execute End-2-End Scenario =================="
@@ -154,6 +155,7 @@ benchmarkingChaincodeQuery () {
         cat log.txt
         if test $rc -eq 0 ; then
            echo "===================== Benchmarking chaincode query on PEER$p.org$1 on channel '$CHANNEL_NAME' was successful ===================== "
+           echo
         else
             echo "!!!!!!!!!!!!!!! Benchmarking chaincode query result on PEER$p.org$1 is INVALID !!!!!!!!!!!!!!!!"
             echo "================== ERROR !!! FAILED to execute End-2-End Scenario =================="
