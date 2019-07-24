@@ -520,7 +520,7 @@ def write_script(config, logger):
                 f"        CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org$2.example.com/users/Admin@org$2.example.com/msp\n")
 
             if config['fabric_settings']['tls_enabled'] == 1:
-                f.write("        # setting TLS environment variables")
+                f.write("        # setting TLS environment variables\n")
                 f.write(f"        CORE_PEER_TLS_ENABLED=true\n")
                 f.write(f"        CORE_PEER_TLS_CLIENTAUTHREQUIRED=false\n")
                 f.write(
@@ -532,7 +532,8 @@ def write_script(config, logger):
             else:
                 f.write(f"        CORE_PEER_TLS_ENABLED=false\n")
 
-    f.write("    fi\n")
+        f.write("    fi\n")
+
     f.write("}\n\n")
 
     f.close()

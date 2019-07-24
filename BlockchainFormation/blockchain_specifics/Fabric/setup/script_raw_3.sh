@@ -87,7 +87,7 @@ instantiateExampleChaincode () {
 instantiateBenchmarkingChaincode () {
     for p in 0; do
         setGlobals $p $1
-        peer chaincode instantiate -o orderer1.example.com:7050 -C $CHANNEL_NAME -l node -n benchmarking -v 1.0 -c '{"Args":[]}' -P "substitute_endorsement ('Org1MSP.member','Org2MSP.member')" substitute_tls>&log.txt
+        peer chaincode instantiate -o orderer1.example.com:7050 -C $CHANNEL_NAME -l node -n benchmarking -v 1.0 -c '{"Args":["org.bench.benchcontract:instantiate"]}' -P "substitute_endorsement ('Org1MSP.member','Org2MSP.member')" substitute_tls>&log.txt
         res=$?
         cat log.txt
         verifyResult $res "Benchmarking chaincode instantiation on PEER$p.org$1 on channel '$CHANNEL_NAME' failed"
@@ -166,17 +166,34 @@ benchmarkingChaincodeQuery () {
     done
 }
 
-chaincodeInvoke () {
-    PEER=$1
-    setGlobals $PEER
+exampleChaincodeInvoke () {
+    for p in substitute_enum_peers; do
+        setGlobals $p $1
+        echo "===================== Invoking example chaincode on PEER$p.org$1 on channel '$CHANNEL_NAME'... ===================== "
     # while "peer chaincode" command can get the orderer endpoint from the peer (if join was successful),
     # lets supply it directly as we know it using the "-o" option
-    peer chaincode invoke -o orderer.example.com:7050 -C $CHANNEL_NAME -n mycc -c '{"Args":["invoke","a","b","10"]}' substitute_tls>&log.txt
-    res=$?
-    cat log.txt
-    verifyResult $res "Invoke execution on PEER$PEER failed "
-    echo "===================== Invoke transaction on PEER$PEER on channel '$CHANNEL_NAME' is successful ===================== "
-    echo
+        peer chaincode invoke -o orderer$1.example.com:7050 -C $CHANNEL_NAME -n mycc -c '{"Args":["invoke","a","b","10"]}' substitute_tls>&log.txt
+        res=$?
+        cat log.txt
+        verifyResult $res "Example chaincode invoke execution on PEER$p.org$1 failed "
+        echo "===================== Example chaincode invoke transaction on PEER$p.org$1 on channel '$CHANNEL_NAME' is successful ===================== "
+        echo
+    done
+}
+
+benchmarkingChaincodeInvoke () {
+    for p in substitute_enum_peers; do
+        setGlobals $p $1
+        echo "===================== Invoking benchmarking chaincode on PEER$p.org$1 on channel '$CHANNEL_NAME'... ===================== "
+    # while "peer chaincode" command can get the orderer endpoint from the peer (if join was successful),
+    # lets supply it directly as we know it using the "-o" option
+        peer chaincode invoke -o orderer$1.example.com:7050 -C $CHANNEL_NAME -n benchmarking -c '{"Args":["matrixMultiplication","5"]}' substitute_tls>&log.txt
+        res=$?
+        cat log.txt
+        verifyResult $res "Example chaincode invoke execution on PEER$p.org$1 failed "
+        echo "===================== Example chaincode invoke transaction on PEER$p.org$1 on channel '$CHANNEL_NAME' is successful ===================== "
+        echo
+    done
 }
 
 ## Create channel
@@ -195,23 +212,29 @@ updateAnchorPeers 0 2
 
 ## Install chaincode on Peers
 echo "Installing chaincode on peers..."
+installExampleChaincode 1
+installExampleChaincode 2
 installBenchmarkingChaincode 1
 installBenchmarkingChaincode 2
 
 ##Instantiate example and benchmarking chaincode on peer 0
 echo "Instantiating example and benchmarking chaincode on peers..."
+instantiateExampleChaincode 1
 instantiateBenchmarkingChaincode 1
 
 ##Query example and benchmarking chaincode on all peers
 echo "Querying example and benchmarking chaincode on all peers"
-# exampleChaincodeQuery 1
-# exampleChaincodeQuery 2
+exampleChaincodeQuery 1
+exampleChaincodeQuery 2
 benchmarkingChaincodeQuery 1
 benchmarkingChaincodeQuery 2
 
-# #Invoke chaincode on Peer0/Org1
-# echo "Sending invoke transaction on org1/peer0..."
-# chaincodeInvoke 0
+##Invoke example and benchmarking chaincode on all peers
+echo "Invoking example and benchmarking chaincode on all peers"
+exampleChaincodeInvoke 1
+exampleChaincodeInvoke 2
+benchmarkingChaincodeInvoke 1
+benchmarkingChaincodeInvoke 2
 
 # #Query on chaincode on Peer1/Org1, check if the result is 90
 # echo "Querying chaincode on org2/peer3..."

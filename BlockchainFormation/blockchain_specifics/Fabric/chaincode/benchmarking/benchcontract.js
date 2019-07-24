@@ -56,7 +56,8 @@ class BenchContract extends Contract {
 		await ctx.stub.putState(key.toString(), Buffer.from(data))
 		key++
 	}
-        return Buffer.from(key.toString())
+        //return Buffer.from(key.toString())
+        return key.toString()
     }
 
     async readData(ctx, n, key) {
@@ -73,6 +74,7 @@ class BenchContract extends Contract {
     /** For overhead testing
     */
     async doNothing(ctx) {
+        return 1
     }
 
     /** Function for matrix multiplication
@@ -117,7 +119,8 @@ class BenchContract extends Contract {
                 matrixSum += result[i][j];
             }
         }
-        return Buffer.from(matrixSum.toString())
+        //return Buffer.from(matrixSum.toString())
+        return matrixSum.toString()
     }
 
 
