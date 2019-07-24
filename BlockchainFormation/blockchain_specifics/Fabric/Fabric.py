@@ -177,6 +177,8 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
             string_ca_tls = string_ca_tls + f" -e FABRIC_CA_SERVER_TLS_ENABLED=true"
             string_ca_tls = string_ca_tls + f" -e FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.org{org}.example.com-cert.pem"
             string_ca_tls = string_ca_tls + f" -e FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/{peer_orgs_secret_keys[org - 1]}"
+        # else:
+        #     string_ca_tls = string_ca_tls + f" -e FABRIC_CA_SERVER_TLS_ENABLED=false"
 
         string_ca_v = ""
         string_ca_v = string_ca_v + f" -v $(pwd)/crypto-config/peerOrganizations/org{org}.example.com/ca/:/etc/hyperledger/fabric-ca-server-config"
@@ -187,7 +189,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         channel.exec_command(
             f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + f" hyperledger/fabric-ca sh -c 'fabric-ca-server start -b admin:adminpw -d' &> /home/ubuntu/ca.org{org}.log)")
         ssh_clients[org - 1].exec_command(
-            f"echo \"docker run -it --rm" + string_ca_v + " hyperledger/fabric-tools /bin/bash\" >> cli.sh")
+            f"echo \"docker run -it --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + " hyperledger/fabric-tools /bin/bash\" >> cli.sh")
 
     # starting orderer
     logger.info(f"Starting orderers")
@@ -205,6 +207,10 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         string_orderer_base = string_orderer_base + f" -e ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp"
         string_orderer_base = string_orderer_base + f" -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE={my_net}"
 
+        string_orderer_link = ""
+        for orderer2 in range(1, orderer):
+            string_orderer_link = string_orderer_link + f" --link orderer{orderer2}.example.com:orderer{orderer2}.example.com"
+
         string_orderer_tls = ""
         if config['fabric_settings']['tls_enabled'] == 1:
             logger.debug("    --> TLS environment variables set")
@@ -214,6 +220,8 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
             string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]"
             string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt"
             string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key"
+        else:
+            string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_TLS_ENABLED=false"
 
         string_orderer_v = ""
         string_orderer_v = string_orderer_v + f" -v $(pwd)/channel-artifacts/genesis.block:/var/hyperledger/orderer/genesis.block"
@@ -225,16 +233,14 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         logger.debug(f" - Starting orderer{orderer} on {config['pub_ips'][config['fabric_settings']['org_count'] - 1 + orderer]}")
         channel = ssh_clients[config['fabric_settings']['org_count'] + orderer - 1].get_transport().open_session()
         channel.exec_command(
-            f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_orderer_base + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /home/ubuntu/orderer{orderer}.log)")
+            f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_orderer_base + string_orderer_link + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /home/ubuntu/orderer{orderer}.log)")
         ssh_clients[config['fabric_settings']['org_count'] + orderer - 1].exec_command(
-            f"echo \"docker run -it --rm" + string_orderer_v + " hyperledger/fabric-tools /bin/bash\" >> cli.sh")
+            f"(cd /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_orderer_base + string_orderer_link + string_orderer_tls + string_orderer_v + " hyperledger/fabric-tools /bin/bash\" >> /home/ubuntu/cli.sh)")
 
-    link_string = ""
     # starting peers and databases
     logger.info(f"Starting databases and peers")
     for org in range(1, config['fabric_settings']['org_count'] + 1):
-        for peer, ip in enumerate(config['pub_ips'][
-                                  config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * (org - 1):
+        for peer, ip in enumerate(config['pub_ips'][config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * (org - 1):
                                   config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * org]):
             # set up configuration of database like with docker compose
             string_database_base = ""
@@ -251,22 +257,21 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
             # Setting up configuration of peer like with docker compose
 
-            for orderer in range(1, config['fabric_settings']['orderer_count'] + 1):
-                link_string = link_string + f" --link orderer{orderer}.example.com:orderer{orderer}.example.com"
-
-            for peer_org2 in range(1, org + 1):
-                if peer_org2 < org:
-                    end = config['fabric_settings']['org_count']
-                else:
-                    end = peer
-
-                for peer2 in range(0, end + 1):
-                    link_string = link_string + f" --link peer{peer2}.org{peer_org2}.example.com:peer{peer2}.org{org}.example.com"
-
             string_peer_base = ""
             string_peer_base = string_peer_base + f" --network='{my_net}' --name peer{peer}.org{org}.example.com -p 7051:7051 -p 7053:7053"
 
-            string_peer_link = link_string
+            string_peer_link = ""
+            for orderer2 in range(1, config['fabric_settings']['orderer_count'] + 1):
+                string_peer_link = string_peer_link + f" --link orderer{orderer2}.example.com:orderer{orderer2}.example.com"
+
+            for org2 in range(1, org + 1):
+                if org2 < org:
+                    end = config['fabric_settings']['peer_count']
+                else:
+                    end = peer
+
+                for peer2 in range(0, end):
+                    string_peer_link = string_peer_link + f" --link peer{peer2}.org{org2}.example.com:peer{peer2}.org{org2}.example.com"
 
             string_peer_database = ""
             string_peer_database = string_peer_database + f" -e CORE_LEDGER_STATE_STATEDATABASE=CouchDB"
@@ -276,7 +281,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
             string_peer_core = ""
             string_peer_core = string_peer_core + f" -e FABRIC_LOGGING_SPEC={config['fabric_settings']['log_level']}"
-            string_peer_core = string_peer_core + f" -e CORE_LOGGING_MSP={config['fabric_settings']['log_level']}"
+            # string_peer_core = string_peer_core + f" -e CORE_LOGGING_MSP={config['fabric_settings']['log_level']}"
             string_peer_core = string_peer_core + f" -e CORE_PEER_ADDRESSAUTODETECT=true"
             string_peer_core = string_peer_core + f" -e CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock"
             string_peer_core = string_peer_core + f" -e CORE_PEER_NETWORKID=peer{peer}.org{org}.example.com"
@@ -303,6 +308,8 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
                 string_peer_tls = string_peer_tls + f" -e CORE_PEER_TLS_CERT_FILE=/var/hyperledger/fabric/tls/server.crt"
                 string_peer_tls = string_peer_tls + f" -e CORE_PEER_TLS_KEY_FILE=/var/hyperledger/fabric/tls/server.key"
                 string_peer_tls = string_peer_tls + f" -e CORE_PEER_TLS_ROOTCERT_FILE=/var/hyperledger/fabric/tls/ca.crt"
+            else:
+                string_peer_tls = string_orderer_tls + f" -e CORE_PEER_TLS_ENABLED=false"
 
             string_peer_v = ""
             string_peer_v = string_peer_v + f" -v /var/run/:/host/var/run/"
@@ -312,27 +319,25 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
             # Starting the peers
             logger.debug(f" - Starting peer{peer}.org{org} on {ip}")
-            channel = ssh_clients[config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * (
-                        org - 1) + peer].get_transport().open_session()
+            channel = ssh_clients[config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * (org - 1) + peer].get_transport().open_session()
             channel.exec_command(
                 f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_peer_base + string_peer_link + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + f" hyperledger/fabric-peer peer node start &> /home/ubuntu/peer{peer}.org{org}.log)")
             ssh_clients[
                 config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * (org - 1) + peer].exec_command(
-                f"echo \"docker run -it --rm" + string_peer_v + " hyperledger/fabric-tools /bin/bash\" >> cli.sh")
+                f"(cd /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_peer_base + string_peer_link + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + " hyperledger/fabric-tools /bin/bash\" >> /home/ubuntu/cli.sh)")
 
     # Waiting for a few seconds until all has started
     time.sleep(10)
-
+    index_last_node = config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * (config['fabric_settings']['org_count'] + 1) - 1
     # Creating script and pushing it to the last node
     logger.debug(
-        "Executing script on last node which creates channel, adds peers to channel, installs and instantiates all chaincode - can take some minutes")
+        f"Executing script on {config['pub_ips'][index_last_node]}  which creates channel, adds peers to channel, installs and instantiates all chaincode - can take some minutes")
     write_script(config, logger)
-    stdin, stdout, stderr = ssh_clients[config["vm_count"] - 1].exec_command(
+    stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(
         "rm -f /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/script.sh")
     logger.debug(stdout.readlines())
     logger.debug(stdout.readlines())
-    scp_clients[config["vm_count"] - 1].put(f"{config['exp_dir']}/setup/script.sh",
-                                            "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/script.sh")
+    scp_clients[index_last_node].put(f"{config['exp_dir']}/setup/script.sh", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/script.sh")
 
     # Setting up configuration of cli like with docker compose
     string_cli_base = ""
@@ -340,8 +345,13 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     string_cli_base = string_cli_base + f" -e GOPATH=/opt/gopath"
     string_cli_base = string_cli_base + f" -e FABRIC_LOGGING_SPEC={config['fabric_settings']['log_level']}"
 
-    string_cli_link = link_string
-    string_cli_link = string_cli_link + f" --link peer{peer}.org{org}.example.com:peer{peer}.org{org}.example.com"
+    string_cli_link = ""
+    for orderer in range(1, config['fabric_settings']['orderer_count'] + 1):
+        string_cli_link = string_cli_link + f" --link orderer{orderer}.example.com:orderer{orderer}.example.com"
+
+    for org in range(1, org + 1):
+        for peer in range(0, config['fabric_settings']['peer_count'] + 1):
+            string_cli_link = string_cli_link + f" --link peer{peer}.org{org}.example.com:peer{peer}.org{org}.example.com"
 
     string_cli_core = ""
     string_cli_core = string_cli_core + f" -e CORE_PEER_LOCALMSPID=Org{org}MSP"
@@ -359,6 +369,8 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         string_cli_tls = string_cli_tls + f" -e CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org{org}.example.com/peers/peer{peer}.org{org}.example.com/tls/server.crt"
         string_cli_tls = string_cli_tls + f" -e CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org{org}.example.com/peers/peer{peer}.org{org}.example.com/tls/server.key"
         string_cli_tls = string_cli_tls + f" -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org{org}.example.com/peers/peer{peer}.org{org}.example.com/tls/ca.crt"
+    else:
+        string_cli_tls = string_cli_tls + f" -e CORE_PEER_TLS_ENABLED=false"
 
     string_cli_v = ""
     string_cli_v = string_cli_v + f" -v /var/run/:/host/var/run/"
@@ -369,15 +381,15 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     string_cli_v = string_cli_v + f" -w /opt/gopath/src/github.com/hyperledger/fabric/peer"
 
     # execute script.sh on last node
-    stdin, stdout, stderr = ssh_clients[config["vm_count"] - 1].exec_command(
+    stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(
         f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_link + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 script.sh && ls -la && cd .. && ./scripts/script.sh)' |& tee /home/ubuntu/setup.log)")
     out = stdout.readlines()
     for index, _ in enumerate(out):
         logger.debug(out[index].replace("\n", ""))
 
     # save the cli command on the last node and save it in exp_dir
-    ssh_clients[config['vm_count'] - 1].exec_command(
-        f"echo \"docker run -it --rm" + string_cli_base + string_cli_link + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash\" >> cli2.sh")
+    ssh_clients[index_last_node].exec_command(
+        f"(cd /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_cli_base + string_cli_link + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash\" >> /home/ubuntu/cli2.sh)")
 
     logger.debug("".join(stderr.readlines()))
 
