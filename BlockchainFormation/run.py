@@ -172,7 +172,8 @@ class ArgParser:
     def _add_fabric_args(parser):
         parser.add_argument('--org_count', help='specify number of organizations', type=int, default=2)
         parser.add_argument('--peer_count', help='specify number of peers per organization', type=int, default=3)
-        parser.add_argument('--orderer_count', help='specify number of orderers', type=int, default=1)
+        parser.add_argument('--orderer_type', help='specify the orderer type chosen from "solo" and "raft", default="solo"')
+        parser.add_argument('--orderer_count', help='specify number of orderers - if orderer_type is "solo", then orderer_count must be 1', type=int, default=1)
         parser.add_argument('--batch_timeout', help='spefify the amount of seconds to wait before creating a batch',
                             type=int, default=2)
         parser.add_argument('--max_message_count', help='speficy the maximum number of messages to permit in a batch',
@@ -315,6 +316,7 @@ class ArgParser:
             {
                 "org_count": namespace_dict['org_count'],
                 "peer_count": namespace_dict['peer_count'],
+                "orderer_type": namespace_dict['orderer_type'],
                 "orderer_count": namespace_dict['orderer_count'],
                 "batch_timeout": namespace_dict['batch_timeout'],
                 "max_message_count": namespace_dict['max_message_count'],

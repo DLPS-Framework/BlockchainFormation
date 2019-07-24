@@ -316,7 +316,7 @@ class VMHandler:
                     lb_handler.creation_routine()
 
             self.logger.info(
-                f"Setup of all {self.config['blockchyin_type}']}-VMs was successful, to terminate them run run.py terminate --config {self.config['exp_dir']}/config.json")
+                f"Setup of all {self.config['blockchain_type}']}-VMs was successful, to terminate them run run.py terminate --config {self.config['exp_dir']}/config.json")
         try:
             map(lambda client: client.close(), ssh_clients)
             map(lambda client: client.close(), scp_clients)

@@ -182,7 +182,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         string_ca_v = string_ca_v + f" -v $(pwd)/crypto-config/peerOrganizations/org{org}.example.com/ca/:/etc/hyperledger/fabric-ca-server-config"
 
         # Starting the Certificate Authority
-        logger.debug(f" - Starting ca for org{org} on {config['priv_ips'][org - 1]}")
+        logger.debug(f" - Starting ca for org{org} on {config['pub_ips'][org - 1]}")
         channel = ssh_clients[org - 1].get_transport().open_session()
         channel.exec_command(
             f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + f" hyperledger/fabric-ca sh -c 'fabric-ca-server start -b admin:adminpw -d' &> /home/ubuntu/ca.org{org}.log)")
@@ -222,7 +222,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         string_orderer_v = string_orderer_v + f" -w /opt/gopath/src/github.com/hyperledger/fabric"
 
         # Starting the orderers
-        logger.debug(f" - Starting orderer{orderer} on {config['priv_ips'][config['fabric_settings']['org_count'] - 1 + orderer]}")
+        logger.debug(f" - Starting orderer{orderer} on {config['pub_ips'][config['fabric_settings']['org_count'] - 1 + orderer]}")
         channel = ssh_clients[config['fabric_settings']['org_count'] + orderer - 1].get_transport().open_session()
         channel.exec_command(
             f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_orderer_base + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /home/ubuntu/orderer{orderer}.log)")
@@ -233,7 +233,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     # starting peers and databases
     logger.info(f"Starting databases and peers")
     for org in range(1, config['fabric_settings']['org_count'] + 1):
-        for peer, ip in enumerate(config['priv_ips'][
+        for peer, ip in enumerate(config['pub_ips'][
                                   config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * (org - 1):
                                   config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * org]):
             # set up configuration of database like with docker compose
@@ -378,8 +378,6 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     # save the cli command on the last node and save it in exp_dir
     ssh_clients[config['vm_count'] - 1].exec_command(
         f"echo \"docker run -it --rm" + string_cli_base + string_cli_link + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash\" >> cli2.sh")
-    scp_clients[config['vm_count'] - 1].get(f"/home/ubuntu/cli.sh",
-                                            f"{config['exp_dir']}/setup")
 
     logger.debug("".join(stderr.readlines()))
 
@@ -393,7 +391,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
     logger.info("Getting logs from vms")
 
-    for index, ip in enumerate(config['priv_ips']):
+    for index, ip in enumerate(config['pub_ips']):
         scp_clients[index].get("/var/log/user_data.log",
                                f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
 
@@ -462,22 +460,28 @@ def write_configtx(config):
 
     f = open(f"{config['exp_dir']}/setup/configtx2.yaml", "w+")
 
-    f.write("\n    OrdererType: etcdraft\n\n")
+    if config['fabric_settings']['orderer_type'].upper() == "RAFT":
+        f.write("\n    OrdererType: etcdraft\n\n")
 
-    f.write("    EtcdRaft:\n")
-    f.write("        Consenters:\n")
-    for orderer in range(1, config['fabric_settings']['orderer_count'] + 1):
-        f.write(f"            - Host: orderer{orderer}.example.com\n")
-        f.write(f"              Port: 7050\n")
-        f.write(
-            f"              ClientTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer{orderer}.example.com/tls/server.crt\n")
-        f.write(
-            f"              ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer{orderer}.example.com/tls/server.crt\n")
+        f.write("    EtcdRaft:\n")
+        f.write("        Consenters:\n")
+        for orderer in range(1, config['fabric_settings']['orderer_count'] + 1):
+            f.write(f"            - Host: orderer{orderer}.example.com\n")
+            f.write(f"              Port: 7050\n")
+            f.write(
+                f"              ClientTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer{orderer}.example.com/tls/server.crt\n")
+            f.write(
+                f"              ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer{orderer}.example.com/tls/server.crt\n")
+
+
+    else:
+        f.write("\n    OrdererType: solo\n\n")
 
     f.write("\n")
     f.write("    Addresses:\n")
     for orderer in range(1, config['fabric_settings']['orderer_count'] + 1):
         f.write(f"        - orderer{orderer}.example.com:7050\n")
+
 
     f.close()
 

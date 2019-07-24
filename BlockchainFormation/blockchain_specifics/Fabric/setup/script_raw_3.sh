@@ -174,7 +174,7 @@ exampleChaincodeInvoke () {
         echo "===================== Invoking example chaincode on PEER$p.org$1 on channel '$CHANNEL_NAME'... ===================== "
     # while "peer chaincode" command can get the orderer endpoint from the peer (if join was successful),
     # lets supply it directly as we know it using the "-o" option
-        peer chaincode invoke -o orderer$1.example.com:7050 -C $CHANNEL_NAME -n mycc -c '{"Args":["invoke","a","b","10"]}' substitute_tls>&log.txt
+        peer chaincode invoke -o orderer1.example.com:7050 -C $CHANNEL_NAME -n mycc -c '{"Args":["invoke","a","b","10"]}' substitute_tls>&log.txt
         res=$?
         cat log.txt
         verifyResult $res "Example chaincode invoke execution on PEER$p.org$1 failed "
@@ -189,7 +189,7 @@ benchmarkingChaincodeInvoke () {
         echo "===================== Invoking benchmarking chaincode on PEER$p.org$1 on channel '$CHANNEL_NAME'... ===================== "
     # while "peer chaincode" command can get the orderer endpoint from the peer (if join was successful),
     # lets supply it directly as we know it using the "-o" option
-        peer chaincode invoke -o orderer$1.example.com:7050 -C $CHANNEL_NAME -n benchmarking -c '{"Args":["matrixMultiplication","5"]}' substitute_tls>&log.txt
+        peer chaincode invoke -o orderer1.example.com:7050 -C $CHANNEL_NAME -n benchmarking -c '{"Args":["matrixMultiplication","5"]}' substitute_tls>&log.txt
         res=$?
         cat log.txt
         verifyResult $res "Example chaincode invoke execution on PEER$p.org$1 failed "
