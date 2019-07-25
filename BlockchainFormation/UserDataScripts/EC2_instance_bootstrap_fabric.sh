@@ -21,7 +21,7 @@
   rm go1.7.3.linux-amd64.tar.gz
 
   # Cloning hyperledger fabric + docker images
-  curl -sSL http://bit.ly/2ysbOFE | sudo bash -s 1.4.0
+  curl -sSL http://bit.ly/2ysbOFE | sudo bash -s 1.4.1
 
   # Cloning github repository with helping material for Multi-Host-Network
   git clone https://github.com/wahabjawed/Build-Multi-Host-Network-Hyperledger.git
