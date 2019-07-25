@@ -16,9 +16,9 @@
 
   # Setting up go
   # echo 'Y' | sudo apt-get install golang-go
-  wget -c https://storage.googleapis.com/golang/go1.7.3.linux-amd64.tar.gz
-  sudo tar -xvzf go1.7.3.linux-amd64.tar.gz -C /usr/local
-  rm go1.7.3.linux-amd64.tar.gz
+  wget -c https://dl.google.com/go/go1.12.7.linux-amd64.tar.gz
+  sudo tar -xvzf go1.12.7.linux-amd64.tar.gz -C /usr/local
+  rm go1.12.7.linux-amd64.tar.gz
 
   # Cloning hyperledger fabric + docker images
   curl -sSL http://bit.ly/2ysbOFE | sudo bash -s 1.4.1

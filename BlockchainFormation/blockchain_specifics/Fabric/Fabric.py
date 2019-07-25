@@ -198,9 +198,10 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         string_orderer_base = ""
         string_orderer_base = string_orderer_base + f" --network={my_net} --name orderer{orderer}.example.com -p 7050:7050"
         string_orderer_base = string_orderer_base + f" -e FABRIC_LOGGING_SPEC={config['fabric_settings']['log_level']}"
-        # string_orderer_base = string_orderer_base + f" -e ORDERER_HOME=/var/hyperledger/orderer"
+        string_orderer_base = string_orderer_base + f" -e ORDERER_HOME=/var/hyperledger/orderer"
         string_orderer_base = string_orderer_base + f" -e ORDERER_GENERAL_LISTENADDRESS=0.0.0.0"
         string_orderer_base = string_orderer_base + f" -e ORDERER_GENERAL_LISTENPORT=7050"
+        string_orderer_base = string_orderer_base + f" -e ODERER_HOST=orderer{orderer}.example.com"
         string_orderer_base = string_orderer_base + f" -e ORDERER_GENERAL_GENESISMETHOD=file"
         string_orderer_base = string_orderer_base + f" -e ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/genesis.block"
         string_orderer_base = string_orderer_base + f" -e ORDERER_GENERAL_LOCALMSPID=OrdererMSP"
@@ -218,8 +219,13 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
             string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key"
             string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt"
             string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]"
-            string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt"
-            string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key"
+            # string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt"
+            # string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key"
+            # string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_CLUSTER_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]"
+            string_orderer_tls = string_orderer_tls + f" -e ORDERER_TLS_CLIENTAUTHREQUIRED=false"
+            string_orderer_tls = string_orderer_tls + f" -e ORDERER_TLS_CLIENTROOTCAS_FILES=/var/hyperledger/users/Admin@example.com/tls/ca.crt"
+            string_orderer_tls = string_orderer_tls + f" -e ORDERER_TLS_CLIENTCERT_FILE=/var/hyperledger/users/Admin@example.com/tls/client.crt"
+            string_orderer_tls = string_orderer_tls + f" -e ORDERER_TLS_CLIENTKEY_FILE=/var/hyperledger/users/Admin@example.com/tls/client.key"
         else:
             string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_TLS_ENABLED=false"
 
@@ -227,15 +233,16 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         string_orderer_v = string_orderer_v + f" -v $(pwd)/channel-artifacts/genesis.block:/var/hyperledger/orderer/genesis.block"
         string_orderer_v = string_orderer_v + f" -v $(pwd)/crypto-config/ordererOrganizations/example.com/orderers/orderer{orderer}.example.com/msp:/var/hyperledger/orderer/msp"
         string_orderer_v = string_orderer_v + f" -v $(pwd)/crypto-config/ordererOrganizations/example.com/orderers/orderer{orderer}.example.com/tls:/var/hyperledger/orderer/tls"
+        string_orderer_v = string_orderer_v + f" -v $(pwd)/crypto-config/ordererOrganizations/example.com/users:/var/hyperledger/users"
         string_orderer_v = string_orderer_v + f" -w /opt/gopath/src/github.com/hyperledger/fabric"
 
         # Starting the orderers
         logger.debug(f" - Starting orderer{orderer} on {config['pub_ips'][config['fabric_settings']['org_count'] - 1 + orderer]}")
         channel = ssh_clients[config['fabric_settings']['org_count'] + orderer - 1].get_transport().open_session()
         channel.exec_command(
-            f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_orderer_base + string_orderer_link + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /home/ubuntu/orderer{orderer}.log)")
+            f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_orderer_base + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /home/ubuntu/orderer{orderer}.log)")
         ssh_clients[config['fabric_settings']['org_count'] + orderer - 1].exec_command(
-            f"(cd /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_orderer_base + string_orderer_link + string_orderer_tls + string_orderer_v + " hyperledger/fabric-tools /bin/bash\" >> /home/ubuntu/cli.sh)")
+            f"(cd /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_orderer_base + string_orderer_tls + string_orderer_v + " hyperledger/fabric-tools /bin/bash\" >> /home/ubuntu/cli.sh)")
 
     # starting peers and databases
     logger.info(f"Starting databases and peers")
@@ -276,29 +283,32 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
             string_peer_database = ""
             string_peer_database = string_peer_database + f" -e CORE_LEDGER_STATE_STATEDATABASE=CouchDB"
             string_peer_database = string_peer_database + f" -e CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb{peer}.org{org}:5984"
-            string_peer_database = string_peer_database + f" -e CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME="
-            string_peer_database = string_peer_database + f" -e CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD="
+            # string_peer_database = string_peer_database + f" -e CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME="
+            # string_peer_database = string_peer_database + f" -e CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD="
 
             string_peer_core = ""
             string_peer_core = string_peer_core + f" -e FABRIC_LOGGING_SPEC={config['fabric_settings']['log_level']}"
             # string_peer_core = string_peer_core + f" -e CORE_LOGGING_MSP={config['fabric_settings']['log_level']}"
-            string_peer_core = string_peer_core + f" -e CORE_PEER_ADDRESSAUTODETECT=true"
+            string_peer_core = string_peer_core + f" -e CORE_PEER_ADDRESS=peer{peer}.org{org}.example.com:7051"
+            string_peer_core = string_peer_core + f" -e CORE_PEER_ADDRESSAUTODETECT=false"
             string_peer_core = string_peer_core + f" -e CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock"
-            string_peer_core = string_peer_core + f" -e CORE_PEER_NETWORKID=peer{peer}.org{org}.example.com"
-            string_peer_core = string_peer_core + f" -e CORE_NEXT=true"
-            string_peer_core = string_peer_core + f" -e CORE_PEER_ENDORSER_ENABLED=true"
+            string_peer_core = string_peer_core + f" -e CORE_PEER_NETWORKID={my_net}"
+            # string_peer_core = string_peer_core + f" -e CORE_NEXT=true"
+            # string_peer_core = string_peer_core + f" -e CORE_PEER_ENDORSER_ENABLED=true"
             string_peer_core = string_peer_core + f" -e CORE_PEER_ID=peer{peer}.org{org}.example.com"
             string_peer_core = string_peer_core + f" -e CORE_PEER_PROFILE_ENABLED=true"
-            string_peer_core = string_peer_core + f" -e CORE_PEER_COMMITTER_LEDGER_ORDERER=orderer1.example.com:7050"
-            string_peer_core = string_peer_core + f" -e CORE_PEER_GOSSIP_IGNORESECURITY=true"
+            # string_peer_core = string_peer_core + f" -e CORE_PEER_COMMITTER_LEDGER_ORDERER=orderer1.example.com:7050"
+            # string_peer_core = string_peer_core + f" -e CORE_PEER_GOSSIP_IGNORESECURITY=true"
             string_peer_core = string_peer_core + f" -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE={my_net}"
             string_peer_core = string_peer_core + f" -e CORE_PEER_LOCALMSPID=Org{org}MSP"
             string_peer_core = string_peer_core + f" -e CORE_PEER_MSPCONFIGPATH=/var/hyperledger/fabric/msp"
             string_peer_core = string_peer_core + f" -e CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer{peer}.org{org}.example.com:7051"
-            string_peer_core = string_peer_core + f" -e CORE_PEER_GOSSIP_USELEADERELECTION=false"
-            string_peer_core = string_peer_core + f" -e CORE_PEER_GOSSIP_ORGLEADER=true"
-            if peer != 0:
-                string_peer_core = string_peer_core + f" -e CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org{org}.example.com:7051"
+            # string_peer_core = string_peer_core + f" -e CORE_PEER_GOSSIP_USELEADERELECTION=false"
+            # string_peer_core = string_peer_core + f" -e CORE_PEER_GOSSIP_ORGLEADER=true"
+            # if peer != 0:
+            #     string_peer_core = string_peer_core + f" -e CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org{org}.example.com:7051"
+
+            string_peer_core = string_peer_core + f" -e CORE_PEER_CHAINCODELISTENADDRESS=peer{peer}.org{org}.example.com:7052"
 
             string_peer_tls = ""
             if config['fabric_settings']['tls_enabled'] == 1:
@@ -321,10 +331,10 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
             logger.debug(f" - Starting peer{peer}.org{org} on {ip}")
             channel = ssh_clients[config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * (org - 1) + peer].get_transport().open_session()
             channel.exec_command(
-                f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_peer_base + string_peer_link + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + f" hyperledger/fabric-peer peer node start &> /home/ubuntu/peer{peer}.org{org}.log)")
+                f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + f" hyperledger/fabric-peer peer node start &> /home/ubuntu/peer{peer}.org{org}.log)")
             ssh_clients[
                 config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * (org - 1) + peer].exec_command(
-                f"(cd /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_peer_base + string_peer_link + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + " hyperledger/fabric-tools /bin/bash\" >> /home/ubuntu/cli.sh)")
+                f"(cd /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + " hyperledger/fabric-tools /bin/bash\" >> /home/ubuntu/cli.sh)")
 
     # Waiting for a few seconds until all has started
     time.sleep(10)
@@ -358,7 +368,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     string_cli_core = string_cli_core + f" -e CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock"
     string_cli_core = string_cli_core + f" -e CORE_PEER_ID=cli"
     string_cli_core = string_cli_core + f" -e CORE_PEER_ADDRESS=peer0.org{org}.example.com:7051"
-    string_cli_core = string_cli_core + f" -e CORE_PEER_NETWORKID=cli"
+    string_cli_core = string_cli_core + f" -e CORE_PEER_NETWORKID={my_net}"
     string_cli_core = string_cli_core + f" -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org{org}.example.com/users/Admin@org{org}.example.com/msp"
     string_cli_core = string_cli_core + f" -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE={my_net}"
 
@@ -382,14 +392,14 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
     # execute script.sh on last node
     stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(
-        f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_link + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 script.sh && ls -la && cd .. && ./scripts/script.sh)' |& tee /home/ubuntu/setup.log)")
+        f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 script.sh && ls -la && cd .. && ./scripts/script.sh)' |& tee /home/ubuntu/setup.log)")
     out = stdout.readlines()
     for index, _ in enumerate(out):
         logger.debug(out[index].replace("\n", ""))
 
     # save the cli command on the last node and save it in exp_dir
     ssh_clients[index_last_node].exec_command(
-        f"(cd /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_cli_base + string_cli_link + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash\" >> /home/ubuntu/cli2.sh)")
+        f"(cd /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash\" >> /home/ubuntu/cli2.sh)")
 
     logger.debug("".join(stderr.readlines()))
 
