@@ -3,7 +3,7 @@
 createChannel() {
 
     setGlobals 0 2
-    peer channel create -o orderer1.example.com:7050 -c $CHANNEL_NAME -f ./channel-artifacts/channel.tx --outputBlock ./channel-artifacts/mychannel_genesis_block substitute_tls>&log.txt
+    peer channel create -o orderer1.example.com:7050 -c $CHANNEL_NAME -f ./channel-artifacts/channel.tx substitute_tls>&log.txt
     res=$?
     cat log.txt
     verifyResult $res "Channel creation failed"
@@ -24,7 +24,7 @@ updateAnchorPeers() {
 
 ## Sometimes Join takes time hence RETRY atleast for 5 times
 joinWithRetry () {
-    peer channel join -b ./channel-artifacts/mychannel_genesis_block substitute_tls>&log.txt
+    peer channel join -b $CHANNEL_NAME.block substitute_tls>&log.txt
     res=$?
     cat log.txt
     if [ $res -ne 0 -a $COUNTER -lt $MAX_RETRY ]; then
@@ -180,6 +180,7 @@ exampleChaincodeInvoke () {
         verifyResult $res "Example chaincode invoke execution on PEER$p.org$1 failed "
         echo "===================== Example chaincode invoke transaction on PEER$p.org$1 on channel '$CHANNEL_NAME' is successful ===================== "
         echo
+        sleep 2
     done
 }
 
@@ -195,6 +196,7 @@ benchmarkingChaincodeInvoke () {
         verifyResult $res "Example chaincode invoke execution on PEER$p.org$1 failed "
         echo "===================== Example chaincode invoke transaction on PEER$p.org$1 on channel '$CHANNEL_NAME' is successful ===================== "
         echo
+        sleep 2
     done
 }
 
@@ -237,6 +239,13 @@ exampleChaincodeInvoke 1
 exampleChaincodeInvoke 2
 benchmarkingChaincodeInvoke 1
 benchmarkingChaincodeInvoke 2
+
+##Query example and benchmarking chaincode on all peers
+echo "Querying example and benchmarking chaincode on all peers"
+exampleChaincodeQuery 1
+exampleChaincodeQuery 2
+benchmarkingChaincodeQuery 1
+benchmarkingChaincodeQuery 2
 
 # #Query on chaincode on Peer1/Org1, check if the result is 90
 # echo "Querying chaincode on org2/peer3..."

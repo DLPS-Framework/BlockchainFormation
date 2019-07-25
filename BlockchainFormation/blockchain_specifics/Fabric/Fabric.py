@@ -167,7 +167,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
         string_ca_ca = ""
         string_ca_ca = string_ca_ca + f" -e FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server"
-        string_ca_ca = string_ca_ca + f" -e FABRIC_CA_SERVER_CA_NAME=ca.example.com"
+        string_ca_ca = string_ca_ca + f" -e FABRIC_CA_SERVER_CA_NAME=ca.org{org}.example.com"
         string_ca_ca = string_ca_ca + f" -e FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.org{org}.example.com-cert.pem"
         string_ca_ca = string_ca_ca + f" -e FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/{peer_orgs_secret_keys[org - 1]}"
 
@@ -288,7 +288,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
             string_peer_core = string_peer_core + f" -e CORE_NEXT=true"
             string_peer_core = string_peer_core + f" -e CORE_PEER_ENDORSER_ENABLED=true"
             string_peer_core = string_peer_core + f" -e CORE_PEER_ID=peer{peer}.org{org}.example.com"
-            string_peer_core = string_peer_core + f" -e CORE_PEER_PROFILE_ENABLED=true "
+            string_peer_core = string_peer_core + f" -e CORE_PEER_PROFILE_ENABLED=true"
             string_peer_core = string_peer_core + f" -e CORE_PEER_COMMITTER_LEDGER_ORDERER=orderer1.example.com:7050"
             string_peer_core = string_peer_core + f" -e CORE_PEER_GOSSIP_IGNORESECURITY=true"
             string_peer_core = string_peer_core + f" -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE={my_net}"
@@ -309,7 +309,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
                 string_peer_tls = string_peer_tls + f" -e CORE_PEER_TLS_KEY_FILE=/var/hyperledger/fabric/tls/server.key"
                 string_peer_tls = string_peer_tls + f" -e CORE_PEER_TLS_ROOTCERT_FILE=/var/hyperledger/fabric/tls/ca.crt"
             else:
-                string_peer_tls = string_orderer_tls + f" -e CORE_PEER_TLS_ENABLED=false"
+                string_peer_tls = string_peer_tls + f" -e CORE_PEER_TLS_ENABLED=false"
 
             string_peer_v = ""
             string_peer_v = string_peer_v + f" -v /var/run/:/host/var/run/"
@@ -519,36 +519,24 @@ def write_script(config, logger):
 
     f.write("\n\nsetGlobals() {\n\n")
 
-    f.write("    CORE_PEER_LOCALMSPID=\"Org\"$2\"MSP\"\n")
+    f.write("    CORE_PEER_ADDRESS=peer$1.org$2.example.com:7051\n")
+
+    f.write("    CORE_PEER_LOCALMSPID=Org$2MSP\n")
+
     f.write(
         "    CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org$2.example.com/peers/peer0.org$2.example.com/tls/ca.crt\n")
     f.write(
         "    CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org$2.example.com/users/Admin@org$2.example.com/msp\n")
 
-    if config['fabric_settings']['peer_count'] == 1:
-        f.write("    CORE_PEER_ADDRESS=peer0.org$2.example.com:7051\n")
+    if config['fabric_settings']['tls_enabled'] == 1:
+        f.write("    # setting TLS environment variables\n")
+        f.write("    CORE_PEER_TLS_ENABLED=true\n")
+        f.write("    CORE_PEER_TLS_CLIENTAUTHREQUIRED=false\n")
+        f.write("    CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org$2.example.com/peers/peer$1.org$2.example.com/tls/server.crt\n")
+        f.write("    CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org$2.example.com/peers/peer$1.org$2.example.com/tls/server.key\n")
+        f.write("    CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org$2.example.com/peers/peer$1.org$2.example.com/tls/ca.crt\n")
     else:
-        f.write("    if [ $1 -eq 0 ]; then\n        CORE_PEER_ADDRESS=peer0.org$2.example.com:7051\n")
-        for peer in range(1, config['fabric_settings']['peer_count']):
-            f.write(f"    elif [ $1 -eq {peer} ]; then\n")
-            f.write(f"        CORE_PEER_ADDRESS=peer$1.org$2.example.com:7051\n")
-            f.write(
-                f"        CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org$2.example.com/users/Admin@org$2.example.com/msp\n")
-
-            if config['fabric_settings']['tls_enabled'] == 1:
-                f.write("        # setting TLS environment variables\n")
-                f.write(f"        CORE_PEER_TLS_ENABLED=true\n")
-                f.write(f"        CORE_PEER_TLS_CLIENTAUTHREQUIRED=false\n")
-                f.write(
-                    f"        CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org$2.example.com/peers/peer$1.org$2.example.com/tls/server.crt\n")
-                f.write(
-                    f"        CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org$2.example.com/peers/peer$1.org$2.example.com/tls/server.key\n")
-                f.write(
-                    f"        CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org$2.example.com/peers/peer$1.org$2.example.com/tls/ca.crt\n")
-            else:
-                f.write(f"        CORE_PEER_TLS_ENABLED=false\n")
-
-        f.write("    fi\n")
+        f.write("    CORE_PEER_TLS_ENABLED=false\n")
 
     f.write("}\n\n")
 

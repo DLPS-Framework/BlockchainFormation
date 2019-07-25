@@ -15,7 +15,6 @@ TIMEOUT="$2"
 : ${TIMEOUT:="30"}
 COUNTER=1
 MAX_RETRY=5
-# ORDERER_CA=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
 
 echo "Channel name : "$CHANNEL_NAME
 
