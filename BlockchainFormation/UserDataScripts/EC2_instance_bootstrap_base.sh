@@ -47,10 +47,10 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
 
   #mounting disk
-
+  # On some instance types the disk has different name
   mkdir /data
-  mkfs -t ext4 /dev/xvdb
-  mount /dev/xvdb /data
+  mkfs -t ext4 /dev/xvdb || mkfs -t ext4 /dev/nvme0n1
+  mount /dev/xvdb /data || mount /dev/nvme0n1 /data
   DISKUUID=`sudo file -s /dev/xvdb | awk '{print $8}'`
   bash -c  "echo '$DISKUUID       /data   ext4    defaults,nofail        0       2' >> /etc/fstab"
   bash -c  "sudo chown -R ubuntu:ubuntu /data"
