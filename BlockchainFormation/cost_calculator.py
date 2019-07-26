@@ -53,7 +53,11 @@ class AWSCostCalculator:
         self.logger.info("Launch Times:" + str(launch_times))
         self.logger.info("Stop Times:" + str(stop_times))
 
-        time_differences = np.subtract(stop_times, [datetime.datetime.strptime(x.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S') for x in launch_times])
+        if type(launch_times[0]) is str:
+            time_differences = np.subtract(stop_times, [
+                datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S') for x in launch_times])
+        else:
+            time_differences = np.subtract(stop_times, [datetime.datetime.strptime(x.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S') for x in launch_times])
 
         def diff_in_hours(x):
             return float(x.total_seconds() / 3600)
