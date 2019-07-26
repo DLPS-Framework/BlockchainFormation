@@ -131,7 +131,7 @@ class ArgParser:
 
         parser.add_argument('--vm_count', '-vmc', help='specify how many VM you want to start', type=int)
         parser.add_argument('--instance_type', '-it', help='specify what type of instances you want to start',
-                                 default='t2.micro', choices=['t2.nano','t2.micro','t2.small','t2.medium','t2.large', 't2.xlarge','t2.2xlarge'])
+                                 default='t2.micro', choices=['t2.nano','t2.micro','t2.small','t2.medium','t2.large', 't2.xlarge','t2.2xlarge','m5.large','m5.xlarge','m5.2xlarge'])
         parser.add_argument('--aws_credentials', '-cred',
                                  help='path to aws credentials', default=os.path.expanduser('~/.aws/credentials'))
         parser.add_argument('--key_name', '-kn',
