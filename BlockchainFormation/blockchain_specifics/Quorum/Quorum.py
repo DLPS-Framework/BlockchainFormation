@@ -110,6 +110,16 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
         logger.debug("".join(stdout.readlines()))
         logger.debug("".join(stderr.readlines()))
 
+    # starting tessera_nodes
+    tessera_public_keys, tessera_private_keys = start_tessera_nodes(config, ssh_clients, logger)
+    config['tessera_public_keys'] = tessera_public_keys
+    config['tessera_private_keys'] = tessera_private_keys
+
+    # starting quorum nodes
+    start_quorum_nodes(config, ssh_clients, scp_clients, logger)
+
+
+def start_tessera_nodes(config, ssh_clients, logger):
     # for saving the public and private keys of the tessera nodes (enclaves)
     tessera_public_keys = []
     tessera_private_keys = []
@@ -194,9 +204,10 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
         except:
             pass
 
-    config['tessera_public_keys'] = tessera_public_keys
-    config['tessera_private_keys'] = tessera_private_keys
+    return tessera_public_keys, tessera_private_keys
 
+
+def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
     logger.info("Starting the quorum network...")
     for index, ip in enumerate(config['priv_ips']):
 
@@ -204,6 +215,8 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
             logger.info(f"Starting node {index} and wait for 5s until it is running")
             channel = ssh_clients[index].get_transport().open_session()
             channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --raftport 50000 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip} --raftblocktime {config['quorum_settings']['raftblocktime']} >>node.log 2>&1")
+            logger.debug(stdout.readlines())
+            logger.debug(stderr.readlines())
             time.sleep(5)
 
         else:
@@ -300,3 +313,16 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info("")
 
+
+def kill_node(ssh_clients, index, logger):
+    # stdin, stdout, stderr = ssh_clients[index].exec_command("pidof java")
+    # pid = stdout.readlines()[0].replace("\n", "")
+    # stdin, stdout, stderr = ssh_clients.exec_command(f"kill {pid}")
+    # logger.debug(f"tessera pid: {pid}")
+    stdin, stdout, stderr = ssh_clients[index].exec_command("pidof geth")
+    pid = stdout.readlines()[0].replace("\n", "")
+    logger.debug(f"geth pid: {pid}")
+    stdin, stdout, stderr = ssh_clients[index].exec_comand(f"kill {pid}")
+
+def revive_node(config, ssh_clients, index, logger):
+    pass
