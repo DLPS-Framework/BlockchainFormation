@@ -49,7 +49,7 @@ class VMHandler:
             os.environ["HTTP_PROXY"] = f"http://{self.config['proxy_user']}:{password}@proxy.muc:8080"
             os.environ["NO_PROXY"] = "localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net"
         else:
-            self.logger.info("No proxy sets since proxy user is None or proxy already set")
+            self.logger.info("No proxy set since proxy user is None or proxy already set")
 
         os.environ["AWS_SHARED_CREDENTIALS_FILE"] = self.config['aws_credentials']
         os.environ["AWS_CONFIG_FILE"] = self.config['aws_config']
