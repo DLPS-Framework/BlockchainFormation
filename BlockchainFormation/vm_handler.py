@@ -302,7 +302,7 @@ class VMHandler:
                 self.logger.info(f"VMs are not being shutdown")
 
         else:
-            self.logger.info(f"Boot up of all VMs was successful, waited {timer} minutes")
+            self.logger.info(f"Boot up of all {self.config['blockchain_type']}-VMs was successful, waited {timer} minutes")
 
             self._run_specific_startup(ssh_clients, scp_clients)
 

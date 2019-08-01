@@ -167,9 +167,9 @@ def start_tessera_nodes(config, ssh_clients, logger):
                 try:
                     sftp.stat('/home/ubuntu/qdata/tm/tm.ipc')
                     status_flags[index] = True
-                    logger.info(f"Tessera node on {ip} is ready")
+                    logger.info(f"   --> Tessera node on {ip} is ready")
                 except IOError:
-                    logger.info(f"Tessera node on {ip} not ready")
+                    logger.info(f"   --> Tessera node on {ip} is not ready yet")
 
     if (False in status_flags):
         logger.error('Boot up NOT successful')
@@ -187,13 +187,13 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
     for index, ip in enumerate(config['priv_ips']):
 
         if index == 0:
-            logger.info(f"Starting node {index} and wait for 5s until it is running")
+            logger.info(f" --> Starting node {index} and wait for 5s until it is running")
             channel = ssh_clients[index].get_transport().open_session()
             channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --raftport 50000 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip} --raftblocktime {config['quorum_settings']['raftblocktime']} >>node.log 2>&1")
             time.sleep(5)
 
         else:
-            logger.info(f"Adding node {index} to raft on node {0} and starting it afterwards")
+            logger.info(f" --> Adding node {index} to raft on node {0} and starting it afterwards")
             stdin, stdout, stderr = ssh_clients[0].exec_command("geth --exec " + '\"' + "raft.addPeer('enode://" + f"{config['enodes'][index]}" + "@" + f"{ip}" + ":21000?discport=0&raftport=50000')" + '\"' + " attach /home/ubuntu/nodes/new-node-1/geth.ipc")
             out = stdout.readlines()
             # logger.debug(out)
@@ -219,9 +219,9 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
                 try:
                     sftp.stat('/home/ubuntu/nodes/new-node-1/geth.ipc')
                     status_flags[index] = True
-                    logger.info(f"Quorum node on {ip} is ready")
+                    logger.info(f"   --> Quorum node on {ip} is ready")
                 except IOError:
-                    logger.info(f"Quorum node on {ip} not ready")
+                    logger.info(f"   --> Quorum node on {ip} is not ready yet")
 
     if (False in status_flags):
         logger.error('Boot up NOT successful')
