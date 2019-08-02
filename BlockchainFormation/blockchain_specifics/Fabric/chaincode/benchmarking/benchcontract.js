@@ -50,31 +50,38 @@ class BenchContract extends Contract {
      * @param {String|Object} data value to store
      */
 
-    async writeData(ctx, n, key, data) {
-	for (var i = 0; i < n; i++) {
-		console.log(key)
-		await ctx.stub.putState(key.toString(), Buffer.from(data))
-		key++
-	}
-        //return Buffer.from(key.toString())
-        return key.toString()
+    async writeData(ctx, _key, _value) {
+        await ctx.stub.putState(_key.toString(), Buffer.from(_value))
+        return Buffer.from('1')
     }
 
-    async readData(ctx, n, key) {
-	var data = []
-	for (var i = 0; i < n; i++) {
-		console.log(key)
-		var tmp = await ctx.stub.getState(key.toString())
-		data.push(tmp.toString().charAt(0))
-		key++
-	}
-        return Buffer.from(data.toString())
+    async readData(ctx, _key) {
+        var tmp = await ctx.stub.getState(_key.toString())
+        return Buffer.from(tmp.toString())
     }
+
+    async writeMuchData(ctx, _start, _end) {
+        for (var i = _start; i < _end; i++) {
+            await ctx.stub.putState(i.toString(), Buffer.from(i.toString()))
+        }
+        return Buffer.from('1')
+    }
+
+    async readMuchData(ctx, _start, _end) {
+        var sum = 0
+        for (var i = _start; i < _end; i++) {
+            var tmp = await ctx.stub.getState(i.toString())
+            console.log(sum)
+            sum += Number(tmp)
+        }
+        return Buffer.from(sum.toString())
+    }
+
 
     /** For overhead testing
     */
     async doNothing(ctx) {
-        return 1
+        return Buffer.from('1')
     }
 
     /** Function for matrix multiplication
@@ -112,18 +119,21 @@ class BenchContract extends Contract {
 
         var result = multiplyMatrices(m1, m2)
 
-	var matrixSum = 0
+        var matrixSum = 0
 
-	for(var i = 0; i < result.length; ++i) {
-            for (var j = 0; j < result[i].length; ++j){
+        for (var i = 0; i < result.length; ++i) {
+            for (var j = 0; j < result[i].length; ++j) {
                 matrixSum += result[i][j];
             }
         }
-        //return Buffer.from(matrixSum.toString())
-        return matrixSum.toString()
+        return Buffer.from(matrixSum.toString())
     }
 
-
+    async setMatrixMultiplication(ctx, n) {
+        var res = await this.matrixMultiplication(ctx, n)
+        await ctx.stub.putState("tmp", res.toString())
+        return Buffer.from(res.toString())
+    }
 
 }
 
