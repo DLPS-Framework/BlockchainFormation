@@ -23,9 +23,9 @@ def fabric_shutdown(config, logger, ssh_clients, scp_clients):
 def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
     # adding "true" number of nodes and their ips
-    config['node_count'] = config['blockchain_specifics']["org_count"] * (config['blockchain_specifics']['peer_count'] + 1) + config['blockchain_specifics']['orderer_count']
-    config['node_pub_ips'] = config['pub_ips'][config['blockchain_specifics']['org_count'] + config['blockchain_specifics']['orderer_count'] : config['vm_count'] - 1]
-    config['node_priv_ips'] = config['priv_ips'][config['blockchain_specifics']['org_count'] + config['blockchain_specifics']['orderer_count'] : config['vm_count'] - 1]
+    config['node_count'] = config['fabric_settings']['org_count'] * (config['fabric_settings']['peer_count'] + 1) + config['fabric_settings']['orderer_count']
+    config['node_pub_ips'] = config['pub_ips'][config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] : config['vm_count'] - 1]
+    config['node_priv_ips'] = config['priv_ips'][config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] : config['vm_count'] - 1]
 
     dir_name = os.path.dirname(os.path.realpath(__file__))
     
