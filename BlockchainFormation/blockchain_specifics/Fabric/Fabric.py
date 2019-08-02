@@ -1,11 +1,11 @@
-import os
-import sys
-import subprocess
-import json
-import time
-import numpy as np
-import paramiko
 import boto3
+import json
+import numpy as np
+import os
+import paramiko
+import subprocess
+import sys
+import time
 from scp import SCPClient
 
 
@@ -147,9 +147,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
     logger.info("Pushing chaincode to all nodes")
     for index, _ in enumerate(config['priv_ips']):
-        scp_clients[index].put(f"{dir_name}/chaincode/benchmarking",
-                               "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode",
-                               recursive=True)
+        scp_clients[index].put(f"{dir_name}/chaincode/benchcontract", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode", recursive=True)
 
 
     # Starting Certificate Authorities

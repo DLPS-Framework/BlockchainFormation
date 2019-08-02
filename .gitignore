@@ -158,7 +158,8 @@ dmypy.json
 
 # End of https://www.gitignore.io/api/macos,python
 
-
+# Pycharm
+.idea/
 
 experiments/*
 BlockchainFormation/experiments/*
