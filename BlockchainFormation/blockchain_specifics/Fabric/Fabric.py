@@ -17,11 +17,16 @@ def fabric_shutdown(config, logger, ssh_clients, scp_clients):
 
     for index, _ in enumerate(config['priv_ips']):
         scp_clients[index].get("/home/ubuntu/*.log", f"{config['exp_dir']}/fabric_logs")
-        scp_clients[index].get("/var/log/user_data.log",
-                               f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
+        scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
 
 
 def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
+
+    # adding "true" number of nodes and their ips
+    config['node_count'] = config['blockchain_specifics']["org_count"] * (config['blockchain_specifics']['peer_count'] + 1) + config['blockchain_specifics']['orderer_count']
+    config['node_pub_ips'] = config['pub_ips'][config['blockchain_specifics']['org_count'] + config['blockchain_specifics']['orderer_count'] : config['vm_count'] - 1]
+    config['node_priv_ips'] = config['priv_ips'][config['blockchain_specifics']['org_count'] + config['blockchain_specifics']['orderer_count'] : config['vm_count'] - 1]
+
     dir_name = os.path.dirname(os.path.realpath(__file__))
     
     # create directories for the fabric logs and all the setup data (crypto-stuff, config files and scripts which are exchanged with the VMs)
@@ -146,6 +151,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
                                "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode",
                                recursive=True)
 
+
     # Starting Certificate Authorities
     peer_orgs_secret_keys = []
     logger.info(f"Starting Certificate Authorities")
@@ -156,9 +162,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         out = stdout.readlines()
         logger.debug(out)
         logger.debug("".join(stderr.readlines()))
-        peer_orgs_secret_keys.append(
-            "".join(out).replace(f"ca.org{org}.example.com-cert.pem", "").replace("\n", "").replace(" ", "").replace(
-                "...", ""))
+        peer_orgs_secret_keys.append("".join(out).replace(f"ca.org{org}.example.com-cert.pem", "").replace("\n", "").replace(" ", "").replace("...", ""))
 
         # set up configurations of Certificate Authorities like with docker compose
         string_ca_base = f" --network={my_net} --name ca.org{org}.example.com -p 7054:7054"
@@ -414,8 +418,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     logger.info("Getting logs from vms")
 
     for index, ip in enumerate(config['pub_ips']):
-        scp_clients[index].get("/var/log/user_data.log",
-                               f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
+        scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
 
     try:
         scp_clients[index].get("/home/ubuntu/*.log", f"{config['exp_dir']}/fabric_logs")
