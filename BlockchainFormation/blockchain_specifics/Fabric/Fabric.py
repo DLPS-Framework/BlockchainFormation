@@ -531,11 +531,9 @@ def write_script(config, logger):
     f.write("\n\nsetGlobals() {\n\n")
 
     f.write("    CORE_PEER_ADDRESS=peer$1.org$2.example.com:7051\n")
-
     f.write("    CORE_PEER_LOCALMSPID=Org$2MSP\n")
 
-    f.write(
-        "    CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org$2.example.com/peers/peer$1.org$2.example.com/tls/ca.crt\n")
+    f.write("    CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org$2.example.com/peers/peer$1.org$2.example.com/tls/ca.crt\n")
     f.write(
         "    CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org$2.example.com/users/Admin@org$2.example.com/msp\n")
 
