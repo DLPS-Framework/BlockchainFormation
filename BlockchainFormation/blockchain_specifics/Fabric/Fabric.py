@@ -23,9 +23,9 @@ def fabric_shutdown(config, logger, ssh_clients, scp_clients):
 def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
     # adding "true" number of nodes and their ips
-    config['node_count'] = config['fabric_settings']['org_count'] * (config['fabric_settings']['peer_count'] + 1) + config['fabric_settings']['orderer_count']
-    config['node_pub_ips'] = config['pub_ips'][config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] : config['vm_count'] - 1]
-    config['node_priv_ips'] = config['priv_ips'][config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] : config['vm_count'] - 1]
+    config['node_count'] = config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count']
+    config['node_pub_ips'] = config['pub_ips'][config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] : config['fabric_settings']['org_count'] * (config['fabric_settings']['peer_count'] + 1) + config['fabric_settings']['orderer_count'] - 1]
+    config['node_priv_ips'] = config['priv_ips'][config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] : config['fabric_settings']['org_count'] * (config['fabric_settings']['peer_count'] + 1) + config['fabric_settings']['orderer_count'] - 1]
 
     dir_name = os.path.dirname(os.path.realpath(__file__))
     
@@ -518,7 +518,6 @@ def write_configtx(config):
     os.system(f"sed -i -e 's/substitute_max_message_count/{config['fabric_settings']['max_message_count']}/g' {config['exp_dir']}/setup/configtx.yaml")
     os.system(f"sed -i -e 's/substitute_absolute_max_bytes/{config['fabric_settings']['absolute_max_bytes']}/g' {config['exp_dir']}/setup/configtx.yaml")
     os.system(f"sed -i -e 's/substitute_preferred_max_bytes/{config['fabric_settings']['preferred_max_bytes']}/g' {config['exp_dir']}/setup/configtx.yaml")
-
 
 
 def write_script(config, logger):
