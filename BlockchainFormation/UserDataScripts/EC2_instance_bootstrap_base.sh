@@ -46,7 +46,7 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
   APT::Periodic::Unattended-Upgrade "1";" >> /etc/apt/apt.conf.d/20auto-upgrades
 
   #THIS ONLY WORKS IF THE UNMOUNTED DISK IS THE BIGGEST DISK ON VM
-  UNMOUNTED=`lsblk --noheadings --raw -o NAME,MOUNTPOINT,SIZE | awk '{print $4 " " $1}' | sort | tail -n 1`
+  UNMOUNTED=`lsblk --noheadings --raw -o NAME,MOUNTPOINT,SIZE | sort -u -h -k 2 | awk '{print $4 " " $1}'  | tail -n 1`
   #remove whitespace
   UNMOUNTED=`(echo -e "${UNMOUNTED}" | tr -d '[:space:]')`
   echo $UNMOUNTED
