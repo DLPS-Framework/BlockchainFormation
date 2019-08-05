@@ -1,10 +1,8 @@
-import datetime
 import re
 import json
 from pkg_resources import resource_filename
-import numpy as np
 import logging
-
+from BlockchainFormation.utils.utils import *
 
 class AWSCostCalculator:
     """
@@ -124,7 +122,7 @@ class AWSCostCalculator:
         }
 
         with open(f"{self.config['exp_dir']}/aws_costs.json", 'w') as outfile:
-            json.dump(aws_costs, outfile, default=AWSCostCalculator._datetimeconverter)
+            json.dump(aws_costs, outfile, default=datetimeconverter)
 
 
     def _get_instance_price(self, region, instance, osys):
@@ -207,9 +205,3 @@ class AWSCostCalculator:
                 # print (f"Stop Time of {instance.id}:{stop_time}")
 
                 return transition_time
-
-    @staticmethod
-    def _datetimeconverter(o):
-        """Converter to make datetime objects json dumpable"""
-        if isinstance(o, datetime.datetime):
-            return o.__str__()

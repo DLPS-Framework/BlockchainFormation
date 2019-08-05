@@ -1,5 +1,5 @@
 import json
-import datetime
+from BlockchainFormation.utils.utils import *
 
 
 def client_startup(config, logger, ssh_clients, scp_clients):
@@ -16,12 +16,6 @@ def client_startup(config, logger, ssh_clients, scp_clients):
         # Attach client IPs to network conf
         attach_to_blockchain_conf(config, logger)
 
-
-
-def datetimeconverter(o):
-    """Converter to make datetime objects json dumpable"""
-    if isinstance(o, datetime.datetime):
-        return o.__str__()
 
 
 def attach_to_blockchain_conf(config, logger):

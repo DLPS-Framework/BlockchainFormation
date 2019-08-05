@@ -244,7 +244,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
             logger.info("Middleware already injected")
 
     logger.info("testing if new blocks are generated across all nodes; if latest block numbers are not changing over multiple cycles something is wrong")
-    for x in range(10):
+    for x in range(5):
         for index, _ in enumerate(web3_clients):
             logger.info(web3_clients[index].eth.getBlock('latest')['number'])
 
@@ -327,4 +327,4 @@ def natural_keys(text):
     :param text:
     :return:
     """
-    return [ atoi(c) for c in re.split(r'(\d+)', text) ]
+    return [atoi(c) for c in re.split(r'(\d+)', text)]

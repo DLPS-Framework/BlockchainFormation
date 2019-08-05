@@ -1,9 +1,8 @@
-import boto3
 import logging
 import json
-import datetime
 import random
 import string
+from BlockchainFormation.utils.utils import *
 #TODO How to accurately calculate load balancer costs
 
 
@@ -252,9 +251,3 @@ class LBHandler:
         self.delete_dns_mapping()
 
 
-
-
-def datetimeconverter(o):
-    """Converter to make datetime objects json dumpable"""
-    if isinstance(o, datetime.datetime):
-        return o.__str__()

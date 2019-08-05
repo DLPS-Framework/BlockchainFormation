@@ -14,6 +14,7 @@ from BlockchainFormation.blockchain_specifics.Quorum.Quorum import *
 from BlockchainFormation.blockchain_specifics.Sawtooth.Sawtooth import *
 from BlockchainFormation.blockchain_specifics.Client.Client import *
 from BlockchainFormation.lb_handler import *
+from BlockchainFormation.utils.utils import *
 
 utc = pytz.utc
 
@@ -261,36 +262,12 @@ class VMHandler:
         ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
 
         # convert to timedelta for nicer waiting time calcs
-        status_flags = np.zeros(self.config['vm_count'], dtype=bool)
-        # how many minutes to wait
-        timer = 0
+
         self.logger.info("Waiting for all VMs to finish the userData setup...")
-        while (False in status_flags and timer < 20):
-            time.sleep(60)
-            timer += 1
-            self.logger.info(
-                f"Waited {timer} minutes so far, {20 - timer} minutes left before abort (it usually takes around 10 minutes)")
-            for index, i in enumerate(self.ec2_instances):
 
-                if (status_flags[index] == False):
-                    # ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("[[ -f /var/log/user_data_success.log ]] && echo 'File true' || echo 'File false'")
-                    # formatted_output = ssh_stdout.read().decode("utf-8")
-                    sftp = ssh_clients[index].open_sftp()
-                    try:
-                        sftp.stat('/var/log/user_data_success.log')
-                        status_flags[index] = True
-                        self.logger.info(f"{self.config['ips'][index]} is ready")
-                    except IOError:
-                        self.logger.info(f"{self.config['ips'][index]} not ready")
-
-        if (False in status_flags):
+        # Wait until user Data is finished
+        if (wait_till_done(ssh_clients, self.config['ips'], 30*60, 60, "/var/log/user_data_success.log", False, 10*60, self.logger) is False):
             self.logger.error('Boot up NOT successful')
-            try:
-                self.logger.error(f"Failed VMs: {[ips[x] for x in np.where(status_flags != True)]}")
-            except:
-                pass
-
-
 
 
             if yes_or_no("Do you want to shut down the VMs?"):
@@ -302,7 +279,7 @@ class VMHandler:
                 self.logger.info(f"VMs are not being shutdown")
 
         else:
-            self.logger.info(f"Boot up of all {self.config['blockchain_type']}-VMs was successful, waited {timer} minutes")
+            self.logger.info(f"Boot up of all {self.config['blockchain_type']}-VMs was successful")
 
             self._run_specific_startup(ssh_clients, scp_clients)
 
@@ -457,20 +434,3 @@ class VMHandler:
             scp_clients.append(SCPClient(ssh_clients[index].get_transport()))
 
         return ssh_clients, scp_clients
-
-
-
-
-def datetimeconverter(o):
-    """Converter to make datetime objects json dumpable"""
-    if isinstance(o, datetime.datetime):
-        return o.__str__()
-
-def yes_or_no(question):
-    reply = str(input(question + ' (y/n): ')).lower().strip()
-    if reply[0] == 'y':
-        return 1
-    elif reply[0] == 'n':
-        return 0
-    else:
-        return yes_or_no("Please Enter (y/n) ")
