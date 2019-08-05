@@ -117,8 +117,8 @@ class ArgParser:
     def storage_type(x):
         """Check if the chosen storage is in a given range (Needs to be >1 else the mounting process of the UserData script fails)"""
         x = int(x)
-        if x < 8 or x > 2048:
-            raise argparse.ArgumentTypeError("Minimum storage is 8GB, maximum is 1024 GB")
+        if x < 9 or x > 2048:
+            raise argparse.ArgumentTypeError("Minimum storage is 9GB, maximum is 1024 GB")
         return x
 
     @staticmethod
@@ -193,6 +193,7 @@ class ArgParser:
                             help='the logging severity levels are specified using case-insensitive strings chosen from << FATAL | PANIC | ERROR | WARNING | INFO | DEBUG >>',
                             default="debug")
 
+    @staticmethod
     def _add_geth_args(parser):
         parser.add_argument('--chainid', '-ci', help='specify chainID', type=int, default=11)
         parser.add_argument('--period', '-pd', help='specify clique period', type=int, default=5)
@@ -210,10 +211,12 @@ class ArgParser:
         parser.add_argument('--gaslimit', '-gl', help='specify gasLimit', default="0x5B8D80")
         parser.add_argument('--balance', '-bal', help='specify start balance of account', default="0x200000000000000000000000000000000000000000000000000000000000000")
 
+    @staticmethod
     def _add_quorum_args(parser):
         parser.add_argument('--raftblocktime', help='amount of time between raft block creations in milliseconds',
                             type=int, default=50)
 
+    @staticmethod
     def _add_sawtooth_args(parser):
         pass
 
