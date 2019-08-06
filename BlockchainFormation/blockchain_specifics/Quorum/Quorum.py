@@ -4,6 +4,8 @@ import json
 import time
 from web3 import Web3
 import numpy as np
+from BlockchainFormation.utils.utils import *
+
 
 def quorum_shutdown(config, logger, ssh_clients, scp_clients):
     """
@@ -43,7 +45,6 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info("Get the addresses of each node's wallet (which have been generated during bootstrapping) and store it in the corresponding array <addresses>")
     for index, _ in enumerate(config['priv_ips']):
-
         stdin, stdout, stderr = ssh_clients[index].exec_command("cat /home/ubuntu/nodes/address")
         out = stdout.readlines()
         addresses.append(out[0].replace("\n", ""))
@@ -52,7 +53,6 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info("Replace the genesis_raw.json on each node by genesis_raw where the first two nodes have some ether")
     for index, _ in enumerate(config['priv_ips']):
-
         stdin, stdout, stderr = ssh_clients[index].exec_command("(sed -i -e 's/substitute_first_address/'" + f"'{addresses[0]}'" + "'/g' /home/ubuntu/genesis_raw.json && sed -i -e 's/substitute_second_address/'" + f"'{addresses[1]}'" + "'/g' /home/ubuntu/genesis_raw.json && mv /home/ubuntu/genesis_raw.json /home/ubuntu/nodes/genesis.json)")
         stdout.readlines()
         # logger.debug("".join(stdout.readlines()))
@@ -62,7 +62,6 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info("Generate the enode on each node and store it in enodes")
     for index, _ in enumerate(config['priv_ips']):
-
         stdin, stdout, stderr = ssh_clients[index].exec_command("(bootnode --genkey=nodekey && mv nodekey /home/ubuntu/nodes/new-node-1/nodekey)")
         stdout.readlines()
         # logger.debug("".join(stdout.readlines()))
@@ -152,14 +151,14 @@ def start_tessera_nodes(config, ssh_clients, logger):
         # Specify missing data in config_raw.json and store the result in config.json
         stdin, stdout, stderr = ssh_clients[index1].exec_command(f"(sed -i -e s#substitute_ip#{ip1}#g /home/ubuntu/config_raw.json && sed -i -e s#substitute_public_key#{tessera_public_keys[index1]}#g /home/ubuntu/config_raw.json && sed -i -e s#substitute_private_key#{tessera_private_keys[index1]}#g /home/ubuntu/config_raw.json && sed -i -e s#substitute_peers#" + peer_string + "#g /home/ubuntu/config_raw.json && mv /home/ubuntu/config_raw.json /home/ubuntu/qdata/tm/config.json)")
         stdout.readlines()
-        # logger.debug("".join(stdout.readlines()))
-        # logger.debug("".join(stderr.readlines()))
 
         logger.info(f"Starting tessera on node {index1}")
         channel = ssh_clients[index1].get_transport().open_session()
         channel.exec_command("java -jar tessera/tessera-app-0.9.2-app.jar -configfile qdata/tm/config.json >> tessera.log 2>&1")
 
     logger.info("Waiting until all tessera nodes have started")
+    boo = wait_till_done(ssh_clients, config['priv_ips'], 60, 10, '/home/ubuntu/qdata/tm/tm.ipc', False, 10, logger)
+    """
     status_flags = np.zeros(config['vm_count'], dtype=bool)
     timer = 0
     while (False in status_flags and timer < 10):
@@ -185,6 +184,10 @@ def start_tessera_nodes(config, ssh_clients, logger):
         except:
             pass
 
+    """
+    if boo == False:
+        raise Exception("At least one tessera node did not start properly")
+
     return tessera_public_keys, tessera_private_keys
 
 
@@ -195,7 +198,7 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
         if index == 0:
             logger.info(f" --> Starting node {index} and wait for 5s until it is running")
             channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --raftport 50000 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip} --raftblocktime {config['quorum_settings']['raftblocktime']} >>node.log 2>&1")
+            channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --maxpeers {config['vm_count']} --raftport 50000 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip} --raftblocktime {config['quorum_settings']['raftblocktime']} >>node.log 2>&1")
             time.sleep(5)
 
         else:
@@ -208,9 +211,11 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
             # logger.info(f"raftID: {raftID}")
 
             channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --raftport 50000 --raftjoinexisting {raftID} --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip} --raftblocktime {config['quorum_settings']['raftblocktime']} >>node.log 2>&1")
+            channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --maxpeers {config['vm_count']} --raftport 50000 --raftjoinexisting {raftID} --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip} --raftblocktime {config['quorum_settings']['raftblocktime']} >>node.log 2>&1")
 
+    boo = wait_till_done(ssh_clients, config['pub_ips'], 60, 10, '/home/ubuntu/nodes/new-node-1/geth.ipc', False, 10, logger)
 
+    """
     logger.info("Waiting until all quorum nodes have started")
     status_flags = np.zeros(config['vm_count'], dtype=bool)
     timer = 0
@@ -236,6 +241,11 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
             logger.error(f"Failed Quorum nodes: {[config['priv_ips'][x] for x in np.where(status_flags != True)]}")
         except:
             pass
+
+    """
+
+    if boo == False:
+        raise Exception("At least one quorum node did not start properly")
 
     logger.info("Testing whether the system has started successfully")
     status_flags = np.zeros(config['vm_count'], dtype=bool)
@@ -306,7 +316,7 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
             scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
             scp_clients[index].get("/home/ubuntu/tessera.log", f"{config['exp_dir']}/tessera_logs/tessera_node{index}.log")
             scp_clients[index].get("/home/ubuntu/node.log", f"{config['exp_dir']}/quorum_logs/quorum_node{index}.log")
-            # logger.info("Logs fetched successfully")
+            logger.debug(f"Logs fetched successfully from {ip}")
         except:
             logger.info(f"Not all logs available on {ip}")
             boo = False
@@ -314,6 +324,11 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
     if boo == True:
         logger.info("All logs successfully stored")
 
+
+"""
+
+methods in development - necessary for more compact stdout logging resp. node killing and reviving in case the network breaks down
+not prioritized since full setup is okay, does not take too long and time is sparse
 
 def kill_node(ssh_clients, index, logger):
     # stdin, stdout, stderr = ssh_clients[index].exec_command("pidof java")
@@ -335,3 +350,5 @@ def log_outs(stdout, stderr, logger):
         logger.debug(f"{out1[1]}")
     except:
         pass
+
+"""
