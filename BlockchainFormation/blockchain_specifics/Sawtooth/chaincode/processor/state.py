@@ -1,0 +1,102 @@
+import hashlib
+
+from sawtooth_sdk.processor.exceptions import InternalError
+
+# Generate the namespace for our transaction processor: 'benchmark' -> {9088e8}
+XO_NAMESPACE = hashlib.sha512('benchmark'.encode("utf-8")).hexdigest()[0:6]
+
+def _make_benchmark_address(name):
+    '''
+    # Here we generate the addresses used to store and retreive data to and from the blockchain
+    # NOTE: This defines the input and output fields of the transactions we send with our client
+    # As we use 'benchmark' as namespace input our addresses all start with '9088e8'
+    # For name='benchmark_result' --> 9088e8 + 3e049dd3e0791a8048c65c4c97919e8cd2d6faed745fe3093357079a3cc43dba
+    :param name: String which is hashed to generate the remainder of the address
+    :return: address [String] hex encoded hash of namespace and name
+    '''
+    return XO_NAMESPACE + \
+           hashlib.sha512(name.encode('utf-8')).hexdigest()[:64]
+
+class BenchmarkState:
+    TIMEOUT = 3
+
+    def __init__(self, context):
+        """
+        Constructor
+
+        :param context[sawtooth_sdk.processor.context.context): Access to validator state
+                    from within the transaction processor.
+        """
+
+        self._context = context
+        # TODO: What is that?
+        self._address_cache = {}
+
+    def delete_result(self):
+        """
+        Deletes the current result from the global state.
+
+        Args:
+        :param self:
+        :return: nothing
+
+        Raises:
+
+        """
+
+        result = self._load_result()
+
+        del result
+
+    def store_result(self, value):
+        """
+        Sets the current result to the given value
+        :param self:
+        :param value [int]: value to set as result
+        :return:
+        """
+
+        address = _make_benchmark_address('benchmark_result')
+
+        state_data = self._serialize(value)
+
+        self._address_cache[address] = state_data
+
+        self._context.set_state(
+            {address: state_data},
+            timeout=self.TIMEOUT)
+
+    def _delete_result(self):
+        address = _make_benchmark_address('benchmark_result')
+
+        self._context.delete_state(
+            [address],
+            timeout=self.TIMEOUT)
+
+    def _load_result(self):
+        address = _make_benchmark_address('benchmark_result')
+
+        if address in self._address_cache:
+            if self._address_cache[address]:
+                serialized_result = self._address_cache[address]
+                result = self._deserialize(serialized_result)
+
+        return result
+
+    def _deserialize(self, data):
+        """Take bytes stored in state and deserialize them into Python
+        Game objects.
+        Args:
+            data (bytes): The UTF-8 encoded string stored in state.
+        Returns:
+            result [int]
+
+    """
+        try:
+            result = data.decode()
+            return int(result)
+        except ValueError:
+            raise InternalError("Failed to deserialize data")
+
+    def _serialize(self, value):
+       return str(value).encode()

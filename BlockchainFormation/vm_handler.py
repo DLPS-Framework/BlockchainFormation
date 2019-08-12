@@ -212,10 +212,12 @@ class VMHandler:
         # add instance IPs and IDs to config
         self.config['ips'] = ips
         self.config['vpc_ids'] = vpc_ids
+        self.config['priv_ips'] = ips
         if self.config['public_ip']:
             self.config['ips'] = public_ips
             self.config['pub_ips'] = public_ips
-            self.config['priv_ips'] = ips
+        else:
+            self.config['pub_ips'] = ips
         self.config['instance_ids'] = [instance.id for instance in self.ec2_instances]
 
         # Give launched instances tag with time/type of experiment/number of node
