@@ -29,7 +29,7 @@ def wait_till_done(ssh_clients, ips, total_time, delta, path, message, typical_t
     while (False in status_flags and timer < total_time):
         time.sleep(delta)
         timer += delta
-        logger.debug(f" --> Waited {timer} seconds so far, {total_time - timer} seconds left before abort (it usually takes less than {round(typical_time/60)} minutes)")
+        logger.debug(f" --> Waited {timer} seconds so far, {total_time - timer} seconds left before abort (it usually takes less than {np.ceil(typical_time/60)} minutes)")
 
         for index, ip in enumerate(ips):
             if (status_flags[index] == False):

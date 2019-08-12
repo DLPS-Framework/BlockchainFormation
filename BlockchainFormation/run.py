@@ -213,8 +213,8 @@ class ArgParser:
 
     @staticmethod
     def _add_quorum_args(parser):
-        parser.add_argument('--raftblocktime', help='amount of time between raft block creations in milliseconds',
-                            type=int, default=50)
+        parser.add_argument('--raftblocktime', help='amount of time between raft block creations in milliseconds', type=int, default=50)
+        parser.add_argument('--private_fors', help='number of recipients for private transactions (at most one less than tessera nodes)', default="all")
 
     @staticmethod
     def _add_sawtooth_args(parser):
@@ -355,7 +355,8 @@ class ArgParser:
         elif blockchain_type == "quorum":
             return\
             {
-                "raftblocktime": namespace_dict['raftblocktime']
+                "raftblocktime": namespace_dict['raftblocktime'],
+                "private_fors": namespace_dict['private_fors']
 
             }
         elif blockchain_type =="client":

@@ -3,8 +3,6 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
   # Settings -> enable tracing for commands
   set -x
 
-
-
   # hosts file fix for localhost naming issue with sudo commands on ubuntu 18
   #127.0.0.1 localhost ip-10-6-57-68
   export hsname=$(cat /etc/hostname)
@@ -24,6 +22,10 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
   APT::Periodic::AutocleanInterval "7";
   APT::Periodic::Unattended-Upgrade "1";" >> /etc/apt/apt.conf.d/20auto-upgrades
 
+  # for monitoring of upload and download speed
+  apt install -y ifstat
+  # for monitoring i/o
+  apt-get install sysstat -y
 
   #THIS ONLY WORKS IF THE UNMOUNTED DISK IS THE BIGGEST DISK ON VM
   UNMOUNTED=`lsblk --noheadings --raw -o NAME,MOUNTPOINT,SIZE | sort -u -h -k 2 | awk '{print $4 " " $1}'  | tail -n 1`
