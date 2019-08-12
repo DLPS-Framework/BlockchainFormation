@@ -22,6 +22,9 @@
   echo "nvm version: $(nvm version)"
   sudo apt update
 
+  # for upload and download monitoring
+  sudo apt install -y ifstat
+
   # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log
 
