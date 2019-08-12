@@ -1,14 +1,16 @@
 {
-  "vm_count": 5,
-  "instance_type": "t2.small",
+  "vm_count": 2,
+  "instance_type": "m5.large",
   "image": {
-            "image_id": null,
-            "os": "ubuntu",
-            "version": 18,
-            "permissions": "default"
+    "image_id": null,
+    "os": "ubuntu",
+    "version": 18,
+    "permissions": "default"
   },
   "subnet_id": "subnet-0fa70db2bd49231db",
-  "security_group_id": "sg-0ca45822daf371316",
+  "security_group_id": [
+    "sg-0a1a62af94278cd07"
+  ],
   "proxy_user": "None",
   "user": "ubuntu",
   "profile": "default",
@@ -18,6 +20,7 @@
   "aws_region": "eu-central-1",
   "priv_key_path": "/home/user/.aws/Johannes_test_pub.pem",
   "tag_name": "blclab_quorum",
+  "exp_dir": "/home/user/PycharmProjects/BlockchainFormation/BlockchainFormation",
   "public_ip": true,
   "storage_settings": [
     {
@@ -34,7 +37,6 @@
   ],
   "blockchain_type": "quorum",
   "quorum_settings": {
-    "chain_id": "tbd",
     "raftblocktime": 50
   }
 }
