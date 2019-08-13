@@ -24,7 +24,7 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
   # for monitoring of upload and download speed
   apt install -y ifstat
-  # for monitoring i/o
+  # for monitoring disk i/o
   apt-get install sysstat -y
 
   #THIS ONLY WORKS IF THE UNMOUNTED DISK IS THE BIGGEST DISK ON VM
