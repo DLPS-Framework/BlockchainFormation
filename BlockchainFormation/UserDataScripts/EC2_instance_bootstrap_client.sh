@@ -1,12 +1,12 @@
   # ======== Install needed Client packages ========
-  sudo apt update
-  sudo apt upgrade
+  sudo apt update || sudo apt update
+  sudo apt upgrade || sudo apt upgrade
 
   sudo apt-get install -y make || sudo apt-get install -y make
   sudo apt install -y g++ || sudo apt install -y g++
   sudo apt install -y python2.7 python-pip || sudo apt install -y python2.7 python-pip
   # sudo apt install -y python3-pip || sudo apt install -y python3-pip
-  wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash
+  wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash || wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash || wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash
   . ~/.nvm/nvm.sh
   . ~/.profile
   . ~/.bashrc

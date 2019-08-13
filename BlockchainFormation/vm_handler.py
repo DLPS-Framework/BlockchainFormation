@@ -336,6 +336,8 @@ class VMHandler:
         else:
             pass
 
+        with open(f"{self.config['exp_dir']}/config.json", 'w') as outfile:
+            json.dump(self.config, outfile, default=datetimeconverter, indent=4)
 
     def run_general_shutdown(self):
         """

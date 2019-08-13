@@ -96,6 +96,11 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
     :return:
     """
 
+    config['node_count'] = config['vm_count']
+    config['node_priv_ips'] = config['ips']
+    if config['public_ip']:
+        config['node_pub_ips'] = config['pub_ips']
+
     #acc_path = os.getcwd()
     os.mkdir(f"{config['exp_dir']}/setup/accounts")
     # enodes dir not needed anymore since enodes are saved in static-nodes file
@@ -290,6 +295,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         # Is this really needed?
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo service parity restart")
 
+    coinbase = []
     enodes = []
     # collect enodes
     web3_clients = []
@@ -306,8 +312,9 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         enodes.append((ip, web3_clients[index].parity.enode()))
         #web3_clients[index].miner.stop()
         logger.info(f"Coinbase of {ip}: {web3_clients[index].eth.coinbase}")
+        coinbase.append(web3_clients[index].eth.coinbase)
 
-
+    config['coinbase'] = coinbase
 
     logger.info([enode for (ip, enode) in enodes])
 

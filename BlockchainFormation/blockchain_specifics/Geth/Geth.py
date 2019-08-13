@@ -72,6 +72,13 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
     Runs the geth specific startup script
     :return:
     """
+
+    config['node_count'] = config['vm_count']
+    config['node_priv_ips'] = config['ips']
+    if config['public_ip']:
+        config['node_pub_ips'] = config['pub_ips']
+
+
     #acc_path = os.getcwd()
     os.mkdir(f"{config['exp_dir']}/setup/accounts")
     # enodes dir not needed anymore since enodes are saved in static-nodes file
@@ -188,23 +195,26 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
 
 
     enodes = []
+    coinbase = []
     # collect enodes
     web3_clients = []
-    time.sleep(30)
+    time.sleep(45)
 
     for index, ip in enumerate(config['ips']):
         if config['public_ip']:
             # use public ip if exists, else it wont work
             ip_pub = config['public_ips'][index]
-            web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip_pub}:8545", request_kwargs={'timeout': 5})))
+            web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip_pub}:8545", request_kwargs={'timeout': 20})))
         else:
-            web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 5})))
+            web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 20})))
         # print(web3.admin)
+        time.sleep(3)
         enodes.append((ip, web3_clients[index].admin.nodeInfo.enode))
         #web3_clients[index].miner.stop()
         logger.info(f"Coinbase of {ip}: {web3_clients[index].eth.coinbase}")
+        coinbase.append(web3_clients[index].eth.coinbase)
 
-
+    config['coinbase'] = coinbase
     logger.info([enode for (ip, enode) in enodes])
 
     with open(f"{config['exp_dir']}/setup/static-nodes.json", 'w') as outfile:
