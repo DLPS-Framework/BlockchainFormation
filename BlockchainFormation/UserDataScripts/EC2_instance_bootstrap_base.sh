@@ -3,10 +3,6 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
   # Settings -> enable tracing for commands
   set -x
 
-  # for monitoring of upload and download speed
-  # sudo apt install -y ipconfig
-  sudo apt install -y ifstat
-
   # hosts file fix for localhost naming issue with sudo commands on ubuntu 18
   #127.0.0.1 localhost ip-10-6-57-68
   export hsname=$(cat /etc/hostname)
