@@ -10,6 +10,11 @@ def sawtooth_shutdown(config, logger, ssh_clients, scp_clients):
     :return:
     """
 
+    # adding "true" number of blockchain nodes and their ips
+    config['node_count'] = config['vm_count']
+    config['node_priv_ips'] = config['priv_ips']
+    config['node_pub_ips'] = config['pub_ips']
+
     for index, _ in enumerate(config['pub_ips']):
         # get account from all instances
         scp_clients[index].get("/var/log/sawtooth", f"{config['exp_dir']}/sawtooth_logs/sawtooth_logs_node_{index}", recursive=True)
@@ -21,6 +26,8 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
     Runs the geth specific startup script
     :return:
     """
+
+    dir_name = os.path.dirname(os.path.realpath(__file__))
 
     logger.info("Creating directories for saving data and logs locally")
     os.mkdir(f"{config['exp_dir']}/sawtooth_logs")
@@ -160,6 +167,11 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
         channel = ssh_clients[index1].get_transport().open_session()
         channel.exec_command("sudo systemctl start sawtooth-poet-engine.service")
 
+        logger.debug("Installing BenchContract...")
+        scp_clients[index1].put(dir_name + "/processor", "/home/ubuntu", recursive=True)
+        channel = ssh_clients[index1].get_transport().open_session()
+        channel.exec_command("screen -S bench python3 /home/ubuntu/processor/main.py")
+
     logger.info("Waiting for 10s until all nodes have started")
     time.sleep(10)
     logger.info("All nodes have started")
@@ -206,7 +218,8 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
     else:
         logger.info("Sawtooth network setup was NOT successful")
 
-    logger.info("Done")
+    logger.info("Checking whether BenchContract is working properly on every peer by making one set operation and reading on all nodes")
+    
 
 """ THIS IS CLIENT-STUFF
     # setting up api stuff on first node
