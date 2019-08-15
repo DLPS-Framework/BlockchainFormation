@@ -10,11 +10,6 @@ def sawtooth_shutdown(config, logger, ssh_clients, scp_clients):
     :return:
     """
 
-    # adding "true" number of blockchain nodes and their ips
-    config['node_count'] = config['vm_count']
-    config['node_priv_ips'] = config['priv_ips']
-    config['node_pub_ips'] = config['pub_ips']
-
     for index, _ in enumerate(config['pub_ips']):
         # get account from all instances
         scp_clients[index].get("/var/log/sawtooth", f"{config['exp_dir']}/sawtooth_logs/sawtooth_logs_node_{index}", recursive=True)
@@ -26,6 +21,11 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
     Runs the geth specific startup script
     :return:
     """
+
+    # adding "true" number of blockchain nodes and their ips
+    config['node_count'] = config['vm_count']
+    config['node_priv_ips'] = config['priv_ips']
+    config['node_pub_ips'] = config['pub_ips']
 
     dir_name = os.path.dirname(os.path.realpath(__file__))
 
