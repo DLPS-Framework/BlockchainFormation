@@ -3,19 +3,18 @@ import hashlib
 from sawtooth_sdk.processor.exceptions import InternalError
 
 # Generate the namespace for our transaction processor: 'benchmark' -> {9088e8}
-XO_NAMESPACE = hashlib.sha512('benchmark'.encode("utf-8")).hexdigest()[0:6]
+namespace = hashlib.sha512('benchcontract'.encode("utf-8")).hexdigest()[0:6]
 
-def _make_benchmark_address(name):
+def _make_address(name):
     '''
     # Here we generate the addresses used to store and retreive data to and from the blockchain
     # NOTE: This defines the input and output fields of the transactions we send with our client
-    # As we use 'benchmark' as namespace input our addresses all start with '9088e8'
-    # For name='benchmark_result' --> 9088e8 + 3e049dd3e0791a8048c65c4c97919e8cd2d6faed745fe3093357079a3cc43dba
+    # As we use 'benchcontract' as namespace input our addresses all start with 'dc7a45'
+    # For name='benchcontract_result' --> dc7a45 + e54be707a312cf1cbd3ed406aa946f7b77ef39c84c077a8f4be9052158967e1a
     :param name: String which is hashed to generate the remainder of the address
     :return: address [String] hex encoded hash of namespace and name
     '''
-    return XO_NAMESPACE + \
-           hashlib.sha512(name.encode('utf-8')).hexdigest()[:64]
+    return namespace + hashlib.sha512(name.encode('utf-8')).hexdigest()[:64]
 
 class BenchmarkState:
     TIMEOUT = 3
@@ -56,7 +55,7 @@ class BenchmarkState:
         :return:
         """
 
-        address = _make_benchmark_address('benchmark_result')
+        address = _make_address('benchcontract_result')
 
         state_data = self._serialize(value)
 
@@ -67,14 +66,14 @@ class BenchmarkState:
             timeout=self.TIMEOUT)
 
     def _delete_result(self):
-        address = _make_benchmark_address('benchmark_result')
+        address = _make_address('benchcontract_result')
 
         self._context.delete_state(
             [address],
             timeout=self.TIMEOUT)
 
     def _load_result(self):
-        address = _make_benchmark_address('benchmark_result')
+        address = _make_address('benchcontract_result')
 
         if address in self._address_cache:
             if self._address_cache[address]:

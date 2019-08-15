@@ -47,27 +47,31 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
     logger.info("Doing special config stuff for first node")
     logger.debug("Creating genesis config on first node")
 
-    # Creating config-genesis.batch
+    logger.debug("Creating config-genesis.batch")
     stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawset genesis --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/config-genesis.batch")
-    logger.debug("".join(stdout.readlines()))
-    logger.debug("".join(stderr.readlines()))
+    stdout.readlines()
+    # logger.debug("".join(stdout.readlines()))
+    # logger.debug("".join(stderr.readlines()))
 
-    # Creating config-consensus.batch
+    logger.debug("Creating config-consensus.batch")
     stdin, stdout, stderr = ssh_clients[0].exec_command('sudo -u sawtooth sawset proposal create --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/config-consensus.batch sawtooth.consensus.algorithm.name=PoET sawtooth.consensus.algorithm.version=0.1 sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/simulator_rk_pub.pem)" sawtooth.poet.valid_enclave_measurements=$(poet enclave measurement) sawtooth.poet.valid_enclave_basenames=$(poet enclave basename)')
-    logger.debug("".join(stdout.readlines()))
-    logger.debug("".join(stderr.readlines()))
+    stdout.readlines()
+    # logger.debug("".join(stdout.readlines()))
+    # logger.debug("".join(stderr.readlines()))
 
-    # Creating poet.batch
+    logger.debug("Creating poet.batch")
     stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth poet registration create --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/poet.batch")
-    logger.debug("".join(stdout.readlines()))
-    logger.debug("".join(stderr.readlines()))
+    stdout.readlines()
+    # logger.debug("".join(stdout.readlines()))
+    # logger.debug("".join(stderr.readlines()))
 
-    # Creating poet-settings.batch
+    logger.debug("Creating poet-settings.batch")
     stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawset proposal create --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/poet-settings.batch sawtooth.poet.target_wait_time=5 sawtooth.poet.initial_wait_time=25 sawtooth.publisher.max_batches_per_block=100")
-    logger.debug("".join(stdout.readlines()))
-    logger.debug("".join(stderr.readlines()))
+    stdout.readlines()
+    # logger.debug("".join(stdout.readlines()))
+    # logger.debug("".join(stderr.readlines()))
 
-    # Creating genesis block using the just created config.batches
+    logger.debug("Creating genesis block using the just created config.batches")
     stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawadm genesis /home/sawtooth/temp/config-genesis.batch /home/sawtooth/temp/config-consensus.batch /home/sawtooth/temp/poet.batch /home/sawtooth/temp/poet-settings.batch")
     logger.debug("".join(stdout.readlines()))
     logger.debug("".join(stderr.readlines()))
@@ -78,14 +82,16 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
         # Creating string for binding specification and replace substitute_binding
         binding_string = f'\\"network:tcp://{ip1}:8800\\",'
         stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_bind#" + binding_string + "#g /home/ubuntu/validator.toml")
-        logger.debug("".join(stdout.readlines()))
-        logger.debug("".join(stderr.readlines()))
+        stdout.readlines()
+        # logger.debug("".join(stdout.readlines()))
+        # logger.debug("".join(stderr.readlines()))
 
         # Creating string for endpoint speficifation and replace substitute_endpoint
         endpoint_string = f'endpoint\ =\ \\"tcp://{ip1}:8800\\"'
         stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_endpoint#" + endpoint_string + "#g /home/ubuntu/validator.toml")
-        logger.debug("".join(stdout.readlines()))
-        logger.debug("".join(stderr.readlines()))
+        stdout.readlines()
+        # logger.debug("".join(stdout.readlines()))
+        # logger.debug("".join(stderr.readlines()))
 
         if len(config['priv_ips']) == 1:
             peer_string = "# no peers"
@@ -105,34 +111,39 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
         logger.debug("".join(stdout.readlines()))
         logger.debug("".join(stderr.readlines()))
 
-        # Adjusting minimum and maximum peer connectivity
+        logger.debug("Adjusting minimum and maximum peer connectivity")
         min_connectivity_string = f"{len(config['priv_ips']) - 1}"
         max_connectivity_string = f"{2 * (len(config['priv_ips']) - 1)}"
         stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_min_connectivity#" + min_connectivity_string + "#g /home/ubuntu/validator.toml")
-        logger.debug("".join(stdout.readlines()))
-        logger.debug("".join(stderr.readlines()))
+        stdout.readlines()
+        # logger.debug("".join(stdout.readlines()))
+        # logger.debug("".join(stderr.readlines()))
         stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_max_connectivity#" + max_connectivity_string + "#g /home/ubuntu/validator.toml")
-        logger.debug("".join(stdout.readlines()))
-        logger.debug("".join(stderr.readlines()))
+        stdout.readlines()
+        # logger.debug("".join(stdout.readlines()))
+        # logger.debug("".join(stderr.readlines()))
 
-        # adjusting REST-API config
+        logger.debug("adjusting REST-API config")
         stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_local_private_ip#" + ip1 + "#g /home/ubuntu/rest_api.toml")
-        logger.debug("".join(stdout.readlines()))
-        logger.debug("".join(stderr.readlines()))
+        stdout.readlines()
+        # logger.debug("".join(stdout.readlines()))
+        # logger.debug("".join(stderr.readlines()))
 
-        # Replacing the configs in /etc/sawtooth by the customized configs
-
+        logger.debug("Replacing the configs in /etc/sawtooth by the customized configs")
         stdin, stdout, stderr = ssh_clients[index1].exec_command("sudo mv /home/ubuntu/validator.toml /etc/sawtooth/validator.toml")
-        logger.debug("".join(stdout.readlines()))
-        logger.debug("".join(stderr.readlines()))
+        stdout.readlines()
+        # logger.debug("".join(stdout.readlines()))
+        # logger.debug("".join(stderr.readlines()))
 
         stdin, stdout, stderr = ssh_clients[index1].exec_command("sudo mv /home/ubuntu/rest_api.toml /etc/sawtooth/rest_api.toml")
-        logger.debug("".join(stdout.readlines()))
-        logger.debug("".join(stderr.readlines()))
+        stdout.readlines()
+        # logger.debug("".join(stdout.readlines()))
+        # logger.debug("".join(stderr.readlines()))
 
         stdin, stdout, stderr = ssh_clients[index1].exec_command("sudo mv /home/ubuntu/cli.toml /etc/sawtooth/cli.toml")
-        logger.debug("".join(stdout.readlines()))
-        logger.debug("".join(stderr.readlines()))
+        stdout.readlines()
+        # logger.debug("".join(stdout.readlines()))
+        # logger.debug("".join(stderr.readlines()))
 
         # stdin, stdout, stderr = ssh_clients[index1].exec_command("sudo chown root:sawtooth /etc/sawtooth/validator.toml")
         # logger.debug("".join(stdout.readlines()))
@@ -142,7 +153,7 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
         # logger.debug("".join(stdout.readlines()))
         # logger.debug("".join(stderr.readlines()))
 
-        # Starting all services
+        logger.debug("Starting all services")
         channel = ssh_clients[index1].get_transport().open_session()
         channel.exec_command("sudo systemctl start sawtooth-rest-api.service")
 
@@ -167,12 +178,14 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
         channel = ssh_clients[index1].get_transport().open_session()
         channel.exec_command("sudo systemctl start sawtooth-poet-engine.service")
 
-        logger.debug("Installing BenchContract...")
+        logger.debug("Starting BenchContract...")
         scp_clients[index1].put(dir_name + "/processor", "/home/ubuntu", recursive=True)
         channel = ssh_clients[index1].get_transport().open_session()
-        channel.exec_command("screen -S bench python3 /home/ubuntu/processor/main.py")
+        channel.exec_command("python3 /home/ubuntu/processor/main.py > bench.log")
 
     logger.info("Waiting for 10s until all nodes have started")
+
+    # TODO wait until all peers are in list instead of hard-coded network
     time.sleep(10)
     logger.info("All nodes have started")
     logger.info("Checking whether setup has been successful by searching for every peer in sawtooth peer list")
@@ -218,24 +231,3 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
     else:
         logger.info("Sawtooth network setup was NOT successful")
 
-    logger.info("Checking whether BenchContract is working properly on every peer by making one set operation and reading on all nodes")
-    
-
-""" THIS IS CLIENT-STUFF
-    # setting up api stuff on first node
-    scp_clients[0].put("/home/user/ec2_automation/blockchain_specifics/Sawtooth/api", "/home/ubuntu", recursive=True)
-    stdin, stdout, stderr = ssh_clients[0].exec_commnand("nvm install node")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
-    stdin, stdout, stderr = ssh_clients[0].exec_command("(mv /home/ubuntu/api/request_raw.js /home/ubuntu/api/request.js && cd api && npm install &> api.log)")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
-    stdin, stdout, stderr = ssh_clients[0].exec_command(f"sed -i -e 's/substitute_priv_ip/{config['pub_ips'][0]}/g' /home/ubuntu/api/request.js")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
-    stdin, stdout, stderr = ssh_clients[0].exec_command("(cd api && node request.js &> api.log")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
-
-    logger.info("Done")
-"""
