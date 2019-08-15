@@ -220,5 +220,5 @@ class BenchmarkHandler(TransactionHandler):
             raise InvalidTransaction("Unhandled method: {}".format(payload["method"]()))
 
         print("result: {}".format(result))
-        raise Exception("stop")
+        # raise Exception("stop")
         return result
