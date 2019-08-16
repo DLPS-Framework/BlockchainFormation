@@ -1,6 +1,6 @@
 {
     "vm_count": 7,
-    "instance_type": "t2.medium",
+    "instance_type": "m5.large",
     "image": {
               "image_id": null,
               "os": "ubuntu",
