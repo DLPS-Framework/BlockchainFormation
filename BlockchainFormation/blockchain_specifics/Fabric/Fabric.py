@@ -24,7 +24,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
     # adding "true" number of nodes and their ips
     config['node_count'] = config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count']
-    config['node_ips'] = config['ips'][config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] : config['fabric_settings']['org_count'] * (config['fabric_settings']['peer_count'] + 1) + config['fabric_settings']['orderer_count']]
+    config['node_pub_ips'] = config['pub_ips'][config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] : config['fabric_settings']['org_count'] * (config['fabric_settings']['peer_count'] + 1) + config['fabric_settings']['orderer_count']]
     config['node_priv_ips'] = config['priv_ips'][config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] : config['fabric_settings']['org_count'] * (config['fabric_settings']['peer_count'] + 1) + config['fabric_settings']['orderer_count']]
 
     dir_name = os.path.dirname(os.path.realpath(__file__))

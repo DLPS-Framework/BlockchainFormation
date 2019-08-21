@@ -25,7 +25,7 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
     # adding "true" number of blockchain nodes and their ips
     config['node_count'] = config['vm_count']
     config['node_priv_ips'] = config['priv_ips']
-    config['node_ips'] = config['ips']
+    config['node_pub_ips'] = config['pub_ips']
 
     dir_name = os.path.dirname(os.path.realpath(__file__))
 
