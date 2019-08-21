@@ -396,8 +396,6 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(
         f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 script.sh && ls -la && cd .. && ./scripts/script.sh)' |& tee /home/ubuntu/setup.log)")
     out = stdout.readlines()
-    # for index, _ in enumerate(out):
-    #     logger.debug(out[index].replace("\n", ""))
 
     # save the cli command on the last node and save it in exp_dir
     ssh_clients[index_last_node].exec_command(
@@ -412,6 +410,9 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     else:
         logger.info("")
         logger.info("******************!!! ERROR: Fabric network formation failed !!! *********************")
+        for index, _ in enumerate(out):
+            logger.debug(out[index].replace("\n", ""))
+        raise Exception("Blockchain did not start properly - Omitting or repeating")
 
     logger.info("Getting logs from vms")
 

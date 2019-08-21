@@ -277,12 +277,13 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
                     logger.debug(str(Exception))
 
     if (False in status_flags):
-        logger.error('Quorum network start was not successful')
-        exit - 1
         try:
             logger.error(f"Failed Quorum nodes: {[config['priv_ips'][x] for x in np.where(status_flags != True)]}")
         except:
             pass
+        logger.error('Quorum network start was not successful')
+        raise Exception("Blockchain did not start properly - Omitting or repeating")
+
 
     logger.info("")
     logger.info("================================")

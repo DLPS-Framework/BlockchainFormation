@@ -230,4 +230,5 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
         logger.info("Sawtooth network setup was successful")
     else:
         logger.info("Sawtooth network setup was NOT successful")
+        raise Exception("Blockchain did not start properly - Omitting or repeating")
 
