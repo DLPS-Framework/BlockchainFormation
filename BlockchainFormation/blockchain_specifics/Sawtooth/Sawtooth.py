@@ -10,7 +10,7 @@ def sawtooth_shutdown(config, logger, ssh_clients, scp_clients):
     :return:
     """
 
-    for index, _ in enumerate(config['pub_ips']):
+    for index, _ in enumerate(config['ips']):
         # get account from all instances
         scp_clients[index].get("/var/log/sawtooth", f"{config['exp_dir']}/sawtooth_logs/sawtooth_logs_node_{index}", recursive=True)
         scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
@@ -25,7 +25,7 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
     # adding "true" number of blockchain nodes and their ips
     config['node_count'] = config['vm_count']
     config['node_priv_ips'] = config['priv_ips']
-    config['node_pub_ips'] = config['pub_ips']
+    config['node_ips'] = config['ips']
 
     dir_name = os.path.dirname(os.path.realpath(__file__))
 
@@ -191,7 +191,7 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
     logger.info("Checking whether setup has been successful by searching for every peer in sawtooth peer list")
 
     boo1 = True
-    for index, ip in enumerate(config['pub_ips']):
+    for index, ip in enumerate(config['ips']):
 
         stdin, stdout, stderr = ssh_clients[index].exec_command(f"sawtooth peer list --url http://{config['priv_ips'][index]}:8008")
         out = stdout.readlines()

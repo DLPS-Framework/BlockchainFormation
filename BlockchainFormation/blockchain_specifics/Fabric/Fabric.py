@@ -24,7 +24,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
     # adding "true" number of nodes and their ips
     config['node_count'] = config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count']
-    config['node_pub_ips'] = config['pub_ips'][config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] : config['fabric_settings']['org_count'] * (config['fabric_settings']['peer_count'] + 1) + config['fabric_settings']['orderer_count']]
+    config['node_ips'] = config['ips'][config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] : config['fabric_settings']['org_count'] * (config['fabric_settings']['peer_count'] + 1) + config['fabric_settings']['orderer_count']]
     config['node_priv_ips'] = config['priv_ips'][config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] : config['fabric_settings']['org_count'] * (config['fabric_settings']['peer_count'] + 1) + config['fabric_settings']['orderer_count']]
 
     dir_name = os.path.dirname(os.path.realpath(__file__))
@@ -186,7 +186,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         string_ca_v = string_ca_v + f" -v $(pwd)/crypto-config/peerOrganizations/org{org}.example.com/ca/:/etc/hyperledger/fabric-ca-server-config"
 
         # Starting the Certificate Authority
-        logger.debug(f" - Starting ca for org{org} on {config['pub_ips'][org - 1]}")
+        logger.debug(f" - Starting ca for org{org} on {config['ips'][org - 1]}")
         channel = ssh_clients[org - 1].get_transport().open_session()
         channel.exec_command(
             f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + f" hyperledger/fabric-ca sh -c 'fabric-ca-server start -b admin:adminpw -d' &> /home/ubuntu/ca.org{org}.log)")
@@ -239,7 +239,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         string_orderer_v = string_orderer_v + f" -w /opt/gopath/src/github.com/hyperledger/fabric"
 
         # Starting the orderers
-        logger.debug(f" - Starting orderer{orderer} on {config['pub_ips'][config['fabric_settings']['org_count'] - 1 + orderer]}")
+        logger.debug(f" - Starting orderer{orderer} on {config['ips'][config['fabric_settings']['org_count'] - 1 + orderer]}")
         channel = ssh_clients[config['fabric_settings']['org_count'] + orderer - 1].get_transport().open_session()
         channel.exec_command(
             f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_orderer_base + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /home/ubuntu/orderer{orderer}.log)")
@@ -249,7 +249,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     # starting peers and databases
     logger.info(f"Starting databases and peers")
     for org in range(1, config['fabric_settings']['org_count'] + 1):
-        for peer, ip in enumerate(config['pub_ips'][config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * (org - 1):
+        for peer, ip in enumerate(config['ips'][config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * (org - 1):
                                   config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * org]):
             # set up configuration of database like with docker compose
             string_database_base = ""
@@ -343,7 +343,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     index_last_node = config['fabric_settings']['orderer_count'] + (config['fabric_settings']['peer_count'] + 1) * config['fabric_settings']['org_count'] - 1
     # Creating script and pushing it to the last node
     logger.debug(
-        f"Executing script on {config['pub_ips'][index_last_node]}  which creates channel, adds peers to channel, installs and instantiates all chaincode - can take some minutes")
+        f"Executing script on {config['ips'][index_last_node]}  which creates channel, adds peers to channel, installs and instantiates all chaincode - can take some minutes")
     write_script(config, logger)
     stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(
         "rm -f /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/script.sh")
@@ -415,7 +415,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
 
     logger.info("Getting logs from vms")
 
-    for index, ip in enumerate(config['pub_ips']):
+    for index, ip in enumerate(config['ips']):
         scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
 
     try:
@@ -442,7 +442,7 @@ def reboot_all(ec2_instances, config, logger, ssh_clients, scp_clients):
     while (False in status_flags and timer < 30):
         # logger.info(f"Waited {timer * 40} seconds so far, {300 - timer * 20} seconds left before abort (it usually takes around 2 minutes)")
         ssh_key_priv = paramiko.RSAKey.from_private_key_file(config['priv_key_path'])
-        for index, ip in enumerate(config['pub_ips']):
+        for index, ip in enumerate(config['ips']):
             if (status_flags[index] == False):
                 try:
                     ssh_clients[index].connect(hostname=ip, username=config['user'], pkey=ssh_key_priv)

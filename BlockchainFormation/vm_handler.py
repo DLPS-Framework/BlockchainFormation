@@ -195,19 +195,16 @@ class VMHandler:
         for i in self.ec2_instances:
             i.wait_until_running()
             i.load()
-            self.logger.info(f"ID: {i.id}, State: {i.state['Name']}, IP: {i.private_ip_address}")
+            # self.logger.info(f"ID: {i.id}, State: {i.state['Name']}, IP: {i.private_ip_address}")
             ips.append(i.private_ip_address)
             vpc_ids.append(i.vpc_id)
             if self.config['public_ip']:
-                self.logger.info(f"ID: {i.id}, PUBLIC IP: {i.public_ip_address}")
+                # self.logger.info(f"ID: {i.id}, PUBLIC IP: {i.public_ip_address}")
                 public_ips.append(i.public_ip_address)
 
         # add no proxy for all VM IPs
         if self.config['proxy_user'] is not None:
             os.environ["NO_PROXY"] = f"localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net,{','.join(str(ip) for ip in ips)}"
-
-        self.logger.info(f"You can now access machines via: ssh -i \"path to {self.config['key_name']} key\" ubuntu@{ips} (if user is ubuntu) ")
-        self.logger.info(f"e.g. ssh -i {self.config['priv_key_path']} ubuntu@{ips[0]}")
 
         # add instance IPs and IDs to config
         self.config['ips'] = ips
@@ -219,6 +216,10 @@ class VMHandler:
         else:
             self.config['pub_ips'] = ips
         self.config['instance_ids'] = [instance.id for instance in self.ec2_instances]
+
+        self.logger.info(f"You can now access machines via: ssh -i \"path to {self.config['key_name']} key\" ubuntu@{self.config['ips']} (if user is ubuntu) ")
+        self.logger.info(f"e.g. ssh -i {self.config['priv_key_path']} ubuntu@{self.config['ips'][0]}")
+
 
         # Give launched instances tag with time/type of experiment/number of node
         ts = time.time()
@@ -237,7 +238,7 @@ class VMHandler:
 
         self.launch_times = []
         for i in self.ec2_instances:
-            self.logger.info("Launch Time: " + str(i.launch_time))
+            # self.logger.info("Launch Time: " + str(i.launch_time))
             # get launch time
             self.launch_times.append(i.launch_time.replace(tzinfo=None))
 

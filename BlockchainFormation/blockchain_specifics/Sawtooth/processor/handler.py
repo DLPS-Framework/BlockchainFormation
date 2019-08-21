@@ -22,7 +22,7 @@ def _make_benchcontract_address(name):
 
     print("name: {}".format(name))
     print("namespace: {}".format(namespace))
-    return namespace + hashlib.sha512(name.encode("utf-8")).hexdigest()[:64]
+    return namespace + hashlib.sha512(name.encode("utf-8")).hexdigest()[0:64]
 
 class BenchmarkHandler(TransactionHandler):
     """

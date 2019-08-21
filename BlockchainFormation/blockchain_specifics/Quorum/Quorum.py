@@ -29,7 +29,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
     # adding "true" number of blockchain nodes and their ips
     config['node_count'] = config['vm_count']
     config['node_priv_ips'] = config['priv_ips']
-    config['node_pub_ips'] = config['pub_ips']
+    config['node_ips'] = config['ips']
 
     logger.info("Create directories for saving data and logs locally")
     # path = os.getcwd()
@@ -213,7 +213,7 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
             channel = ssh_clients[index].get_transport().open_session()
             channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --maxpeers {config['vm_count']} --raftport 50000 --raftjoinexisting {raftID} --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip} --raftblocktime {config['quorum_settings']['raftblocktime']} >>node.log 2>&1")
 
-    boo = wait_till_done(ssh_clients, config['pub_ips'], 60, 10, '/home/ubuntu/nodes/new-node-1/geth.ipc', False, 10, logger)
+    boo = wait_till_done(ssh_clients, config['ips'], 60, 10, '/home/ubuntu/nodes/new-node-1/geth.ipc', False, 10, logger)
 
     """
     logger.info("Waiting until all quorum nodes have started")
@@ -310,7 +310,7 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
 
     logger.info("Getting logs from vms")
     boo = True
-    for index, ip in enumerate(config['pub_ips']):
+    for index, ip in enumerate(config['ips']):
 
         try:
             scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
