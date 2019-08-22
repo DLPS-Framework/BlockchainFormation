@@ -316,57 +316,63 @@ class ArgParser:
 
         if blockchain_type == "fabric":
             return\
-            {
-                "org_count": namespace_dict['org_count'],
-                "peer_count": namespace_dict['peer_count'],
-                "orderer_type": namespace_dict['orderer_type'],
-                "orderer_count": namespace_dict['orderer_count'],
-                "batch_timeout": namespace_dict['batch_timeout'],
-                "max_message_count": namespace_dict['max_message_count'],
-                "absolute_max_bytes": namespace_dict['absolute_max_bytes'],
-                "preferred_max_bytes": namespace_dict['preferred_max_bytes'],
-                "tls_enabled": namespace_dict['tls_enabled'],
-                "endorsement_policy": namespace_dict['endorsement_policy'],
-                "log_level": namespace_dict['log_level']
+                {
+                    "org_count": namespace_dict['org_count'],
+                    "peer_count": namespace_dict['peer_count'],
+                    "orderer_type": namespace_dict['orderer_type'],
+                    "orderer_count": namespace_dict['orderer_count'],
+                    "batch_timeout": namespace_dict['batch_timeout'],
+                    "max_message_count": namespace_dict['max_message_count'],
+                    "absolute_max_bytes": namespace_dict['absolute_max_bytes'],
+                    "preferred_max_bytes": namespace_dict['preferred_max_bytes'],
+                    "tls_enabled": namespace_dict['tls_enabled'],
+                    "endorsement_policy": namespace_dict['endorsement_policy'],
+                    "log_level": namespace_dict['log_level']
 
-            }
+                }
 
         elif blockchain_type == "geth":
             return\
-            {
-                "chain_id": namespace_dict['chainid'],
-                "period": namespace_dict['period'],
-                "epoch": namespace_dict['epoch'],
-                "balance": namespace_dict['balance'],
-                "timestamp": namespace_dict['timestamp'],
-                "gaslimit": namespace_dict['gaslimit'],
-                "num_acc": namespace_dict['num_acc']
+                {
+                    "chain_id": namespace_dict['chainid'],
+                    "period": namespace_dict['period'],
+                    "epoch": namespace_dict['epoch'],
+                    "balance": namespace_dict['balance'],
+                    "timestamp": namespace_dict['timestamp'],
+                    "gaslimit": namespace_dict['gaslimit'],
+                    "num_acc": namespace_dict['num_acc']
 
-            }
+                }
         elif blockchain_type == "parity":
             return\
-            {
-                "step_duration": namespace_dict['step_duration'],
-                "num_acc": namespace_dict['num_acc'],
-                "gaslimit": namespace_dict['gaslimit'],
-                "balance": namespace_dict['balance']
+                {
+                    "step_duration": namespace_dict['step_duration'],
+                    "num_acc": namespace_dict['num_acc'],
+                    "gaslimit": namespace_dict['gaslimit'],
+                    "balance": namespace_dict['balance']
 
-            }
+                }
         elif blockchain_type == "quorum":
             return\
-            {
-                "raftblocktime": namespace_dict['raftblocktime'],
-                "private_fors": namespace_dict['private_fors']
+                {
+                    "raftblocktime": namespace_dict['raftblocktime'],
+                    "private_fors": namespace_dict['private_fors']
 
-            }
+                }
         elif blockchain_type =="client":
             return\
-            {
-                "target_network_conf": namespace_dict["target_network_conf"]
+                {
+                    "target_network_conf": namespace_dict["target_network_conf"]
 
-            }
+                }
         elif blockchain_type == "sawtooth":
-            return {}
+            return\
+                {
+                    "sawtooth.consensus.algorithm.name": namespace_dict["sawtooth.consensus.algorithm.name"],
+                    "sawtooth.poet.initial_wait_time": namespace_dict["sawtooth.poet.initial_wait_time"],
+                    "sawtooth.poet.target_wait_time": namespace_dict["sawtooth.poet.target_wait_time"],
+                    "sawtooth.publisher.max_batches_per_block": namespace_dict["sawtooth.publisher.max_batches_per_block"]
+                }
 
 
     def load_config(self, namespace_dict):

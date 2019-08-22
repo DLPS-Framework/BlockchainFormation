@@ -208,6 +208,19 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
     if boo1 == True:
             logger.info(f"All nodes seem to have started properly")
 
+    logger.info("Adapting the sawtooth specific properties such as consenus algorithm, block time, ...")
+    for key in config["sawtooth_settings"]:
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"sudo sawset proposal create --url http://{config['priv_ips'][0]}:8008 --key /etc/sawtooth/keys/validator.priv {key}={config['sawtooth_settings'][key]}")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+
+    logger.info("Checking whether these proposals have been adopted")
+    time.sleep(10)
+    stdin, stdout, stderr = ssh_clients[-1].exec_command(f"sawtooth settings list --url http://{config['priv_ips'][-1]}:8008")
+    logger.debug("".join(stdout.readlines()))
+    logger.debug("".join(stderr.readlines()))
+
+
     logger.info("Checking whether intkey is working on every peer by making one set operation and reading on all nodes")
     ssh_clients[len(config['priv_ips'])-1].exec_command(f"intkey set val1 100 --url http://{config['priv_ips'][0]}:8008")
     time.sleep(5)

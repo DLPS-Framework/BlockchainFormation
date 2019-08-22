@@ -188,7 +188,6 @@ def start_tessera_nodes(config, ssh_clients, logger):
     if boo == False:
         raise Exception("At least one tessera node did not start properly")
 
-    logger.debug(f"number of tessera public keys: {len(tessera_public_keys)}")
     return tessera_public_keys, tessera_private_keys
 
 
