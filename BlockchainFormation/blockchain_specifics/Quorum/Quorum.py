@@ -157,7 +157,7 @@ def start_tessera_nodes(config, ssh_clients, logger):
         channel.exec_command("java -jar tessera/tessera-app-0.9.2-app.jar -configfile qdata/tm/config.json >> tessera.log 2>&1")
 
     logger.info("Waiting until all tessera nodes have started")
-    boo = wait_till_done(ssh_clients, config['priv_ips'], 60, 10, '/home/ubuntu/qdata/tm/tm.ipc', False, 10, logger)
+    boo = wait_till_done(ssh_clients, config['ips'], 60, 10, '/home/ubuntu/qdata/tm/tm.ipc', False, 10, logger)
     """
     status_flags = np.zeros(config['vm_count'], dtype=bool)
     timer = 0
@@ -188,6 +188,7 @@ def start_tessera_nodes(config, ssh_clients, logger):
     if boo == False:
         raise Exception("At least one tessera node did not start properly")
 
+    logger.debug(f"number of tessera public keys: {len(tessera_public_keys)}")
     return tessera_public_keys, tessera_private_keys
 
 
@@ -255,7 +256,7 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
         timer += 1
         logger.info(
             f" --> Waited {timer * 10} seconds so far, {120 - timer * 10} seconds left before abort (it usually takes around 10 seconds)")
-        for index, ip in enumerate(config['priv_ips']):
+        for index, ip in enumerate(config['ips']):
 
             if (status_flags[index] == False):
                 try:
