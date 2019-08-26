@@ -24,10 +24,19 @@ EOF
 
   #add log rotate
 
+  sudo timedatectl set-ntp no
+  sudo apt install ntp -y || sudo apt install ntp -y || sudo apt install ntp -y
+  ntpq -p
+  #sudo service ntp stop
+  #sudo ntpd -gq
+  #sudo service ntp start
+  timedatectl status
 
-  sudo apt install chrony -y || apt install chrony -y || apt install chrony -y
-  sudo bash -c "echo 'server 169.254.169.123 prefer iburst' >> sudo /etc/chrony/chrony.conf"
-  sudo /etc/init.d/chrony restart
+
+  #sudo apt install chrony -y || apt install chrony -y || apt install chrony -y
+  #sudo bash -c "echo 'server 169.254.169.123 prefer iburst' >> sudo /etc/chrony/chrony.conf"
+  #sudo /etc/init.d/chrony restart
+  #timedatectl status
 
   # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log

@@ -204,7 +204,8 @@ class VMHandler:
 
         # add no proxy for all VM IPs
         if self.config['proxy_user'] is not None:
-            os.environ["NO_PROXY"] = f"localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net,{','.join(str(ip) for ip in ips)}"
+            # Careful that you do NOT delete old NO_PROXY settings, hence the os.environ["NO_PROXY"] + new
+            os.environ["NO_PROXY"] = os.environ["NO_PROXY"] + f",{','.join(str(ip) for ip in ips)}"
 
         # add instance IPs and IDs to config
         self.config['ips'] = ips

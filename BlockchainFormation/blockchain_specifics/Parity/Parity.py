@@ -5,6 +5,7 @@ import os
 import time
 from web3 import Web3
 import web3
+import urllib3
 from web3.middleware import geth_poa_middleware
 import toml
 
@@ -309,7 +310,17 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         else:
             web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 5})))
 
-        enodes.append((ip, web3_clients[index].parity.enode()))
+        try:
+            # Renew HTTP Provider
+            # TODO To this for public IP if it works
+            enodes.append((ip, web3_clients[index].parity.enode()))
+        except requests.exceptions.ReadTimeout or urllib3.exceptions.ReadTimeoutError:
+            logger.debug(os.environ["NO_PROXY"])
+            logger.info("TimeoutError: Restarting Service and Trying to add Enode again")
+            ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo service parity restart")
+            time.sleep(10)
+            web3_clients[index] = Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 20}))
+            enodes.append((ip, web3_clients[index].parity.enode()))
         #web3_clients[index].miner.stop()
         logger.info(f"Coinbase of {ip}: {web3_clients[index].eth.coinbase}")
         coinbase.append(web3_clients[index].eth.coinbase)
@@ -374,7 +385,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
             logger.info("Middleware already injected")
 
     logger.info("testing if new blocks are generated across all nodes; if latest block numbers are not changing over multiple cycles something is wrong")
-    for x in range(15):
+    for x in range(5):
         for index, _ in enumerate(web3_clients):
             logger.info(web3_clients[index].eth.getBlock('latest')['number'])
 
