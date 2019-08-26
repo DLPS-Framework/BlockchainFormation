@@ -134,10 +134,8 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     logger.info("Pushing crypto-config and channel-artifacts to all other nodes")
     for index, _ in enumerate(config['priv_ips']):
         if index != 0:
-            stdin, stdout, stderr = ssh_clients[index].exec_command(
-                "sudo rm -rf /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts")
-            logger.debug("".join(stdout.readlines()))
-            logger.debug("".join(stderr.readlines()))
+            stdin, stdout, stderr = ssh_clients[index].exec_command("sudo rm -rf /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts")
+            stdout.readlines()
             scp_clients[index].put(f"{config['exp_dir']}/setup/crypto-config",
                                    "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger", recursive=True)
             scp_clients[index].put(f"{config['exp_dir']}/setup/channel-artifacts",
@@ -393,8 +391,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     string_cli_v = string_cli_v + f" -w /opt/gopath/src/github.com/hyperledger/fabric/peer"
 
     # execute script.sh on last node
-    stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(
-        f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 script.sh && ls -la && cd .. && ./scripts/script.sh)' |& tee /home/ubuntu/setup.log)")
+    stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 script.sh && ls -la && cd .. && ./scripts/script.sh)' |& tee /home/ubuntu/setup.log)")
     out = stdout.readlines()
 
     # save the cli command on the last node and save it in exp_dir
