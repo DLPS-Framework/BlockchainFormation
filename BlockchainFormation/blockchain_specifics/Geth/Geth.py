@@ -211,7 +211,6 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
             web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 20})))
         # print(web3.admin)
         #time.sleep(3)
-        logger.debug(web3_clients)
         try:
             # Renew HTTP Provider
             # TODO To this for public IP if it works
