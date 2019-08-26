@@ -304,6 +304,7 @@ def generate_genesis(accounts, config):
         "config": {
             'chainId': config['geth_settings']['chain_id'],
             'homesteadBlock': 0,
+            "constantinopleBlock": 0,
             'eip150Block': 0,
             'eip155Block': 0,
             'eip158Block': 0,
