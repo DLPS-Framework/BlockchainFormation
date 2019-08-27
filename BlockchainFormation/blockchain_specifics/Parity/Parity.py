@@ -467,6 +467,7 @@ def generate_spec(accounts, config):
         merged_balances = base_balances
         accounts = []
 
+    # source for parts of if: https://github.com/paritytech/parity-ethereum/blob/master/ethcore/res/instant_seal.json ?
     spec_dict = {
                  "name": "DemoPoA",
                  "engine": {
@@ -484,12 +485,23 @@ def generate_spec(accounts, config):
                              "maximumExtraDataSize": "0x20",
                              "minGasLimit": "0x1388",
                              "networkID": "0x2323",
-                             "eip155Transition": 0,
                              "validateChainIdTransition": 0,
-                             "eip140Transition": 0,
-                             "eip211Transition": 0,
-                             "eip214Transition": 0,
-                             "eip658Transition": 0
+                             "eip150Transition": "0x0",
+                             "eip160Transition": "0x0",
+                             "eip161abcTransition": "0x0",
+                             "eip161dTransition": "0x0",
+                             "eip155Transition": "0x0",
+                             "eip98Transition": "0x7fffffffffffff",
+                             "maxCodeSize": 24576,
+                             "maxCodeSizeTransition": "0x0",
+                             "eip140Transition": "0x0",
+                             "eip211Transition": "0x0",
+                             "eip214Transition": "0x0",
+                             "eip658Transition": "0x0",
+                             "eip145Transition": "0x0",
+                             "eip1014Transition": "0x0",
+                             "eip1052Transition": "0x0",
+                             "wasmActivationTransition": "0x0"
                             },
                  "genesis": {
                  "seal": {
