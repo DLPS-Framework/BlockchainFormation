@@ -53,5 +53,6 @@
 
 # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log
+  sudo reboot
 
 EOF

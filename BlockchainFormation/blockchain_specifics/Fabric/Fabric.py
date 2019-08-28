@@ -7,6 +7,7 @@ import subprocess
 import sys
 import time
 from scp import SCPClient
+from BlockchainFormation.vm_handler import *
 
 
 def fabric_shutdown(config, logger, ssh_clients, scp_clients):
@@ -34,7 +35,7 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     os.mkdir(f"{config['exp_dir']}/api")
 
     # Rebooting all machines
-    ssh_clients, scp_clients = reboot_all(ec2_instances, config, logger, ssh_clients, scp_clients)
+    # ssh_clients, scp_clients = reboot_all(ec2_instances, config, logger, ssh_clients, scp_clients)
 
     # Creating docker swarm
     logger.info("Preparing & starting docker swarm")

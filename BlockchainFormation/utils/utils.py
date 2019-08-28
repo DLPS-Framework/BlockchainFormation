@@ -3,11 +3,12 @@ import time
 import numpy as np
 import paramiko
 from scp import SCPClient
+import socket
 
 # File containing helper functions
 
 
-def wait_till_done(ssh_clients, ips, total_time, delta, path, message, typical_time, logger):
+def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, typical_time, logger):
 
     """
     Waits until a job is done on all of the target VMs
@@ -49,8 +50,40 @@ def wait_till_done(ssh_clients, ips, total_time, delta, path, message, typical_t
                     status_flags[index] = True
                     logger.debug(f"   --> ready on {ip}")
 
-                except:
+                except paramiko.SSHException:
+                    try:
+                        logger.debug(f"    --> Reconnecting {ip}...")
+                        ssh_key_priv = paramiko.RSAKey.from_private_key_file(config['priv_key_path'])
+                        ssh_clients[index].connect(hostname=config['ips'][index], username=config['user'], pkey=ssh_key_priv)
+                        logger.debug(f"    --> {ip} reconnected")
+                        try:
+                            client_sftp = ssh_clients[index].open_sftp()
+                            client_sftp.stat(path)
+                            if (message != False):
+                                stdin, stdout, stderr = ssh_clients[index].exec_command(f"tail -n 1 {path}")
+                                if stdout.readlines()[0] == f"{message}\n":
+                                   status_flags[index] = True
+                                   logger.debug(f"   --> ready on {ip}")
+                                   continue
+                                else:
+                                   logger.debug(f"   --> not yet ready on {ip}")
+                                   continue
+
+                            status_flags[index] = True
+                            logger.debug(f"   --> ready on {ip}")
+
+                        except Exception as e:
+                            # logger.exception(e)
+                            logger.debug(f"   --> still not yet ready on {ip}")
+
+                    except Exception as e:
+                        # logger.exception(e)
+                        logger.debug("Reconnecting failed")
+
+                except Exception as e:
+                    # logger.exception(e)
                     logger.debug(f"   --> not yet ready on {ip}")
+
 
     if (False in status_flags):
         try:

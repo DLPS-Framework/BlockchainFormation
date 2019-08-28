@@ -269,7 +269,7 @@ class VMHandler:
         self.logger.info("Waiting for all VMs to finish the userData setup...")
 
         # Wait until user Data is finished
-        if (wait_till_done(ssh_clients, self.config['ips'], 30*60, 60, "/var/log/user_data_success.log", False, 10*60, self.logger) is False):
+        if (wait_till_done(self.config, ssh_clients, self.config['ips'], 30*60, 60, "/var/log/user_data_success.log", False, 10*60, self.logger) is False):
             self.logger.error('Boot up NOT successful')
 
 
@@ -283,6 +283,9 @@ class VMHandler:
 
         else:
             self.logger.info(f"Boot up of all {self.config['blockchain_type']}-VMs was successful")
+
+            #Recreating the ssh_clients
+            ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
 
             self._run_specific_startup(ssh_clients, scp_clients)
 
