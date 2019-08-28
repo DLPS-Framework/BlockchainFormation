@@ -92,6 +92,7 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
                     # logger.exception(e)
                     logger.debug(f"   --> not yet ready on {ip}")
 
+
     if (False in status_flags):
         try:
             logger.error(f"Failed VMs: {[ips[x] for x in np.where(status_flags != True)]}")
