@@ -5,6 +5,7 @@ import os
 import time
 from web3 import Web3
 import web3
+import urllib3
 from web3.middleware import geth_poa_middleware
 import toml
 
@@ -95,6 +96,11 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
     :param scp_clients: scp clients for all VMs in config
     :return:
     """
+
+    config['node_count'] = config['vm_count']
+    config['node_priv_ips'] = config['ips']
+    if config['public_ip']:
+        config['node_pub_ips'] = config['pub_ips']
 
     #acc_path = os.getcwd()
     os.mkdir(f"{config['exp_dir']}/setup/accounts")
@@ -290,6 +296,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         # Is this really needed?
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo service parity restart")
 
+    coinbase = []
     enodes = []
     # collect enodes
     web3_clients = []
@@ -303,11 +310,22 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         else:
             web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 5})))
 
-        enodes.append((ip, web3_clients[index].parity.enode()))
+        try:
+            # Renew HTTP Provider
+            # TODO To this for public IP if it works
+            enodes.append((ip, web3_clients[index].parity.enode()))
+        except requests.exceptions.ReadTimeout or urllib3.exceptions.ReadTimeoutError:
+            logger.debug(os.environ["NO_PROXY"])
+            logger.info("TimeoutError: Restarting Service and Trying to add Enode again")
+            ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo service parity restart")
+            time.sleep(10)
+            web3_clients[index] = Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 20}))
+            enodes.append((ip, web3_clients[index].parity.enode()))
         #web3_clients[index].miner.stop()
         logger.info(f"Coinbase of {ip}: {web3_clients[index].eth.coinbase}")
+        coinbase.append(web3_clients[index].eth.coinbase)
 
-
+    config['coinbase'] = coinbase
 
     logger.info([enode for (ip, enode) in enodes])
 
@@ -367,7 +385,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
             logger.info("Middleware already injected")
 
     logger.info("testing if new blocks are generated across all nodes; if latest block numbers are not changing over multiple cycles something is wrong")
-    for x in range(15):
+    for x in range(5):
         for index, _ in enumerate(web3_clients):
             logger.info(web3_clients[index].eth.getBlock('latest')['number'])
 
@@ -449,6 +467,7 @@ def generate_spec(accounts, config):
         merged_balances = base_balances
         accounts = []
 
+    # source for parts of if: https://github.com/paritytech/parity-ethereum/blob/master/ethcore/res/instant_seal.json ?
     spec_dict = {
                  "name": "DemoPoA",
                  "engine": {
@@ -466,12 +485,23 @@ def generate_spec(accounts, config):
                              "maximumExtraDataSize": "0x20",
                              "minGasLimit": "0x1388",
                              "networkID": "0x2323",
-                             "eip155Transition": 0,
                              "validateChainIdTransition": 0,
-                             "eip140Transition": 0,
-                             "eip211Transition": 0,
-                             "eip214Transition": 0,
-                             "eip658Transition": 0
+                             "eip150Transition": "0x0",
+                             "eip160Transition": "0x0",
+                             "eip161abcTransition": "0x0",
+                             "eip161dTransition": "0x0",
+                             "eip155Transition": "0x0",
+                             "eip98Transition": "0x7fffffffffffff",
+                             "maxCodeSize": 24576,
+                             "maxCodeSizeTransition": "0x0",
+                             "eip140Transition": "0x0",
+                             "eip211Transition": "0x0",
+                             "eip214Transition": "0x0",
+                             "eip658Transition": "0x0",
+                             "eip145Transition": "0x0",
+                             "eip1014Transition": "0x0",
+                             "eip1052Transition": "0x0",
+                             "wasmActivationTransition": "0x0"
                             },
                  "genesis": {
                  "seal": {
