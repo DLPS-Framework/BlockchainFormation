@@ -2,7 +2,7 @@
 
   # Getting updates (and upgrades)
   sudo apt-get update
-  # sudo apt-get -y upgrade
+  sudo apt-get -y upgrade || echo "Upgrading in quorum_bootstrap failed" >> /home/ubuntu/upgrade_fail2.log
 
   # Installing go, java and make
   echo 'Y' | sudo apt-get install golang-go

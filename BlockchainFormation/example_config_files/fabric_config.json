@@ -1,5 +1,5 @@
 {
-    "vm_count": 7,
+    "vm_count": 16,
     "instance_type": "m5.large",
     "image": {
               "image_id": null,
@@ -37,14 +37,16 @@
     {
       "org_count": 2,
       "peer_count": 2,
-      "orderer_type": "solo",
-      "orderer_count": 1,
+      "orderer_type": "kafka",
+      "orderer_count": 2,
+      "kafka_count": 3,
+      "zookeeper_count": 5,
       "batch_timeout": 0.1,
       "max_message_count": 1000,
       "absolute_max_bytes": 99,
       "preferred_max_bytes": 2048,
       "tls_enabled": 0,
       "endorsement_policy": "OR",
-      "log_level": "WARNING"
+      "log_level": "DEBUG"
     }
 }

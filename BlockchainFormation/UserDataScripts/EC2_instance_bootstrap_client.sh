@@ -1,6 +1,7 @@
   # ======== Install needed Client packages ========
   sudo apt update || sudo apt update
-  sudo apt upgrade || sudo apt upgrade
+
+  sudo apt upgrade || sudo apt upgrade || echo "Upgrading in client_bootstrap failed" >> /home/ubuntu/upgrade_fail2.log
 
   sudo apt-get install -y make || sudo apt-get install -y make
   sudo apt install -y g++ || sudo apt install -y g++

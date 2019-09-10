@@ -1,6 +1,6 @@
 {
   "vm_count": 2,
-  "instance_type": "m5.large",
+  "instance_type": "m5.xlarge",
   "image": {
     "image_id": null,
     "os": "ubuntu",
@@ -37,6 +37,16 @@
   ],
   "blockchain_type": "quorum",
   "quorum_settings": {
-    "raftblocktime": 50
+    "raftblocktime": 50,
+    "cache": 4096,
+    "cache.database": 50,
+    "cache.gc": 50,
+    "trie-cache-gens": 480,
+    "txpool.rejournal": "0h0m30s",
+    "txpool.accountslots": 16,
+    "txpool.globalslots": 4096,
+    "txpool.accountqueue": 500,
+    "txpool.globalqueue": 10000,
+    "txpool.lifetime": "0h0m30s"
   }
 }

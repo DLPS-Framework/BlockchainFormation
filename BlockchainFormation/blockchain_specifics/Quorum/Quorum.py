@@ -157,7 +157,7 @@ def start_tessera_nodes(config, ssh_clients, logger):
         channel.exec_command("java -jar tessera/tessera-app-0.9.2-app.jar -configfile qdata/tm/config.json >> tessera.log 2>&1")
 
     logger.info("Waiting until all tessera nodes have started")
-    boo = wait_till_done(ssh_clients, config['ips'], 60, 10, '/home/ubuntu/qdata/tm/tm.ipc', False, 10, logger)
+    boo = wait_till_done(config, ssh_clients, config['ips'], 60, 10, '/home/ubuntu/qdata/tm/tm.ipc', False, 10, logger)
     """
     status_flags = np.zeros(config['vm_count'], dtype=bool)
     timer = 0
@@ -193,12 +193,20 @@ def start_tessera_nodes(config, ssh_clients, logger):
 
 def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
     logger.info("Starting the quorum network...")
+
+    string_geth_settings = ""
+    for key in config['quorum_settings']:
+        value = config['quorum_settings'][f"{key}"]
+        string_geth_settings = string_geth_settings + f" --{key} {value}"
+
+    logger.debug(f"settings:{string_geth_settings}")
+
     for index, ip in enumerate(config['priv_ips']):
 
         if index == 0:
             logger.info(f" --> Starting node {index} and wait for 5s until it is running")
             channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --maxpeers {config['vm_count']} --raftport 50000 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip} --raftblocktime {config['quorum_settings']['raftblocktime']} >>node.log 2>&1")
+            channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --maxpeers {config['vm_count']} --raftport 50000 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip}{string_geth_settings} >>node.log 2>&1")
             time.sleep(5)
 
         else:
@@ -211,39 +219,9 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
             # logger.info(f"raftID: {raftID}")
 
             channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --maxpeers {config['vm_count']} --raftport 50000 --raftjoinexisting {raftID} --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip} --raftblocktime {config['quorum_settings']['raftblocktime']} >>node.log 2>&1")
+            channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --maxpeers {config['vm_count']} --raftport 50000 --raftjoinexisting {raftID} --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip}{string_geth_settings} >>node.log 2>&1")
 
-    boo = wait_till_done(ssh_clients, config['ips'], 60, 10, '/home/ubuntu/nodes/new-node-1/geth.ipc', False, 10, logger)
-
-    """
-    logger.info("Waiting until all quorum nodes have started")
-    status_flags = np.zeros(config['vm_count'], dtype=bool)
-    timer = 0
-    while (False in status_flags and timer < 10):
-        time.sleep(10)
-        timer += 1
-        logger.info(f" --> Waited {timer*10} seconds so far, {100 - timer*10} seconds left before abort (it usually takes around 10 seconds)")
-        for index, ip in enumerate(config['priv_ips']):
-
-            if (status_flags[index] == False):
-                sftp = ssh_clients[index].open_sftp()
-                try:
-                    sftp.stat('/home/ubuntu/nodes/new-node-1/geth.ipc')
-                    status_flags[index] = True
-                    logger.info(f"   --> Quorum node on {ip} is ready")
-                except IOError:
-                    logger.info(f"   --> Quorum node on {ip} is not ready yet")
-
-    if (False in status_flags):
-        logger.error('Boot up NOT successful')
-        exit -1
-        try:
-            logger.error(f"Failed Quorum nodes: {[config['priv_ips'][x] for x in np.where(status_flags != True)]}")
-        except:
-            pass
-
-    """
-
+    boo = wait_till_done(config, ssh_clients, config['ips'], 60, 10, '/home/ubuntu/nodes/new-node-1/geth.ipc', False, 10, logger)
     if boo == False:
         raise Exception("At least one quorum node did not start properly")
 

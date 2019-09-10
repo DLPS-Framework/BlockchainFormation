@@ -148,6 +148,70 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
     for index, _ in enumerate(config['priv_ips']):
         scp_clients[index].put(f"{dir_name}/chaincode/benchcontract", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode", recursive=True)
 
+    # Starting zookeeper nodes
+    index = config['fabric_settings']['orderer_count'] + (config['fabric_settings']['peer_count'] + 1) * config['fabric_settings']['org_count']
+    logger.info(f"Starting zookeeper nodes")
+    for zookeeper in range(0, config['fabric_settings']['zookeeper_count']):
+        string_zookeeper_base = ""
+        string_zookeeper_base = string_zookeeper_base + f" --network='{my_net}' --name zookeeper{zookeeper}"
+        string_zookeeper_base = string_zookeeper_base + f" -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE={my_net}"
+        string_zookeeper_base = string_zookeeper_base + f" -e ZOO_MY_ID={zookeeper + 1}"
+
+        string_zookeeper_servers = ""
+        for zookeeper1 in range(0, config['fabric_settings']['zookeeper_count']):
+            if string_zookeeper_servers != "":
+                string_zookeeper_servers = string_zookeeper_servers + " "
+            string_zookeeper_servers = string_zookeeper_servers + f"server.{zookeeper1 + 1}=zookeeper{zookeeper1}:2888:3888"
+        string_zookeeper_servers = f" -e ZOO_SERVERS='{string_zookeeper_servers}'"
+
+        logger.debug(f" - Starting zookeeper{zookeeper} on {config['ips'][index+zookeeper]}")
+        channel = ssh_clients[index+zookeeper].get_transport().open_session()
+        channel.exec_command(f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /home/ubuntu/zookeeper{zookeeper}.log)")
+        stdin, stdout, stderr = ssh_clients[index+zookeeper].exec_command(f"echo '(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /home/ubuntu/zookeeper{zookeeper}.log)' >> /home/ubuntu/starting_command.log")
+        stdout.readlines()
+        # logger.debug(stdout.readlines())
+        # logger.debug(stderr.readlines())
+
+    # TODO look for log line which is needed for ready zookeepers
+    time.sleep(10)
+
+    # Starting kafka nodes
+    index = config['fabric_settings']['orderer_count'] + (config['fabric_settings']['peer_count'] + 1) * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count']
+    logger.info(f"Starting kafka nodes")
+    for kafka in range(0, config['fabric_settings']['kafka_count']):
+        string_kafka_base = ""
+        string_kafka_base = string_kafka_base + f" --network='{my_net}' --name kafka{kafka} -p 9092"
+        string_kafka_base = string_kafka_base + f" -e KAFKA_MESSAGE_MAX_BYTES={config['fabric_settings']['absolute_max_bytes'] * 1024 * 1024}"
+        string_kafka_base = string_kafka_base + f" -e KAFKA_REPLICA_FETCH_MAX_BYTES={config['fabric_settings']['absolute_max_bytes'] * 1024 * 1024}"
+        string_kafka_base = string_kafka_base + f" -e KAFKA_UNCLEAN_LEADER_ELECTION_ENABLE=false"
+        string_kafka_base = string_kafka_base + f" -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE={my_net}"
+        string_kafka_base = string_kafka_base + f" -e KAFKA_BROKER_ID={kafka}"
+        string_kafka_base = string_kafka_base + f" -e KAFKA_MIN_INSYNC_REPLICAS=2"
+        string_kafka_base = string_kafka_base + f" -e KAFKA_DEFAULT_REPLICATION_FACTOR=3"
+
+        string_kafka_zookeeper = ""
+        string_kafka_zookeeper = string_kafka_zookeeper + f" -e KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS=360000"
+        string_kafka_zookeeper = string_kafka_zookeeper + f" -e KAFKA_ZOOKEEPER_SESSION_TIMEOUT_MS=360000"
+
+        string_kafka_zookeeper_connect = ""
+        for zookeeper in range(0, config['fabric_settings']['zookeeper_count']):
+            if string_kafka_zookeeper_connect != "":
+                string_kafka_zookeeper_connect = string_kafka_zookeeper_connect + ","
+            string_kafka_zookeeper_connect = string_kafka_zookeeper_connect + f"zookeeper{zookeeper}:2181"
+
+        string_kafka_zookeeper = string_kafka_zookeeper + f" -e KAFKA_ZOOKEEPER_CONNECT={string_kafka_zookeeper_connect}"
+
+        string_kafka_v = ""
+
+        logger.debug(f" - Starting kafka{kafka} on {config['ips'][index+kafka]}")
+        channel = ssh_clients[index+kafka].get_transport().open_session()
+        channel.exec_command(f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /home/ubuntu/kafka{kafka}.log)")
+        stdin, stdout, stderr = ssh_clients[index+kafka].exec_command(f"echo '(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /home/ubuntu/kafka{kafka}.log)' >> /home/ubuntu/starting_command.log")
+        stdout.readlines()
+        # logger.debug(stdout.readlines())
+        # logger.debug(stderr.readlines())
+
+    time.sleep(10)
 
     # Starting Certificate Authorities
     peer_orgs_secret_keys = []
@@ -157,8 +221,8 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         stdin, stdout, stderr = ssh_clients[org - 1].exec_command(
             f"ls -a /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/peerOrganizations/org{org}.example.com/ca")
         out = stdout.readlines()
-        logger.debug(out)
-        logger.debug("".join(stderr.readlines()))
+        # logger.debug(out)
+        # logger.debug("".join(stderr.readlines()))
         peer_orgs_secret_keys.append("".join(out).replace(f"ca.org{org}.example.com-cert.pem", "").replace("\n", "").replace(" ", "").replace("...", ""))
 
         # set up configurations of Certificate Authorities like with docker compose
@@ -230,6 +294,19 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         else:
             string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_TLS_ENABLED=false"
 
+        string_orderer_kafka = ""
+        if config['fabric_settings']['orderer_type'].upper() == "KAFKA":
+            string_orderer_kafka = string_orderer_kafka + " -e ORDERER_KAFKA_BROKERS=["
+            for kafka in range(0, config['fabric_settings']['kafka_count']):
+                if string_orderer_kafka != " -e ORDERER_KAFKA_BROKERS=[":
+                    string_orderer_kafka = string_orderer_kafka + ","
+                string_orderer_kafka = string_orderer_kafka + f"kafka{kafka}:9092"
+            string_orderer_kafka = string_orderer_kafka + "]"
+            string_orderer_kafka = string_orderer_kafka + f" -e ORDERER_KAFKA_BROKERS=[kafka0:9092,kafka1:9092,kafka2:9092,kafka3:9092]"
+            string_orderer_kafka = string_orderer_kafka + f" -e ORDERER_KAFKA_RETRY_SHORTINTERVAL=1s"
+            string_orderer_kafka = string_orderer_kafka + f" -e ORDERER_KAFKA_RETRY_SHORTTOTAL=30s"
+            string_orderer_kafka = string_orderer_kafka + f" -e ORDERER_KAFKA_VERBOSE=true"
+
         string_orderer_v = ""
         string_orderer_v = string_orderer_v + f" -v $(pwd)/channel-artifacts/genesis.block:/var/hyperledger/orderer/genesis.block"
         string_orderer_v = string_orderer_v + f" -v $(pwd)/crypto-config/ordererOrganizations/example.com/orderers/orderer{orderer}.example.com/msp:/var/hyperledger/orderer/msp"
@@ -241,9 +318,9 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
         logger.debug(f" - Starting orderer{orderer} on {config['ips'][config['fabric_settings']['org_count'] - 1 + orderer]}")
         channel = ssh_clients[config['fabric_settings']['org_count'] + orderer - 1].get_transport().open_session()
         channel.exec_command(
-            f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_orderer_base + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /home/ubuntu/orderer{orderer}.log)")
+            f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /home/ubuntu/orderer{orderer}.log)")
         ssh_clients[config['fabric_settings']['org_count'] + orderer - 1].exec_command(
-            f"(cd /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_orderer_base + string_orderer_tls + string_orderer_v + " hyperledger/fabric-tools /bin/bash\" >> /home/ubuntu/cli.sh)")
+            f"(cd /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + " hyperledger/fabric-tools /bin/bash\" >> /home/ubuntu/cli.sh)")
 
     # starting peers and databases
     logger.info(f"Starting databases and peers")
@@ -337,17 +414,18 @@ def fabric_startup(ec2_instances, config, logger, ssh_clients, scp_clients):
                 config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * (org - 1) + peer].exec_command(
                 f"(cd /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + " hyperledger/fabric-tools /bin/bash\" >> /home/ubuntu/cli.sh)")
 
-    # Waiting for a few seconds until all has started
+    # Waiting for a few seconds until all peers and orderers have started
+
     time.sleep(10)
+
     index_last_node = config['fabric_settings']['orderer_count'] + (config['fabric_settings']['peer_count'] + 1) * config['fabric_settings']['org_count'] - 1
     # Creating script and pushing it to the last node
-    logger.debug(
-        f"Executing script on {config['ips'][index_last_node]}  which creates channel, adds peers to channel, installs and instantiates all chaincode - can take some minutes")
+    logger.debug(f"Executing script on {config['ips'][index_last_node]}  which creates channel, adds peers to channel, installs and instantiates all chaincode - can take some minutes")
     write_script(config, logger)
-    stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(
-        "rm -f /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/script.sh")
-    logger.debug(stdout.readlines())
-    logger.debug(stdout.readlines())
+    stdin, stdout, stderr = ssh_clients[index_last_node].exec_command("rm -f /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/script.sh")
+    stdout.readlines()
+    # logger.debug(stdout.readlines())
+    # logger.debug(stdout.readlines())
     scp_clients[index_last_node].put(f"{config['exp_dir']}/setup/script.sh", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/script.sh")
 
     # Setting up configuration of cli like with docker compose
@@ -475,10 +553,8 @@ def write_crypto_config(config, logger):
 def write_configtx(config):
     dir_name = os.path.dirname(os.path.realpath(__file__))
 
-    os.system(
-        f"cp {dir_name}/setup/configtx_raw_1.yaml {config['exp_dir']}/setup/configtx.yaml")
-    os.system(
-        f"cp {dir_name}/setup/configtx_raw_3.yaml {config['exp_dir']}/setup/configtx3.yaml")
+    os.system(f"cp {dir_name}/setup/configtx_raw_1.yaml {config['exp_dir']}/setup/configtx.yaml")
+    os.system(f"cp {dir_name}/setup/configtx_raw_3.yaml {config['exp_dir']}/setup/configtx3.yaml")
 
     f = open(f"{config['exp_dir']}/setup/configtx2.yaml", "w+")
 
@@ -496,12 +572,12 @@ def write_configtx(config):
                 f"              ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer{orderer}.example.com/tls/server.crt\n")
 
     elif config['fabric_settings']['orderer_type'].upper() == "KAFKA":
-        f.write("\n     OrdererType: kafka\n\n")
+        f.write("\n    OrdererType: kafka\n\n")
 
-        f.write("     Kafka:\n")
-        f.write("         Brokers:\n")
+        f.write("    Kafka:\n")
+        f.write("        Brokers:\n")
         for orderer in range(1, config['fabric_settings']['orderer_count'] + 1):
-            f.write(f"            - kafka{orderer-1}:9092")
+            f.write(f"            - kafka{orderer-1}:9092\n")
 
     else:
         f.write("\n    OrdererType: solo\n\n")
@@ -515,8 +591,8 @@ def write_configtx(config):
     f.close()
 
     # append the parts of configtx to the final configtx
-    os.system(f"cat {config['exp_dir']}/setup/configtx2.yaml >> {config['exp_dir']}/setup/configtx.yaml")
-    os.system(f"cat {config['exp_dir']}/setup/configtx3.yaml >> {config['exp_dir']}/setup/configtx.yaml")
+    os.system(f"cat {config['exp_dir']}/setup/configtx2.yaml >> {config['exp_dir']}/setup/configtx.yaml && rm {config['exp_dir']}/setup/configtx2.yaml")
+    os.system(f"cat {config['exp_dir']}/setup/configtx3.yaml >> {config['exp_dir']}/setup/configtx.yaml && {config['exp_dir']}/setup/configtx3.yaml")
 
     # substitute remaining parameters
     os.system(
@@ -556,8 +632,7 @@ def write_script(config, logger):
 
     f.close()
 
-    os.system(
-        f"cp {dir_name}/setup/script_raw_3.sh {config['exp_dir']}/setup/script3.sh")
+    os.system(f"cp {dir_name}/setup/script_raw_3.sh {config['exp_dir']}/setup/script3.sh")
     if config['fabric_settings']['tls_enabled'] == 1:
         logger.debug("    --> TLS environment variables set")
         string_tls = f"--tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem"
@@ -565,8 +640,8 @@ def write_script(config, logger):
         string_tls = f""
 
     # append the parts of script to the final script
-    os.system(f"cat {config['exp_dir']}/setup/script2.sh >> {config['exp_dir']}/setup/script.sh")
-    os.system(f"cat {config['exp_dir']}/setup/script3.sh >> {config['exp_dir']}/setup/script.sh")
+    os.system(f"cat {config['exp_dir']}/setup/script2.sh >> {config['exp_dir']}/setup/script.sh && rm {config['exp_dir']}/setup/script2.sh")
+    os.system(f"cat {config['exp_dir']}/setup/script3.sh >> {config['exp_dir']}/setup/script.sh && rm {config['exp_dir']}/setup/script3.sh")
 
     # substitute the enumeration of peers
     enum_peers = "0"

@@ -39,12 +39,12 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
                     if (message != False):
                         stdin, stdout, stderr = ssh_clients[index].exec_command(f"{func_part_one} {path} {func_part_two}")
 
-                        logger.debug(f"Message: {message}")
+                        # logger.debug(f"Expected message: {message}")
 
                         # read line from stdout
                         stdout_line = stdout.readlines()[0]
 
-                        logger.debug(stdout_line)
+                        # logger.debug(f"Received message: {stdout_line}")
 
 
                         if stdout_line == f"{message}\n":
@@ -60,10 +60,10 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
 
                 except paramiko.SSHException:
                     try:
-                        logger.debug(f"    --> Reconnecting {ip}...")
+                        # logger.debug(f"    --> Reconnecting {ip}...")
                         ssh_key_priv = paramiko.RSAKey.from_private_key_file(config['priv_key_path'])
                         ssh_clients[index].connect(hostname=config['ips'][index], username=config['user'], pkey=ssh_key_priv)
-                        logger.debug(f"    --> {ip} reconnected")
+                        # logger.debug(f"    --> {ip} reconnected")
                         try:
                             client_sftp = ssh_clients[index].open_sftp()
                             client_sftp.stat(path)
@@ -86,7 +86,8 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
 
                     except Exception as e:
                         # logger.exception(e)
-                        logger.debug("Reconnecting failed")
+                        # logger.debug("Reconnecting failed")
+                        pass
 
                 except Exception as e:
                     # logger.exception(e)

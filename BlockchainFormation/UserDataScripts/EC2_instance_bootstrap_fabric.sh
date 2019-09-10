@@ -2,7 +2,7 @@
 
   # Getting updates and upgrades
   sudo apt-get update
-  sudo apt-get -y upgrade
+  sudo apt-get -y upgrade || echo "Upgrading in fabric_bootstrap failed" >> /home/ubuntu/upgrade_fail2.log
 
   # Getting curl
   sudo apt install curl
@@ -30,7 +30,7 @@
   # Testing whether docker runs without user permissions
   docker run hello-world
 
-  # Setting up go
+  # Setting up go (TODO: check whether go is necessary)
   # echo 'Y' | sudo apt-get install golang-go
   wget -c https://dl.google.com/go/go1.12.7.linux-amd64.tar.gz
   sudo tar -xvzf go1.12.7.linux-amd64.tar.gz -C /usr/local
