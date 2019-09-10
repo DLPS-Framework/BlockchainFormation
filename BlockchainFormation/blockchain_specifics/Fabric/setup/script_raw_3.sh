@@ -249,17 +249,6 @@ benchcontractChaincodeQuery 2
 
 echo
 echo
-
-echo ""
-echo " _____   _   _   ____   "
-echo "| ____| | \ | | |  _ \  "
-echo "|  _|   |  \| | | | | | "
-echo "| |___  | |\  | | |_| | "
-echo "|_____| |_| \_| |____/  "
-echo
-
-echo
-echo
 echo "========= All GOOD, BMHN execution completed =========== "
 
 exit 0

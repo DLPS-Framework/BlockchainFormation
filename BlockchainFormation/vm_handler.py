@@ -203,7 +203,7 @@ class VMHandler:
                 public_ips.append(i.public_ip_address)
 
         # add no proxy for all VM IPs
-        if self.config['proxy_user'] is not None:
+        if self.config['proxy_user'] != "None":
             # Careful that you do NOT delete old NO_PROXY settings, hence the os.environ["NO_PROXY"] + new
             os.environ["NO_PROXY"] = os.environ["NO_PROXY"] + f",{','.join(str(ip) for ip in ips)}"
 

@@ -495,6 +495,13 @@ def write_configtx(config):
             f.write(
                 f"              ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer{orderer}.example.com/tls/server.crt\n")
 
+    elif config['fabric_settings']['orderer_type'].upper() == "KAFKA":
+        f.write("\n     OrdererType: kafka\n\n")
+
+        f.write("     Kafka:\n")
+        f.write("         Brokers:\n")
+        for orderer in range(1, config['fabric_settings']['orderer_count'] + 1):
+            f.write(f"            - kafka{orderer-1}:9092")
 
     else:
         f.write("\n    OrdererType: solo\n\n")

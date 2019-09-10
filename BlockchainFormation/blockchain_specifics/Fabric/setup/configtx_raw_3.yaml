@@ -46,10 +46,14 @@ Application: &ApplicationDefaults
 Profiles:
 
     OrdererGenesis:
+        Capabilities:
+            <<: *ChannelCapabilities
         Orderer:
             <<: *OrdererDefaults
             Organizations:
                 - *OrdererOrg
+            Capabilities:
+                - *OrdererCapabilities
         Consortiums:
             SampleConsortium:
                 Organizations:
@@ -62,3 +66,5 @@ Profiles:
             Organizations:
                 - *Org1
                 - *Org2
+            Capabilities:
+                <<: *ApplicationCapabilities

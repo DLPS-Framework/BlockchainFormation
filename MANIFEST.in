@@ -4,4 +4,4 @@ include BlockchainFormation/blockchain_specifics/Fabric/chaincode/benchcontract/
 include BlockchainFormation/blockchain_specifics/Fabric/setup/*
 include BlockchainFormation/blockchain_specifics/Sawtooth/processor/*
 include BlockchainFormation/blockchain_specifics/Quorum/contracts/*
-include BlockchainFormation/utils/*
+include BlockchainFormation/utils/utils.py
