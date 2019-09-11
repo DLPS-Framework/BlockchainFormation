@@ -34,20 +34,20 @@ export FABRIC_CFG_PATH=${PWD}
 
 # Ask user for confirmation to proceed
 function askProceed () {
-  read -p "Continue (y/n)? " ans
-  case "$ans" in
-    y|Y )
-      echo "proceeding ..."
-    ;;
-    n|N )
-      echo "exiting..."
-      exit 1
-    ;;
-    * )
-      echo "invalid response"
-      askProceed
-    ;;
-  esac
+    read -p "Continue (y/n)? " ans
+    case "$ans" in
+      y|Y )
+        echo "proceeding ..."
+      ;;
+      n|N )
+        echo "exiting..."
+        exit 1
+      ;;
+      * )
+        echo "invalid response"
+        askProceed
+      ;;
+    esac
 }
 
 
@@ -71,24 +71,24 @@ function askProceed () {
 
 # Generates Org certs using cryptogen tool
 function generateCerts (){
-  which cryptogen
-  if [ "$?" -ne 0 ]; then
-    echo "cryptogen tool not found. exiting"
-    exit 1
-  fi
-  echo
-  echo "##########################################################"
-  echo "##### Generate certificates using cryptogen tool #########"
-  echo "##########################################################"
-  if [ -d "crypto-config" ]; then
-    rm -Rf crypto-config
-  fi
-  cryptogen generate --config=./crypto-config.yaml
-  if [ "$?" -ne 0 ]; then
-    echo "Failed to generate certificates..."
-    exit 1
-  fi
-  echo
+    which cryptogen
+    if [ "$?" -ne 0 ]; then
+      echo "cryptogen tool not found. exiting"
+      exit 1
+    fi
+    echo
+    echo "##########################################################"
+    echo "##### Generate certificates using cryptogen tool #########"
+    echo "##########################################################"
+    if [ -d "crypto-config" ]; then
+      rm -Rf crypto-config
+    fi
+    cryptogen generate --config=./crypto-config.yaml
+    if [ "$?" -ne 0 ]; then
+      echo "Failed to generate certificates..."
+      exit 1
+    fi
+    echo
 }
 
 # The `configtxgen tool is used to create four artifacts: orderer **bootstrap
@@ -127,59 +127,54 @@ function generateCerts (){
 # You can ignore the logs regarding intermediate certs, we are not using them in
 # this crypto implementation.
 
+function generateAnchorPeerUpdate() {
+    echo
+    echo "#################################################################"
+    echo "#######    Generating anchor peer update for Org$1MSP   ##########"
+    echo "#################################################################"
+    configtxgen -profile ChannelConfig -outputAnchorPeersUpdate ./channel-artifacts/Org$1MSPanchors.tx -channelID $CHANNEL_NAME -asOrg Org$1MSP
+    if [ "$?" -ne 0 ]; then
+      echo "Failed to generate anchor peer update for Org$1MSP..."
+      exit 1
+    fi
+    echo
+}
+
 # Generate orderer genesis block, channel configuration transaction and
 # anchor peer update transactions
 function generateChannelArtifacts() {
-  which configtxgen
-  if [ "$?" -ne 0 ]; then
-    echo "configtxgen tool not found. exiting"
-    exit 1
-  fi
+    which configtxgen
+    if [ "$?" -ne 0 ]; then
+        echo "configtxgen tool not found. exiting"
+        exit 1
+    fi
 
-  echo "##########################################################"
-  echo "#########  Generating Orderer Genesis block ##############"
-  echo "##########################################################"
-  # Note: For some unknown reason (at least for now) the block file can't be
-  # named orderer.genesis.block or the orderer will fail to launch!
-  # configtxgen -profile OneOrgOrdererGenesis -outputBlock ./channel-artifacts/genesis.block
-  configtxgen -profile OrdererGenesis -outputBlock ./channel-artifacts/genesis.block
+    echo "##########################################################"
+    echo "#########  Generating Orderer Genesis block ##############"
+    echo "##########################################################"
+    # Note: For some unknown reason (at least for now) the block file can't be
+    # named orderer.genesis.block or the orderer will fail to launch!
+    # configtxgen -profile OneOrgOrdererGenesis -outputBlock ./channel-artifacts/genesis.block
+    configtxgen -profile OrdererGenesis -outputBlock ./channel-artifacts/genesis.block
 
 
-  if [ "$?" -ne 0 ]; then
-    echo "Failed to generate orderer genesis block..."
-    exit 1
-  fi
-  echo
-  echo "#################################################################"
-  echo "### Generating channel configuration transaction 'channel.tx' ###"
-  echo "#################################################################"
-  configtxgen -profile ChannelConfig -outputCreateChannelTx ./channel-artifacts/channel.tx -channelID $CHANNEL_NAME
-  if [ "$?" -ne 0 ]; then
-    echo "Failed to generate channel configuration transaction..."
-    exit 1
-  fi
+    if [ "$?" -ne 0 ]; then
+        echo "Failed to generate orderer genesis block..."
+        exit 1
+    fi
+    echo
+    echo "#################################################################"
+    echo "### Generating channel configuration transaction 'channel.tx' ###"
+    echo "#################################################################"
+    configtxgen -profile ChannelConfig -outputCreateChannelTx ./channel-artifacts/channel.tx -channelID $CHANNEL_NAME
+    if [ "$?" -ne 0 ]; then
+      echo "Failed to generate channel configuration transaction..."
+      exit 1
+    fi
 
-  echo
-  echo "#################################################################"
-  echo "#######    Generating anchor peer update for Org1MSP   ##########"
-  echo "#################################################################"
-  configtxgen -profile ChannelConfig -outputAnchorPeersUpdate ./channel-artifacts/Org1MSPanchors.tx -channelID $CHANNEL_NAME -asOrg Org1MSP
-  if [ "$?" -ne 0 ]; then
-    echo "Failed to generate anchor peer update for Org1MSP..."
-    exit 1
-  fi
-  echo
-
-  echo
-  echo "#################################################################"
-  echo "#######    Generating anchor peer update for Org2MSP   ##########"
-  echo "#################################################################"
-  configtxgen -profile ChannelConfig -outputAnchorPeersUpdate ./channel-artifacts/Org2MSPanchors.tx -channelID $CHANNEL_NAME -asOrg Org2MSP
-  if [ "$?" -ne 0 ]; then
-    echo "Failed to generate anchor peer update for Org2MSP..."
-    exit 1
-  fi
-  echo
+    for ORG in substitute_enum_orgs; do
+        generateAnchorPeerUpdate $ORG
+    done
 }
 
 # Obtain the OS and Architecture string that will be used to select the correct

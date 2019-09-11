@@ -441,7 +441,9 @@ if __name__ == '__main__':
 
         # if no config file is given, a config file is created with the passed argpass commands
         if namespace.config is not None:
-            logger.info(f"Given config file ({namespace.config}) will be used")
+            # TODO check why the first does not work
+            # logger.info(f"Given config file ({namespace.config}) will be used")
+            logger.info("Given config file will be used")
             config = argparser.load_config(vars(namespace))
         else:
             config = argparser.create_config(vars(namespace), namespace.blockchain_type)

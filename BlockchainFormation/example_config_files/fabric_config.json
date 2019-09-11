@@ -1,5 +1,5 @@
 {
-    "vm_count": 16,
+    "vm_count": 12,
     "instance_type": "m5.large",
     "image": {
               "image_id": null,
@@ -35,18 +35,18 @@
     "blockchain_type": "fabric",
     "fabric_settings":
     {
-      "org_count": 2,
+      "org_count": 3,
       "peer_count": 2,
-      "orderer_type": "kafka",
-      "orderer_count": 2,
-      "kafka_count": 3,
+      "orderer_type": "raft",
+      "orderer_count": 3,
+      "kafka_count": 4,
       "zookeeper_count": 5,
       "batch_timeout": 0.1,
       "max_message_count": 1000,
       "absolute_max_bytes": 99,
       "preferred_max_bytes": 2048,
-      "tls_enabled": 0,
-      "endorsement_policy": "OR",
-      "log_level": "DEBUG"
+      "tls_enabled": 1,
+      "endorsement_policy": "AND",
+      "log_level": "INFO"
     }
 }

@@ -2,7 +2,7 @@
 
 createChannel() {
 
-    setGlobals 0 2
+    setGlobals 0 1
     peer channel create -o orderer1.example.com:7050 -c $CHANNEL_NAME -f ./channel-artifacts/channel.tx substitute_tls>&log.txt
     res=$?
     cat log.txt
@@ -13,7 +13,8 @@ createChannel() {
 
 updateAnchorPeers() {
     PEER=$1
-    setGlobals $PEER $2
+    ORG=$2
+    setGlobals $PEER $ORG
     peer channel update -o orderer1.example.com:7050 -c $CHANNEL_NAME -f ./channel-artifacts/${CORE_PEER_LOCALMSPID}anchors.tx substitute_tls>&log.txt
     res=$?
     cat log.txt
@@ -75,7 +76,7 @@ installBenchcontractChaincode () {
 instantiateExampleChaincode () {
     for p in 0; do
         setGlobals $p $1
-        peer chaincode instantiate -o orderer1.example.com:7050 -C $CHANNEL_NAME -n mycc -v 1.0 -c '{"Args":["init","a","100","b","200"]}' -P "substitute_endorsement ('Org1MSP.member','Org2MSP.member')" substitute_tls>&log.txt
+        peer chaincode instantiate -o orderer1.example.com:7050 -C $CHANNEL_NAME -n mycc -v 1.0 -c '{"Args":["init","a","100","b","200"]}' -P 'substitute_endorsement' substitute_tls>&log.txt
         res=$?
         cat log.txt
         verifyResult $res "Example chaincode instantiation on PEER$p.org$1 on channel '$CHANNEL_NAME' failed"
@@ -87,7 +88,7 @@ instantiateExampleChaincode () {
 instantiateBenchcontractChaincode () {
     for p in 0; do
         setGlobals $p $1
-        peer chaincode instantiate -o orderer1.example.com:7050 -C $CHANNEL_NAME -l node -n benchcontract -v 1.0 -c '{"Args":["org.bench.benchcontract:instantiate"]}' -P "substitute_endorsement ('Org1MSP.member','Org2MSP.member')" substitute_tls>&log.txt
+        peer chaincode instantiate -o orderer1.example.com:7050 -C $CHANNEL_NAME -l node -n benchcontract -v 1.0 -c '{"Args":["org.bench.benchcontract:instantiate"]}' -P 'substitute_endorsement' substitute_tls>&log.txt
         res=$?
         cat log.txt
         verifyResult $res "Benchcontract chaincode instantiation on PEER$p.org$1 on channel '$CHANNEL_NAME' failed"
@@ -206,46 +207,48 @@ createChannel
 
 ## Join all the peers to the channel
 echo "$(date +'%Y-%m-%d %H:%M:%S:%3N')Having all peers join the channel..."
-joinChannel 1
-joinChannel 2
+for ORG in substitute_enum_orgs; do
+    joinChannel $ORG
+done
 
 ## Set the anchor peers for each org in the channel
 echo "$(date +'%Y-%m-%d %H:%M:%S:%3N')Updating anchor peers for org1..."
-updateAnchorPeers 0 1
-updateAnchorPeers 0 2
+for ORG in substitute_enum_orgs; do
+    updateAnchorPeers 0 $ORG
+done
 
 ## Install chaincode on Peers
 echo "$(date +'%Y-%m-%d %H:%M:%S:%3N')Installing chaincode on peers..."
-installExampleChaincode 1
-installExampleChaincode 2
-installBenchcontractChaincode 1
-installBenchcontractChaincode 2
+for ORG in substitute_enum_orgs; do
+    # installExampleChaincode $ORG
+    installBenchcontractChaincode $ORG
+done
 
 ##Instantiate example and benchcontract chaincode on peer 0
 echo "$(date +'%Y-%m-%d %H:%M:%S:%3N')Instantiating example and benchcontract chaincode on peers..."
-instantiateExampleChaincode 1
+# instantiateExampleChaincode 1
 instantiateBenchcontractChaincode 1
 
 ##Query example and benchcontract chaincode on all peers
 echo "$(date +'%Y-%m-%d %H:%M:%S:%3N')Querying example and benchcontract chaincode on all peers"
-exampleChaincodeQuery 1
-exampleChaincodeQuery 2
-benchcontractChaincodeQuery 1
-benchcontractChaincodeQuery 2
+for ORG in substitute_enum_orgs; do
+    # exampleChaincodeQuery $ORG
+    benchcontractChaincodeQuery $ORG
+done
 
 ##Invoke example and benchcontract chaincode on all peers
 echo "$(date +'%Y-%m-%d %H:%M:%S:%3N')Invoking example and benchcontract chaincode on all peers"
-exampleChaincodeInvoke 1
-exampleChaincodeInvoke 2
-benchcontractChaincodeInvoke 1
-benchcontractChaincodeInvoke 2
+for ORG in substitute_enum_orgs; do
+    # exampleChaincodeInvoke $ORG
+    benchcontractChaincodeInvoke $ORG
+done
 
 ##Query example and benchcontract chaincode on all peers
 echo "$(date +'%Y-%m-%d %H:%M:%S:%3N')Querying example and benchcontract chaincode on all peers"
-exampleChaincodeQuery 1
-exampleChaincodeQuery 2
-benchcontractChaincodeQuery 1
-benchcontractChaincodeQuery 2
+for ORG in substitute_enum_orgs; do
+    # exampleChaincodeQuery $ORG
+    benchcontractChaincodeQuery $ORG
+done
 
 echo
 echo

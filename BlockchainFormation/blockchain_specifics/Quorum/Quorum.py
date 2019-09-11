@@ -26,10 +26,8 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
     :return:
     """
 
-    # adding "true" number of blockchain nodes and their ips
-    config['node_count'] = config['vm_count']
-    config['node_priv_ips'] = config['priv_ips']
-    config['node_pub_ips'] = config['pub_ips']
+    # the indices of the blockchain nodes
+    config['node_indices'] = list(range(0, config['vm_count']))
 
     logger.info("Create directories for saving data and logs locally")
     # path = os.getcwd()
@@ -196,8 +194,9 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
 
     string_geth_settings = ""
     for key in config['quorum_settings']:
-        value = config['quorum_settings'][f"{key}"]
-        string_geth_settings = string_geth_settings + f" --{key} {value}"
+        if key != "private_fors":
+            value = config['quorum_settings'][f"{key}"]
+            string_geth_settings = string_geth_settings + f" --{key} {value}"
 
     logger.debug(f"settings:{string_geth_settings}")
 

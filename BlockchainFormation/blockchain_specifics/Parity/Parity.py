@@ -97,10 +97,8 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
     :return:
     """
 
-    config['node_count'] = config['vm_count']
-    config['node_priv_ips'] = config['ips']
-    if config['public_ip']:
-        config['node_pub_ips'] = config['pub_ips']
+    # the indices of the blockchain nodes
+    config['node_indices'] = list(range(0, config['vm_count']))
 
     #acc_path = os.getcwd()
     os.mkdir(f"{config['exp_dir']}/setup/accounts")

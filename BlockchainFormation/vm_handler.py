@@ -311,7 +311,7 @@ class VMHandler:
         """starts startup for given config (geth, parity, etc....)"""
 
         if self.config['blockchain_type'] == 'fabric':
-            fabric_startup(self.ec2_instances, self.config, self.logger, ssh_clients, scp_clients)
+            fabric_startup(self.config, self.logger, ssh_clients, scp_clients)
 
         elif self.config['blockchain_type'] == 'geth':
             geth_startup(self.config, self.logger, ssh_clients, scp_clients)
