@@ -277,8 +277,23 @@ class ArgParser:
             f"{blockchain_type}_settings": ArgParser._add_blockchain_type_config(namespace_dict, blockchain_type),
             "load_balancer_settings": ArgParser._add_load_balancer_config(namespace_dict)
 
-
         }
+
+        if config['blockchain_type'] == 'fabric':
+            if config['fabric_settings']['orderer_type'].upper() == "KAFKA":
+                count = config['fabric_settings']['org_count'] * (config['fabric_settings']['peer_count'] + 1) + config['fabric_settings']['orderer_count'] + config['fabric_settings']['zookeeper_count'] + config['fabric_settings']['kafka_count']
+            elif config['fabric_settings']['orderer_type'].upper() == "RAFT":
+                count = config['fabric_settings']['org_count'] * (config['fabric_settings']['peer_count'] + 1) + config['fabric_settings']['orderer_count']
+            elif config['fabric_settings']['orderer_type'].upper() == "SOLO":
+                count = config['fabric_settings']['org_count'] * (config['fabric_settings']['peer_count'] + 1)
+            else:
+                sys.exit("No valid orderer type")
+
+        if count != config['vm_count']:
+            self.logger.debug(f"vm_count: {config['vm_count']}")
+            self.logger.debug(f"count: {count})")
+            sys.exit("vm_count is different from the expected number of necessary nodes")
+
         return config
 
     @staticmethod
