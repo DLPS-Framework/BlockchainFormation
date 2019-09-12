@@ -261,12 +261,10 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
         string_ca_v = string_ca_v + f" -v $(pwd)/crypto-config/peerOrganizations/org{org}.example.com/ca/:/etc/hyperledger/fabric-ca-server-config"
 
         # Starting the Certificate Authority
-        logger.debug(f" - Starting ca for org{org} on {config['ips'][org - 1]}")
-        channel = ssh_clients[org - 1].get_transport().open_session()
-        channel.exec_command(
-            f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + f" hyperledger/fabric-ca sh -c 'fabric-ca-server start -b admin:adminpw -d' &> /home/ubuntu/ca.org{org}.log)")
-        ssh_clients[org - 1].exec_command(
-            f"echo \"docker run -it --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + " hyperledger/fabric-tools /bin/bash\" >> cli.sh")
+        # logger.debug(f" - Starting ca for org{org} on {config['ips'][org - 1]}")
+        # channel = ssh_clients[org - 1].get_transport().open_session()
+        # channel.exec_command(f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + f" hyperledger/fabric-ca sh -c 'fabric-ca-server start -b admin:adminpw -d' &> /home/ubuntu/ca.org{org}.log)")
+        # ssh_clients[org - 1].exec_command(f"echo \"docker run -it --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + " hyperledger/fabric-tools /bin/bash\" >> cli.sh")
 
     # starting orderer
     logger.info(f"Starting orderers")
@@ -308,6 +306,8 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
             string_orderer_tls = string_orderer_tls + f" -e ORDERER_TLS_CLIENTKEY_FILE=/var/hyperledger/users/Admin@example.com/tls/client.key"
         else:
             string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_TLS_ENABLED=false"
+
+        string_orderer_tls = string_orderer_tls + f" -e GRPC_TRACE=all" + f" -e GRPC_VERBOSITY=debug"
 
         string_orderer_kafka = ""
         if config['fabric_settings']['orderer_type'].upper() == "KAFKA":
@@ -413,6 +413,8 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
                 string_peer_tls = string_peer_tls + f" -e CORE_PEER_TLS_ROOTCERT_FILE=/var/hyperledger/fabric/tls/ca.crt"
             else:
                 string_peer_tls = string_peer_tls + f" -e CORE_PEER_TLS_ENABLED=false"
+
+            string_peer_tls = string_peer_tls + f" -e GRPC_TRACE=all" + f" -e GRPC_VERBOSITY=debug"
 
             string_peer_v = ""
             string_peer_v = string_peer_v + f" -v /var/run/:/host/var/run/"

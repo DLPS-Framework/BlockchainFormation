@@ -30,8 +30,8 @@ joinWithRetry () {
     cat log.txt
     if [ $res -ne 0 -a $COUNTER -lt $MAX_RETRY ]; then
         COUNTER=` expr $COUNTER + 1`
-        echo "PEER$1 failed to join the channel, Retry after 2 seconds"
-        sleep 2
+        echo "PEER$1 failed to join the channel, Retry after 5 seconds"
+        sleep 5
         joinWithRetry $1
     else
         COUNTER=1
