@@ -159,12 +159,14 @@ class VMHandler:
             elif self.config['fabric_settings']['orderer_type'].upper() == "SOLO":
                 count = self.config['fabric_settings']['org_count'] * (self.config['fabric_settings']['peer_count'] + 1)
             else:
-                sys.exit("No valid orderer type")
+                raise Exception("No valid orderer type")
 
             if count != self.config['vm_count']:
                 self.logger.debug(f"vm_count: {self.config['vm_count']}")
-                self.logger.debug(f"count: {count})")
-                sys.exit("vm_count is different from the expected number of necessary nodes")
+                self.logger.debug(f"count: {count}")
+                self.logger.info("vm_count is different from the expected number of necessary nodes")
+                self.logger.info(f"Setting vm_count to {count}")
+                self.config['vm_count'] = count
 
 
         ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
