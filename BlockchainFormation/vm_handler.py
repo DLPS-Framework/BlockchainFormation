@@ -146,6 +146,26 @@ class VMHandler:
             image = search_newest_image(amis['Images'])
             self.config['image']['image_id'] = image["ImageId"]
 
+        # catching errors
+        self.logger.debug(f"vm_count: {self.config['vm_count']}")
+
+        if self.config['blockchain_type'] == 'fabric':
+            self.logger.debug(f"Checking whether vm_count equals the expected number of necessary nodes")
+
+            if self.config['fabric_settings']['orderer_type'].upper() == "KAFKA":
+                count = self.config['fabric_settings']['org_count'] * (self.config['fabric_settings']['peer_count'] + 1) + self.config['fabric_settings']['orderer_count'] + self.config['fabric_settings']['zookeeper_count'] + self.config['fabric_settings']['kafka_count']
+            elif self.config['fabric_settings']['orderer_type'].upper() == "RAFT":
+                count = self.config['fabric_settings']['org_count'] * (self.config['fabric_settings']['peer_count'] + 1) + self.config['fabric_settings']['orderer_count']
+            elif self.config['fabric_settings']['orderer_type'].upper() == "SOLO":
+                count = self.config['fabric_settings']['org_count'] * (self.config['fabric_settings']['peer_count'] + 1)
+            else:
+                sys.exit("No valid orderer type")
+
+            if count != self.config['vm_count']:
+                self.logger.debug(f"vm_count: {self.config['vm_count']}")
+                self.logger.debug(f"count: {count})")
+                sys.exit("vm_count is different from the expected number of necessary nodes")
+
 
         ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
         image = ec2.Image(self.config['image']['image_id'])
