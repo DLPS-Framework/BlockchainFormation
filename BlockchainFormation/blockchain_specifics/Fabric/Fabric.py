@@ -136,10 +136,8 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
     logger.debug("".join(stderr.readlines()))
 
     logger.info(f"Getting crypto-config and channel-artifacts from {config['ips'][0]}...")
-    scp_clients[0].get("/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config",
-                       f"{config['exp_dir']}/setup", recursive=True)
-    scp_clients[0].get("/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts",
-                       f"{config['exp_dir']}/setup", recursive=True)
+    scp_clients[0].get("/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config", f"{config['exp_dir']}/setup", recursive=True)
+    scp_clients[0].get("/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts", f"{config['exp_dir']}/setup", recursive=True)
 
     logger.info("Pushing crypto-config and channel-artifacts to all other nodes")
     for index, _ in enumerate(config['priv_ips']):
@@ -580,7 +578,7 @@ def write_crypto_config(config, logger):
         f.write(f"      Domain: org{org}.example.com\n")
         f.write(f"      Template:\n")
         f.write(f"          # The number of peers in this organization\n")
-        f.write(f"          Count: {config['fabric_settings']['org_count']}\n")
+        f.write(f"          Count: {config['fabric_settings']['peer_count']}\n")
         f.write(f"      Users:\n")
         f.write(f"          # The number of users in this organization\n")
         f.write(f"          Count: 1\n")
