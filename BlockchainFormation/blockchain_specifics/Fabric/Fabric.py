@@ -140,14 +140,12 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
     scp_clients[0].get("/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts", f"{config['exp_dir']}/setup", recursive=True)
 
     logger.info("Pushing crypto-config and channel-artifacts to all other nodes")
-    for index, _ in enumerate(config['priv_ips']):
+    for _, index in enumerate(config['orderer_indices'] + config['peer_indices']):
         if index != 0:
             stdin, stdout, stderr = ssh_clients[index].exec_command("sudo rm -rf /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts")
             stdout.readlines()
-            scp_clients[index].put(f"{config['exp_dir']}/setup/crypto-config",
-                                   "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger", recursive=True)
-            scp_clients[index].put(f"{config['exp_dir']}/setup/channel-artifacts",
-                                   "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger", recursive=True)
+            scp_clients[index].put(f"{config['exp_dir']}/setup/crypto-config", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger", recursive=True)
+            scp_clients[index].put(f"{config['exp_dir']}/setup/channel-artifacts", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger", recursive=True)
 
             logger.debug(f"Done on node {index}")
 
