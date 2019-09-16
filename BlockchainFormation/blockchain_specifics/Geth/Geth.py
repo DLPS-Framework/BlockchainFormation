@@ -109,6 +109,15 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
     # which node gets which account unlocked
     account_mapping = get_relevant_account_mapping(all_accounts, config)
 
+    # https://github.com/ethereum/go-ethereum/wiki/Command-Line-Options
+    # Put all performance setting from config into one string to make service creation in the following lines more lean
+    # FIXME --trie-cache-gens {config['geth_settings']['trie-cache-gens']}  trie-cache-gens not available but it is listed in docs
+    performance_settings = f"--cache {config['geth_settings']['cache']} --cache.database {config['geth_settings']['cache.database']} " \
+        f"--cache.gc {config['geth_settings']['cache.gc']} " \
+        f"--txpool.rejournal {config['geth_settings']['txpool.rejournal']} --txpool.accountslots {config['geth_settings']['txpool.accountslots']} " \
+        f"--txpool.globalslots {config['geth_settings']['txpool.globalslots']} --txpool.accountqueue {config['geth_settings']['txpool.accountqueue']} " \
+        f"--txpool.globalqueue {config['geth_settings']['txpool.globalqueue']} --txpool.lifetime {config['geth_settings']['txpool.lifetime']} "
+
     logger.info(f"Relevant acc: {str(account_mapping)}")
     i = 0
     for index, ip in enumerate(config['ips']):
@@ -123,9 +132,9 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
                 f"printf '%s\\n' '[Unit]' 'Description=Ethereum go client' '[Service]' 'Type=simple' "
                 f"'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 "
-                f"--port 30310 --rpc --rpcvhosts='*' --rpccorsdomain='*' --wsorigins='*' --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool"
-                f" --nat=extip:{ip}  --syncmode full --allow-insecure-unlock --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
-                f"--password /data/gethNetwork/passwords.txt --mine  --etherbase {Web3.toChecksumAddress(account_mapping[ip][i])}'"
+                f"--port 30310 --rpc --rpcvhosts='*' --rpccorsdomain='*' --wsorigins='*' --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool "
+                f"--nat=extip:{ip}  --syncmode full --allow-insecure-unlock --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
+                f"--password /data/gethNetwork/passwords.txt --mine  --etherbase {Web3.toChecksumAddress(account_mapping[ip][i])} {performance_settings}'"
                 f" 'StandardOutput=file:/var/log/geth.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/geth.service")
             #logger.debug(ssh_stdout)
             #logger.debug(ssh_stderr)
@@ -151,9 +160,9 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
                 f"printf '%s\\n' '[Unit]' 'Description=Ethereum go client' '[Service]' 'Type=simple' "
                 f"'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 "
-                f"--port 30310 --rpc --rpcvhosts='*' --rpccorsdomain='*' --wsorigins='*' --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool"
-                f" --nat=extip:{ip}  --syncmode full --allow-insecure-unlock --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
-                f"--password /data/gethNetwork/passwords.txt --mine ' 'StandardOutput=file:/var/log/geth.log' '[Install]' "
+                f"--port 30310 --rpc --rpcvhosts='*' --rpccorsdomain='*' --wsorigins='*' --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool "
+                f"--nat=extip:{ip}  --syncmode full --allow-insecure-unlock --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
+                f"--password /data/gethNetwork/passwords.txt --mine {performance_settings}' 'StandardOutput=file:/var/log/geth.log' '[Install]' "
                 f"'WantedBy=default.target' > /etc/systemd/system/geth.service")
             #logger.debug(ssh_stdout)
             #logger.debug(ssh_stderr)

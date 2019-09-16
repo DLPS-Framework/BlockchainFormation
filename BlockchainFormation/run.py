@@ -204,6 +204,30 @@ class ArgParser:
         parser.add_argument('--timestamp', '-tp', help='specify timestamp of genesis', default="0x00")
         parser.add_argument('--gaslimit', '-gl', help='specify gasLimit', default="0x2fefd8")
         parser.add_argument('--num_acc', '-na', help='specify number of accounts added to each node', type=int, default=None)
+        # https://github.com/ethereum/go-ethereum/wiki/Command-Line-Options
+        parser.add_argument('--cache', help='megabytes of memory allocated to internal caching', type=int, default=1024)
+        parser.add_argument('--cache.database', help='percentage of cache memory allowance to use for database io',
+                            type=int, default=75)
+        parser.add_argument('--cache.gc', help='percentage of cache memory allowance to use for trie pruning', type=int,
+                            default=25)
+        #parser.add_argument('--trie-cache-gens', help='number of trie node generations to keep in memory', type=int,
+            #                default=120)
+        parser.add_argument('--txpool.rejournal', help='time interval to regenerate the local transaction journal',
+                            default='1h0m0s')
+        parser.add_argument('--txpool.accountslots',
+                            help='minimum number of executable transaction slots guaranteed per account', type=int,
+                            default=16)
+        parser.add_argument('--txpool.globalslots',
+                            help='maximum number of executable transaction slots for all accounts', type=int,
+                            default=4096)
+        parser.add_argument('--txpool.accountqueue',
+                            help='maximum number of non-executable transaction slots permitted per account', type=int,
+                            default=64)
+        parser.add_argument('--txpool.globalqueue',
+                            help='maximum number of non-executable transaction slots for all accounts', type=int,
+                            default=1024)
+        parser.add_argument('--txpool.lifetime', help='maximum amount of time non-executable transaction are queued',
+                            default='3h0m0s')
 
     @staticmethod
     def _add_parity_args(parser):
@@ -219,7 +243,7 @@ class ArgParser:
         parser.add_argument('--cache', help='megabytes of memory allocated to internal caching', type=int, default=1024)
         parser.add_argument('--cache.database', help='percentage of cache memory allowance to use for database io', type=int, default=75)
         parser.add_argument('--cache.gc', help='percentage of cache memory allowance to use for trie pruning', type=int, default=25)
-        parser.add_argument('--trie-cache-gens', help='number of trie node generations to keep in memory', type=int, default=120)
+        # parser.add_argument('--trie-cache-gens', help='number of trie node generations to keep in memory', type=int, default=120)
         parser.add_argument('--txpool.rejournal', help='time interval to regenerate the local transaction journal', default='1h0m0s')
         parser.add_argument('--txpool.accountslots', help='minimum number of executable transaction slots guaranteed per account', type=int, default=16)
         parser.add_argument('--txpool.globalslots', help='maximum number of executable transaction slots for all accounts', type=int, default=4096)
@@ -354,7 +378,18 @@ class ArgParser:
                     "balance": namespace_dict['balance'],
                     "timestamp": namespace_dict['timestamp'],
                     "gaslimit": namespace_dict['gaslimit'],
-                    "num_acc": namespace_dict['num_acc']
+                    "num_acc": namespace_dict['num_acc'],
+                    #https://github.com/ethereum/go-ethereum/wiki/Command-Line-Options
+                    "cache": namespace_dict['cache'],
+                    "cache.database": namespace_dict['cache.database'],
+                    "cache.gc": namespace_dict['cache.gc'],
+                    "trie-cache-gens": namespace_dict['trie-cache-gens'],
+                    "txpool.rejournal": namespace_dict['txpool.rejournal'],
+                    "txpool.accountslots": namespace_dict['txpool.accountslots'],
+                    "txpool.globalslots": namespace_dict['txpool.globalslots'],
+                    "txpool.accountqueue": namespace_dict['txpool.accountqueue'],
+                    "txpool.globalqueue": namespace_dict['txpool.globalqueue'],
+                    "txpool.lifetime": namespace_dict['txpool.lifetime'],
 
                 }
         elif blockchain_type == "parity":
@@ -373,7 +408,7 @@ class ArgParser:
                     "cache": namespace_dict['cache'],
                     "cache.database": namespace_dict['cache.database'],
                     "cache.gc": namespace_dict['cache.gc'],
-                    "trie-cache-gens": namespace_dict['trie-cache-gens'],
+                    # "trie-cache-gens": namespace_dict['trie-cache-gens'],
                     "txpool.rejournal": namespace_dict['txpool.rejournal'],
                     "txpool.accountslots": namespace_dict['txpool.accountslots'],
                     "txpool.globalslots": namespace_dict['txpool.globalslots'],
