@@ -140,6 +140,14 @@ class ArgParser:
                                  help='path to aws config', default=os.path.expanduser('~/.aws/config'))
         parser.add_argument('--aws_region', '-aws_r',
                             help='aws region where images should be hosted', default='eu-central-1')
+        parser.add_argument('--aws_http_proxy', '-aws_http_proxy',
+                            help='aws http proxy (only needed for private VPCs)', default='http://proxy.ccc.eu-central-1.aws.cloud.bmw:8080')
+        parser.add_argument('--aws_https_proxy', '-aws_https_proxy',
+                            help='aws https proxy (only needed for private VPCs)',
+                            default='http://proxy.ccc.eu-central-1.aws.cloud.bmw:8080')
+        parser.add_argument('--aws_no_proxy', '-aws_no_proxy',
+                            help='aws no proxy (only needed for private VPCs)',
+                            default='localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net')
         parser.add_argument('--priv_key_path', '-key',
                                  help='path to  ssh key', default=os.path.expanduser('~/.ssh/blockchain'))
         parser.add_argument('--image_id', '-img_id',
@@ -176,9 +184,9 @@ class ArgParser:
         parser.add_argument('--orderer_count', help='specify number of orderers - if orderer_type is "solo", then orderer_count must be 1', type=int, default=1)
         parser.add_argument('--kafka_count', help='specify number of kafka nodes - only relevant if orderer_type is kafka', type=int, default=3)
         parser.add_argument('--zookeeper_count', help='specify number of zookeepers - only relevant if orderer_type is kafka', type=int, default=5)
-        parser.add_argument('--batch_timeout', help='spefify the amount of seconds to wait before creating a batch',
+        parser.add_argument('--batch_timeout', help='specify the amount of seconds to wait before creating a batch',
                             type=int, default=2)
-        parser.add_argument('--max_message_count', help='speficy the maximum number of messages to permit in a batch',
+        parser.add_argument('--max_message_count', help='specify the maximum number of messages to permit in a batch',
                             type=int, default=10)
         parser.add_argument('--absolute_max_bytes',
                             help='specify the absolute maximum number of MB allowed for the serialized messages in a batch',
@@ -286,6 +294,7 @@ class ArgParser:
             "aws_credentials": os.path.expanduser(namespace_dict['aws_credentials']),
             "aws_config": os.path.expanduser(namespace_dict['aws_config']),
             "aws_region": namespace_dict['aws_region'],
+            "aws_proxy_settings": ArgParser._add_aws_proxy_settings(namespace_dict),
             "priv_key_path": os.path.expanduser(namespace_dict['priv_key_path']),
             "public_ip": namespace_dict['public_ip'],
             "tag_name": namespace_dict['tag_name'],
@@ -327,6 +336,22 @@ class ArgParser:
                 'Encrypted': True,
                 'KmsKeyId': namespace_dict['KmsKeyId']
                     }
+    @staticmethod
+    def _add_aws_proxy_settings(namespace_dict):
+        """
+        Creates aws proxy settings
+        :param namespace_dict: namespace given by the Argpass CLI
+        :return: aws proxy dict
+        """
+        if 'aws_http_proxy' in namespace_dict and namespace_dict['aws_http_proxy']:
+            return \
+                {
+                    "aws_http_proxy": namespace_dict['aws_http_proxy'],
+                    "aws_https_proxy": namespace_dict['aws_https_proxy'],
+                    "aws_no_proxy": namespace_dict['aws_no_proxy']
+                }
+        else:
+            return None
 
     @staticmethod
     def _add_load_balancer_config(namespace_dict):

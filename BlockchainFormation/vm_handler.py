@@ -75,10 +75,11 @@ class VMHandler:
 
         # If VM is hosted in public the VMs do not need the internal proxy settings
         if not self.config['public_ip']:
+
             # Is this the best solution to set proxy dynamically?
-            proxy_user_data = f"  HTTP_PROXY=http://proxy.ccc.eu-central-1.aws.cloud.bmw:8080\n" \
-                              f"  HTTPS_PROXY=http://proxy.ccc.eu-central-1.aws.cloud.bmw:8080\n" \
-                              f"  NO_PROXY=localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net\n" \
+            proxy_user_data = f"  HTTP_PROXY={self.config['aws_proxy_settings']['aws_http_proxy']}\n" \
+                              f"  HTTPS_PROXY={self.config['aws_proxy_settings']['aws_https_proxy']}\n" \
+                              f"  NO_PROXY={self.config['aws_proxy_settings']['aws_no_proxy']}\n" \
                               f"  export http_proxy=$HTTP_PROXY\n" \
                               f"  export https_proxy=$HTTPS_PROXY\n" \
                               f"  export no_proxy=$NO_PROXY\n" \
