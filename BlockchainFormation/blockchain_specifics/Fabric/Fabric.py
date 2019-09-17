@@ -655,34 +655,36 @@ def write_configtx(config, logger):
             f.write(f"              ClientTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer{orderer}.example.com/tls/server.crt\n")
             f.write(f"              ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer{orderer}.example.com/tls/server.crt\n")
 
-        """
-            # Options to be specified for all the etcd/raft nodes. The values here
-        # are the defaults for all new channels and can be modified on a
-        # per-channel basis via configuration updates.
-        Options:
-            # TickInterval is the time interval between two Node.Tick invocations.
-            TickInterval: 500ms
-
-            # ElectionTick is the number of Node.Tick invocations that must pass
-            # between elections. That is, if a follower does not receive any
-            # message from the leader of current term before ElectionTick has
-            # elapsed, it will become candidate and start an election.
-            # ElectionTick must be greater than HeartbeatTick.
-            ElectionTick: 10
-
-            # HeartbeatTick is the number of Node.Tick invocations that must
-            # pass between heartbeats. That is, a leader sends heartbeat
-            # messages to maintain its leadership every HeartbeatTick ticks.
-            HeartbeatTick: 1
-
-            # MaxInflightBlocks limits the max number of in-flight append messages
-            # during optimistic replication phase.
-            MaxInflightBlocks: 5
-
-            # SnapshotIntervalSize defines number of bytes per which a snapshot is taken
-            SnapshotIntervalSize: 20 MB
-        """
-
+        f.write(f"\n")
+        f.write(f"\n")
+        f.write(f"        # Options to be specified for all the etcd/raft nodes. The values here\n")
+        f.write(f"        # are the defaults for all new channels and can be modified on a\n")
+        f.write(f"        # per-channel basis via configuration updates.\n")
+        f.write(f"        Options:\n")
+        f.write(f"\n")
+        f.write(f"            # TickInterval is the time interval between two Node.Tick invocations.\n")
+        f.write(f"            TickInterval: {config['fabric_settings']['tick_interval']}ms\n")
+        f.write(f"\n")
+        f.write(f"            # ElectionTick is the number of Node.Tick invocations that must pass\n")
+        f.write(f"            # between elections. That is, if a follower does not receive any\n")
+        f.write(f"            # message from the leader of current term before ElectionTick has\n")
+        f.write(f"            # elapsed, it will become candidate and start an election.\n")
+        f.write(f"            # ElectionTick must be greater than HeartbeatTick.\n")
+        f.write(f"            ElectionTick: {config['fabric_settings']['election_tick']}\n")
+        f.write(f"\n")
+        f.write(f"            # HeartbeatTick is the number of Node.Tick invocations that must\n")
+        f.write(f"            # pass between heartbeats. That is, a leader sends heartbeat\n")
+        f.write(f"            # messages to maintain its leadership every HeartbeatTick ticks.\n")
+        f.write(f"            HeartbeatTick: {config['fabric_settings']['heartbeat_tick']}\n")
+        f.write(f"\n")
+        f.write(f"            # MaxInflightBlocks limits the max number of in-flight append messages\n")
+        f.write(f"            # during optimistic replication phase.\n")
+        f.write(f"            MaxInflightBlocks: {config['fabric_settings']['max_inflight_locks']}\n")
+        f.write(f"\n")
+        f.write(f"            # SnapshotIntervalSize defines number of bytes per which a snapshot is taken\n")
+        f.write(f"            SnapshotIntervalSize: {config['fabric_settings']['snapshot_interval_size']} MB\n")
+        f.write(f"\n")
+        f.write(f"\n")
 
     elif config['fabric_settings']['orderer_type'].upper() == "KAFKA":
         f.write("\n    OrdererType: kafka\n\n")

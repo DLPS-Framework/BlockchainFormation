@@ -150,21 +150,25 @@ class VMHandler:
         self.logger.debug(f"vm_count: {self.config['vm_count']}")
 
         if self.config['blockchain_type'] == 'fabric':
-            self.logger.debug(f"Checking whether vm_count equals the expected number of necessary nodes")
+            # self.logger.debug(f"Checking whether vm_count equals the expected number of necessary nodes")
 
             if self.config['fabric_settings']['orderer_type'].upper() == "KAFKA":
                 count = self.config['fabric_settings']['org_count'] * (self.config['fabric_settings']['peer_count'] + 1) + self.config['fabric_settings']['orderer_count'] + self.config['fabric_settings']['zookeeper_count'] + self.config['fabric_settings']['kafka_count']
             elif self.config['fabric_settings']['orderer_type'].upper() == "RAFT":
                 count = self.config['fabric_settings']['org_count'] * (self.config['fabric_settings']['peer_count'] + 1) + self.config['fabric_settings']['orderer_count']
             elif self.config['fabric_settings']['orderer_type'].upper() == "SOLO":
-                count = self.config['fabric_settings']['org_count'] * (self.config['fabric_settings']['peer_count'] + 1)
+                count = self.config['fabric_settings']['org_count'] * (self.config['fabric_settings']['peer_count'] + 1) + 1
+                if self.config['fabric_settings']['orderer_count'] != 1:
+                    self.logger.info(f"It seems that orderer_count is different from the expected number of orderers for orderer type 'solo'")
+                    self.logger.info(f"Setting orderer_count to 1")
+                    self.config['fabric_settings']['orderer_count'] = 1
             else:
                 raise Exception("No valid orderer type")
 
             if count != self.config['vm_count']:
                 self.logger.debug(f"vm_count: {self.config['vm_count']}")
                 self.logger.debug(f"count: {count}")
-                self.logger.info("vm_count is different from the expected number of necessary nodes")
+                self.logger.info("It seems that vm_count is different from the expected number of necessary nodes")
                 self.logger.info(f"Setting vm_count to {count}")
                 self.config['vm_count'] = count
 
