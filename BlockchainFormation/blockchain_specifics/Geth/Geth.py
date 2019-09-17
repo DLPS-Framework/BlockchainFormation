@@ -211,7 +211,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
     for index, ip in enumerate(config['ips']):
         if config['public_ip']:
             # use public ip if exists, else it wont work
-            ip_pub = config['public_ips'][index]
+            ip_pub = config['pub_ips'][index]
             web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip_pub}:8545", request_kwargs={'timeout': 20})))
         else:
             web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 20})))
