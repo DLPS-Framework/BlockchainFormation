@@ -27,9 +27,9 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
   APT::Periodic::Unattended-Upgrade "1";" >> /etc/apt/apt.conf.d/20auto-upgrades
 
   # for monitoring of upload and download speed
-  apt install -y ifstat
+  apt install -y ifstat || apt install -y ifstat || apt install -y ifstat
   # for monitoring disk i/o
-  apt-get install sysstat -y
+  apt-get install sysstat -y || apt-get install sysstat -y || apt-get install sysstat -y
 
   #THIS ONLY WORKS IF THE UNMOUNTED DISK IS THE BIGGEST DISK ON VM
   UNMOUNTED=`lsblk --noheadings --raw -o NAME,MOUNTPOINT,SIZE | sort -u -h -k 2 | awk '{print $4 " " $1}'  | tail -n 1`
