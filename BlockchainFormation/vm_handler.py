@@ -42,9 +42,10 @@ class VMHandler:
 
 
         # no proxy if no proxy user
-        # TODO: check if "HTTP_PROXY" not in os.environ is failsafe
+        # TODO: check if "HTTP_PROXY" not in os.environ is failsafe F
         if self.config['proxy_user'] != "None" and "HTTP_PROXY" not in os.environ:
 
+            # TODO Open Source: Make BMW specific Proxy work non specific
             password = getpass.getpass(prompt=f"Enter proxy password for {self.config['proxy_user']}:")
             os.environ["HTTPS_PROXY"] = f"http://{self.config['proxy_user']}:{password}@proxy.muc:8080"
             os.environ["HTTP_PROXY"] = f"http://{self.config['proxy_user']}:{password}@proxy.muc:8080"
@@ -69,13 +70,28 @@ class VMHandler:
 
         dir_name = os.path.dirname(os.path.realpath(__file__))
 
+        with open(f"{dir_name}/UserDataScripts/EC2_instance_bootstrap_base.sh", 'r') as content_file:
+            user_data_base = content_file.read()
+
         # If VM is hosted in public the VMs do not need the internal proxy settings
-        if self.config['public_ip']:
-            with open(f"{dir_name}/UserDataScripts/EC2_instance_bootstrap_base_no_proxy.sh", 'r') as content_file:
-                user_data_base = content_file.read()
-        else:
-            with open(f"{dir_name}/UserDataScripts/EC2_instance_bootstrap_base.sh", 'r') as content_file:
-                user_data_base = content_file.read()
+        if not self.config['public_ip']:
+            # Is this the best solution to set proxy dynamically?
+            proxy_user_data = f"  HTTP_PROXY=http://proxy.ccc.eu-central-1.aws.cloud.bmw:8080\n" \
+                              f"  HTTPS_PROXY=http://proxy.ccc.eu-central-1.aws.cloud.bmw:8080\n" \
+                              f"  NO_PROXY=localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net\n" \
+                              f"  export http_proxy=$HTTP_PROXY\n" \
+                              f"  export https_proxy=$HTTPS_PROXY\n" \
+                              f"  export no_proxy=$NO_PROXY\n" \
+                              f"  bash -c 'echo http_proxy=$HTTP_PROXY >> /etc/environment'\n" \
+                              f"  bash -c 'echo https_proxy=$HTTPS_PROXY >> /etc/environment'\n" \
+                              f"  bash -c 'echo no_proxy=$NO_PROXY >> /etc/environment'\n" \
+                              f"  touch /etc/profile.d/environment_mods.sh\n" \
+                              f"  bash -c 'echo http_proxy=$HTTP_PROXY >> /etc/profile.d/environment_mods.sh'\n" \
+                              f"  bash -c 'echo https_proxy=$HTTPS_PROXY >> /etc/profile.d/environment_mods.sh'\n" \
+                              f"  bash -c 'echo no_proxy=$NO_PROXY >> /etc/profile.d/environment_mods.sh'\n"
+
+            user_data_base = user_data_base.replace("  # PROXY_PLACEHOLDER, DO NOT DELETE!", proxy_user_data)
+
 
         # If blockchain type is base, no specific startup script is needed
         if self.config['blockchain_type'] == 'base':
