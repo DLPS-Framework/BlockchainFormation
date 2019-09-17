@@ -83,13 +83,13 @@ class VMHandler:
                               f"  export http_proxy=$HTTP_PROXY\n" \
                               f"  export https_proxy=$HTTPS_PROXY\n" \
                               f"  export no_proxy=$NO_PROXY\n" \
-                              f"  bash -c 'echo http_proxy=$HTTP_PROXY >> /etc/environment'\n" \
-                              f"  bash -c 'echo https_proxy=$HTTPS_PROXY >> /etc/environment'\n" \
-                              f"  bash -c 'echo no_proxy=$NO_PROXY >> /etc/environment'\n" \
-                              f"  touch /etc/profile.d/environment_mods.sh\n" \
-                              f"  bash -c 'echo http_proxy=$HTTP_PROXY >> /etc/profile.d/environment_mods.sh'\n" \
-                              f"  bash -c 'echo https_proxy=$HTTPS_PROXY >> /etc/profile.d/environment_mods.sh'\n" \
-                              f"  bash -c 'echo no_proxy=$NO_PROXY >> /etc/profile.d/environment_mods.sh'\n"
+                              f"  bash -c \"sudo echo http_proxy=$HTTP_PROXY >> /etc/environment\"\n" \
+                              f"  bash -c \"sudo echo https_proxy=$HTTPS_PROXY >> /etc/environment\"\n" \
+                              f"  bash -c \"sudo echo no_proxy=$NO_PROXY >> /etc/environment\"\n" \
+                              f"  sudo touch /etc/profile.d/environment_mods.sh\n" \
+                              f"  bash -c \"sudo echo http_proxy=$HTTP_PROXY >> /etc/profile.d/environment_mods.sh\"\n" \
+                              f"  bash -c \"sudo echo https_proxy=$HTTPS_PROXY >> /etc/profile.d/environment_mods.sh\"\n" \
+                              f"  bash -c \"sudo echo no_proxy=$NO_PROXY >> /etc/profile.d/environment_mods.sh\"\n"
 
             user_data_base = user_data_base.replace("  # PROXY_PLACEHOLDER, DO NOT DELETE!", proxy_user_data)
 

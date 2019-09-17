@@ -18,7 +18,7 @@ class ArgParser:
         """
 
         self.parser = argparse.ArgumentParser(description='This script automizes setup for various blockchain networks on aws and calculates aws costs after finshing'\
-                                    ,usage = 'run.py start geth --vm_count 4 --instance_type t2.micro  --priv_key_path ~/.ssh/blockchain --tag_name blockchain_philipp --subnet_id subnet-0ac7aeeec87150dd7 --security_group_id sg-0db312b6f84d66889 '
+                                    , usage = 'run.py start geth --vm_count 4 --instance_type t2.micro  --priv_key_path ~/.ssh/blockchain --tag_name blockchain_philipp --subnet_id subnet-0ac7aeeec87150dd7 --security_group_id sg-0db312b6f84d66889 '
                                              'run.py terminate --config /Users/q481264/PycharmProjects/scripts/ec2_automation/experiments/exp_2019-05-13_16-32-49_geth/config.json')
 
         subparsers_start_terminate = self.parser.add_subparsers(help='start instances or terminate them')
@@ -159,7 +159,7 @@ class ArgParser:
         parser.add_argument('--KmsKeyId', '-KId',
                                  help='KmsKeyId for Encryption, None for no Encryption', default='arn:aws:kms:eu-central-1:731899578576:key/a808826d-e460-4271-a23b-29e1e0807c1d')
         parser.add_argument('--profile', '-p',
-                                 help='name of aws profile', default='block_exp')
+                                 help='name of aws profile, None for no profile switching', default='block_exp')
         parser.add_argument('--tag_name', '-t',
                                  help='tag for aws', default='blockchain_experiment')
         parser.add_argument('--subnet_id', '-st',
