@@ -18,7 +18,7 @@ class ArgParser:
         """
 
         self.parser = argparse.ArgumentParser(description='This script automizes setup for various blockchain networks on aws and calculates aws costs after finshing'\
-                                    ,usage = 'run.py start geth --vm_count 4 --instance_type t2.micro  --priv_key_path ~/.ssh/blockchain --tag_name blockchain_philipp --subnet_id subnet-0ac7aeeec87150dd7 --security_group_id sg-0db312b6f84d66889 '
+                                    , usage = 'run.py start geth --vm_count 4 --instance_type t2.micro  --priv_key_path ~/.ssh/blockchain --tag_name blockchain_philipp --subnet_id subnet-0ac7aeeec87150dd7 --security_group_id sg-0db312b6f84d66889 '
                                              'run.py terminate --config /Users/q481264/PycharmProjects/scripts/ec2_automation/experiments/exp_2019-05-13_16-32-49_geth/config.json')
 
         subparsers_start_terminate = self.parser.add_subparsers(help='start instances or terminate them')
@@ -140,6 +140,14 @@ class ArgParser:
                                  help='path to aws config', default=os.path.expanduser('~/.aws/config'))
         parser.add_argument('--aws_region', '-aws_r',
                             help='aws region where images should be hosted', default='eu-central-1')
+        parser.add_argument('--aws_http_proxy', '-aws_http_proxy',
+                            help='aws http proxy (only needed for private VPCs)', default='http://proxy.ccc.eu-central-1.aws.cloud.bmw:8080')
+        parser.add_argument('--aws_https_proxy', '-aws_https_proxy',
+                            help='aws https proxy (only needed for private VPCs)',
+                            default='http://proxy.ccc.eu-central-1.aws.cloud.bmw:8080')
+        parser.add_argument('--aws_no_proxy', '-aws_no_proxy',
+                            help='aws no proxy (only needed for private VPCs)',
+                            default='localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net')
         parser.add_argument('--priv_key_path', '-key',
                                  help='path to  ssh key', default=os.path.expanduser('~/.ssh/blockchain'))
         parser.add_argument('--image_id', '-img_id',
@@ -151,7 +159,7 @@ class ArgParser:
         parser.add_argument('--KmsKeyId', '-KId',
                                  help='KmsKeyId for Encryption, None for no Encryption', default='arn:aws:kms:eu-central-1:731899578576:key/a808826d-e460-4271-a23b-29e1e0807c1d')
         parser.add_argument('--profile', '-p',
-                                 help='name of aws profile', default='block_exp')
+                                 help='name of aws profile, None for no profile switching', default='block_exp')
         parser.add_argument('--tag_name', '-t',
                                  help='tag for aws', default='blockchain_experiment')
         parser.add_argument('--subnet_id', '-st',
@@ -176,9 +184,9 @@ class ArgParser:
         parser.add_argument('--orderer_count', help='specify number of orderers - if orderer_type is "solo", then orderer_count must be 1', type=int, default=1)
         parser.add_argument('--kafka_count', help='specify number of kafka nodes - only relevant if orderer_type is kafka', type=int, default=3)
         parser.add_argument('--zookeeper_count', help='specify number of zookeepers - only relevant if orderer_type is kafka', type=int, default=5)
-        parser.add_argument('--batch_timeout', help='spefify the amount of seconds to wait before creating a batch',
+        parser.add_argument('--batch_timeout', help='specify the amount of seconds to wait before creating a batch',
                             type=int, default=2)
-        parser.add_argument('--max_message_count', help='speficy the maximum number of messages to permit in a batch',
+        parser.add_argument('--max_message_count', help='specify the maximum number of messages to permit in a batch',
                             type=int, default=10)
         parser.add_argument('--absolute_max_bytes',
                             help='specify the absolute maximum number of MB allowed for the serialized messages in a batch',
@@ -204,6 +212,30 @@ class ArgParser:
         parser.add_argument('--timestamp', '-tp', help='specify timestamp of genesis', default="0x00")
         parser.add_argument('--gaslimit', '-gl', help='specify gasLimit', default="0x2fefd8")
         parser.add_argument('--num_acc', '-na', help='specify number of accounts added to each node', type=int, default=None)
+        # https://github.com/ethereum/go-ethereum/wiki/Command-Line-Options
+        parser.add_argument('--cache', help='megabytes of memory allocated to internal caching', type=int, default=1024)
+        parser.add_argument('--cache.database', help='percentage of cache memory allowance to use for database io',
+                            type=int, default=75)
+        parser.add_argument('--cache.gc', help='percentage of cache memory allowance to use for trie pruning', type=int,
+                            default=25)
+        #parser.add_argument('--trie-cache-gens', help='number of trie node generations to keep in memory', type=int,
+            #                default=120)
+        parser.add_argument('--txpool.rejournal', help='time interval to regenerate the local transaction journal',
+                            default='1h0m0s')
+        parser.add_argument('--txpool.accountslots',
+                            help='minimum number of executable transaction slots guaranteed per account', type=int,
+                            default=16)
+        parser.add_argument('--txpool.globalslots',
+                            help='maximum number of executable transaction slots for all accounts', type=int,
+                            default=4096)
+        parser.add_argument('--txpool.accountqueue',
+                            help='maximum number of non-executable transaction slots permitted per account', type=int,
+                            default=64)
+        parser.add_argument('--txpool.globalqueue',
+                            help='maximum number of non-executable transaction slots for all accounts', type=int,
+                            default=1024)
+        parser.add_argument('--txpool.lifetime', help='maximum amount of time non-executable transaction are queued',
+                            default='3h0m0s')
 
     @staticmethod
     def _add_parity_args(parser):
@@ -219,7 +251,7 @@ class ArgParser:
         parser.add_argument('--cache', help='megabytes of memory allocated to internal caching', type=int, default=1024)
         parser.add_argument('--cache.database', help='percentage of cache memory allowance to use for database io', type=int, default=75)
         parser.add_argument('--cache.gc', help='percentage of cache memory allowance to use for trie pruning', type=int, default=25)
-        parser.add_argument('--trie-cache-gens', help='number of trie node generations to keep in memory', type=int, default=120)
+        # parser.add_argument('--trie-cache-gens', help='number of trie node generations to keep in memory', type=int, default=120)
         parser.add_argument('--txpool.rejournal', help='time interval to regenerate the local transaction journal', default='1h0m0s')
         parser.add_argument('--txpool.accountslots', help='minimum number of executable transaction slots guaranteed per account', type=int, default=16)
         parser.add_argument('--txpool.globalslots', help='maximum number of executable transaction slots for all accounts', type=int, default=4096)
@@ -262,6 +294,7 @@ class ArgParser:
             "aws_credentials": os.path.expanduser(namespace_dict['aws_credentials']),
             "aws_config": os.path.expanduser(namespace_dict['aws_config']),
             "aws_region": namespace_dict['aws_region'],
+            "aws_proxy_settings": ArgParser._add_aws_proxy_settings(namespace_dict),
             "priv_key_path": os.path.expanduser(namespace_dict['priv_key_path']),
             "public_ip": namespace_dict['public_ip'],
             "tag_name": namespace_dict['tag_name'],
@@ -303,6 +336,22 @@ class ArgParser:
                 'Encrypted': True,
                 'KmsKeyId': namespace_dict['KmsKeyId']
                     }
+    @staticmethod
+    def _add_aws_proxy_settings(namespace_dict):
+        """
+        Creates aws proxy settings
+        :param namespace_dict: namespace given by the Argpass CLI
+        :return: aws proxy dict
+        """
+        if 'aws_http_proxy' in namespace_dict and namespace_dict['aws_http_proxy']:
+            return \
+                {
+                    "aws_http_proxy": namespace_dict['aws_http_proxy'],
+                    "aws_https_proxy": namespace_dict['aws_https_proxy'],
+                    "aws_no_proxy": namespace_dict['aws_no_proxy']
+                }
+        else:
+            return None
 
     @staticmethod
     def _add_load_balancer_config(namespace_dict):
@@ -359,7 +408,18 @@ class ArgParser:
                     "balance": namespace_dict['balance'],
                     "timestamp": namespace_dict['timestamp'],
                     "gaslimit": namespace_dict['gaslimit'],
-                    "num_acc": namespace_dict['num_acc']
+                    "num_acc": namespace_dict['num_acc'],
+                    #https://github.com/ethereum/go-ethereum/wiki/Command-Line-Options
+                    "cache": namespace_dict['cache'],
+                    "cache.database": namespace_dict['cache.database'],
+                    "cache.gc": namespace_dict['cache.gc'],
+                    #"trie-cache-gens": namespace_dict['trie-cache-gens'],
+                    "txpool.rejournal": namespace_dict['txpool.rejournal'],
+                    "txpool.accountslots": namespace_dict['txpool.accountslots'],
+                    "txpool.globalslots": namespace_dict['txpool.globalslots'],
+                    "txpool.accountqueue": namespace_dict['txpool.accountqueue'],
+                    "txpool.globalqueue": namespace_dict['txpool.globalqueue'],
+                    "txpool.lifetime": namespace_dict['txpool.lifetime'],
 
                 }
         elif blockchain_type == "parity":
@@ -435,7 +495,7 @@ if __name__ == '__main__':
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
     # create formatter and add it to the handlers
-    formatter = logging.Formatter('%(asctime)s - %(threadName) - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
     ch.setFormatter(formatter)
     # add the handlers to the logger
     logger.addHandler(ch)
