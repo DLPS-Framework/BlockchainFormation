@@ -412,7 +412,8 @@ def generate_node_dict(signers, config, unlock=None, reserved_peers= False):
                             'tx_queue_size': config['parity_settings']['tx_queue_size']
                             },
                 'network': {
-                            'port': 30300
+                            'port': 30300,
+                            'max_peers': 75
                             },
                 'parity': {
                             'base_path': '/data/parityNetwork', 'chain': '/data/parityNetwork/spec.json'
