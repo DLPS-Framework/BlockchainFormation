@@ -116,7 +116,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
         f"--cache.gc {config['geth_settings']['cache.gc']} " \
         f"--txpool.rejournal {config['geth_settings']['txpool.rejournal']} --txpool.accountslots {config['geth_settings']['txpool.accountslots']} " \
         f"--txpool.globalslots {config['geth_settings']['txpool.globalslots']} --txpool.accountqueue {config['geth_settings']['txpool.accountqueue']} " \
-        f"--txpool.globalqueue {config['geth_settings']['txpool.globalqueue']} --txpool.lifetime {config['geth_settings']['txpool.lifetime']} "
+        f"--txpool.globalqueue {config['geth_settings']['txpool.globalqueue']} --txpool.lifetime {config['geth_settings']['txpool.lifetime']} --minerthreads {config['geth_settings']['minerthreads']}"
 
     logger.info(f"Relevant acc: {str(account_mapping)}")
     i = 0

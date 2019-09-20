@@ -236,6 +236,9 @@ class ArgParser:
                             default=1024)
         parser.add_argument('--txpool.lifetime', help='maximum amount of time non-executable transaction are queued',
                             default='3h0m0s')
+        parser.add_argument('--minerthreads',
+                            help=' Number of CPU threads to use for mining (default: 8)',
+                            type=int, default=8)
 
     @staticmethod
     def _add_parity_args(parser):
@@ -244,6 +247,23 @@ class ArgParser:
                             default=None)
         parser.add_argument('--gaslimit', '-gl', help='specify gasLimit', default="0x5B8D80")
         parser.add_argument('--balance', '-bal', help='specify start balance of account', default="0x200000000000000000000000000000000000000000000000000000000000000")
+        parser.add_argument('--tx_queue_mem_limit',
+                            help='Maximum amount of memory that can be used by the transaction queue. Setting this parameter to 0 disables limiting. (default: 4)', type=int, default=4)
+        parser.add_argument('--tx_queue_size',
+                            help='Maximum amount of transactions in the queue (waiting tobe included in next block). (default: 8192)', type=int, default=8192)
+        parser.add_argument('--cache_size_db',
+                            help='Override database cache size. (default: 128)', type=int, default=128)
+        parser.add_argument('--cache_size_blocks',
+                            help='Specify the preferred size of the blockchain cache in megabytes. (default: 8)', type=int, default=8)
+        parser.add_argument('--cache_size_queue',
+                            help='Specify the maximum size of memory to use for blockqueue. (default: 40)', type=int, default=40)
+        parser.add_argument('--cache_size_state',
+                            help='Specify the maximum size of memory to use for the statecache. (default: 25)', type=int, default=25)
+        parser.add_argument('--server_threads',
+                            help='RPC server threads (default: 4)',
+                            type=int, default=4)
+
+
 
     @staticmethod
     def _add_quorum_args(parser):
@@ -420,6 +440,7 @@ class ArgParser:
                     "txpool.accountqueue": namespace_dict['txpool.accountqueue'],
                     "txpool.globalqueue": namespace_dict['txpool.globalqueue'],
                     "txpool.lifetime": namespace_dict['txpool.lifetime'],
+                    "minerthreads": namespace_dict['minerthreads'],
 
                 }
         elif blockchain_type == "parity":
@@ -428,7 +449,8 @@ class ArgParser:
                     "step_duration": namespace_dict['step_duration'],
                     "num_acc": namespace_dict['num_acc'],
                     "gaslimit": namespace_dict['gaslimit'],
-                    "balance": namespace_dict['balance']
+                    "balance": namespace_dict['balance'],
+                    "server_threads": namespace_dict['server_threads']
 
                 }
         elif blockchain_type == "quorum":

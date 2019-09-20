@@ -113,7 +113,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
 
     with open(f"{config['exp_dir']}/setup/node_basic.toml", 'w') as outfile:
         # dummy signer accounts, gets replaced later anyway with real signers
-        toml.dump(generate_node_dict("0x50fc1dd12e1534704a375f3c9acb14eb5f1f3469"), outfile)
+        toml.dump(generate_node_dict("0x50fc1dd12e1534704a375f3c9acb14eb5f1f3469", config), outfile)
 
     # put spec and node on VM
     for index, _ in enumerate(config['ips']):
@@ -229,7 +229,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         with open(f"{config['exp_dir']}/setup/node_node_{index}.toml", 'w') as outfile:
 
             toml.dump(generate_node_dict(signers=Web3.toChecksumAddress(account_mapping[ip][i]),
-                                         unlock=[Web3.toChecksumAddress(x).lower() for x in account_mapping[ip]]), outfile)
+                                         unlock=[Web3.toChecksumAddress(x).lower() for x in account_mapping[ip]], config=config), outfile)
 
         # add the keyfiles from all relevant accounts to the VMs keystores
         keystore_files = [f for f in glob.glob(acc_path + "**/*/UTC--*", recursive=True)
@@ -391,7 +391,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         time.sleep(10)
 
 
-def generate_node_dict(signers, unlock=None, reserved_peers= False):
+def generate_node_dict(signers, config, unlock=None, reserved_peers= False):
     """
     Generates node dictionary needed for creation of node.toml
     :param signers: which account to be signer
@@ -407,7 +407,9 @@ def generate_node_dict(signers, unlock=None, reserved_peers= False):
                             },
                 'mining': {
                             'engine_signer': signers.lower(),
-                            'reseal_on_txs': 'none'
+                            'reseal_on_txs': 'none',
+                            'tx_queue_mem_limit': config['parity_settings']['tx_queue_mem_limit'],
+                            'tx_queue_size': config['parity_settings']['tx_queue_size']
                             },
                 'network': {
                             'port': 30300
@@ -420,7 +422,8 @@ def generate_node_dict(signers, unlock=None, reserved_peers= False):
                     'port': 8545,
                     'interface': '0.0.0.0',
                     'hosts': ['all'],
-                    'cors': ['all']
+                    'cors': ['all'],
+                    'server_threads': config['parity_settings']['server_threads']
                        },
                 'websockets': {
                     'port': 8450,
@@ -430,7 +433,11 @@ def generate_node_dict(signers, unlock=None, reserved_peers= False):
                     'hosts' : ["all"]
     },
                 'footprint': {
-                    'pruning': 'archive'
+                    'pruning': 'archive',
+                    'cache_size_db': config['parity_settings']['cache_size_db'],
+                    'cache_size_blocks': config['parity_settings']['cache_size_blocks'],
+                    'cache_size_queue': config['parity_settings']['cache_size_queue'],
+                    'cache_size_state': config['parity_settings']['cache_size_state'],
                 }
 
          }
@@ -472,6 +479,10 @@ def generate_spec(accounts, config):
                          "authorityRound": {
                                      "params": {
                                                  "stepDuration": config['parity_settings']['step_duration'],
+                                                 "emptyStepsTransition": 0,
+                                                 "maximumUncleCountTransition": 0,
+                                                 "maximumEmptySteps": 24,
+                                                 "maximumUncleCount": 0,
                                                  "validators": {
                                                  "list": accounts
                                                                  }
