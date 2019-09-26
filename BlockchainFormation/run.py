@@ -265,6 +265,7 @@ class ArgParser:
 
 
 
+
     @staticmethod
     def _add_quorum_args(parser):
         parser.add_argument('--raftblocktime', help='amount of time between raft block creations in milliseconds', type=int, default=50)
@@ -450,7 +451,13 @@ class ArgParser:
                     "num_acc": namespace_dict['num_acc'],
                     "gaslimit": namespace_dict['gaslimit'],
                     "balance": namespace_dict['balance'],
-                    "server_threads": namespace_dict['server_threads']
+                    "server_threads": namespace_dict['server_threads'],
+                    "tx_queue_mem_limit": namespace_dict['tx_queue_mem_limit'],
+                    "tx_queue_size": namespace_dict['tx_queue_size'],
+                    "cache_size_db": namespace_dict['cache_size_db'],
+                    "cache_size_blocks": namespace_dict['cache_size_blocks'],
+                    "cache_size_queue": namespace_dict['cache_size_queue'],
+                    "cache_size_state": namespace_dict['cache_size_state']
 
                 }
         elif blockchain_type == "quorum":

@@ -23,7 +23,7 @@ import requests
 from requests.packages.urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 
-from web3.utils.caching import (
+from web3._utils.caching import (
     generate_cache_key,
 )
 
@@ -44,7 +44,7 @@ def _get_session_new(*args, **kwargs):
         _session_cache[cache_key].mount('https://', adapter)
     return _session_cache[cache_key]
 
-web3.utils.request._get_session = _get_session_new
+web3._utils.request._get_session = _get_session_new
 
 #############################################
 
@@ -308,17 +308,9 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         else:
             web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 5})))
 
-        try:
-            # Renew HTTP Provider
-            # TODO To this for public IP if it works
-            enodes.append((ip, web3_clients[index].parity.enode()))
-        except requests.exceptions.ReadTimeout or urllib3.exceptions.ReadTimeoutError:
-            logger.debug(os.environ["NO_PROXY"])
-            logger.info("TimeoutError: Restarting Service and Trying to add Enode again")
-            ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo service parity restart")
-            time.sleep(10)
-            web3_clients[index] = Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 20}))
-            enodes.append((ip, web3_clients[index].parity.enode()))
+
+        enodes.append((ip, web3_clients[index].parity.enode()))
+
         #web3_clients[index].miner.stop()
         logger.info(f"Coinbase of {ip}: {web3_clients[index].eth.coinbase}")
         coinbase.append(web3_clients[index].eth.coinbase)
@@ -380,7 +372,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         try:
             web3_clients[index].middleware_stack.inject(geth_poa_middleware, layer=0)
         except:
-            logger.info("Middleware already injected")
+            logger.debug("Middleware already injected")
 
     logger.info("testing if new blocks are generated across all nodes; if latest block numbers are not changing over multiple cycles something is wrong")
     for x in range(5):
