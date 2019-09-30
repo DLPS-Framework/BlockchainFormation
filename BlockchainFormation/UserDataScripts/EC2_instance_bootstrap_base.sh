@@ -37,7 +37,7 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
   sudo apt install chrony -y || sudo apt install chrony -y || sudo apt install chrony -y || sudo apt install chrony -y
   sudo sed -i '1s/^/server 169.254.169.123 prefer iburst minpoll 4 maxpoll 4\n/' /etc/chrony/chrony.conf
   sudo /etc/init.d/chrony restart
-  chronyc sources -v
+  chronyc sources -v || chronyc sources -v || chronyc sources -v
 
   #THIS ONLY WORKS IF THE UNMOUNTED DISK IS THE BIGGEST DISK ON VM
   UNMOUNTED=`lsblk --noheadings --raw -o NAME,MOUNTPOINT,SIZE | sort -u -h -k 2 | awk '{print $4 " " $1}'  | tail -n 1`

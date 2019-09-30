@@ -163,8 +163,7 @@ To add another blockchain 4 things need to be added:
 * Make geth/parity setup even more customizable
 * Add logrotate to UserData setup scripts
 *  Support more blockchains
-    * Hyperledger Fabric
-    * Quorum
+    * Libra
     * ...
 
     
