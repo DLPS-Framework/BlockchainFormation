@@ -18,6 +18,7 @@
   "aws_credentials": "/home/user/.aws/credentials",
   "aws_config": "/home/user/.aws/config",
   "aws_region": "eu-central-1",
+  "aws_proxy_settings": null,
   "priv_key_path": "/home/user/.aws/Johannes_test_pub.pem",
   "tag_name": "blclab_quorum",
   "exp_dir": "/home/user/PycharmProjects/BlockchainFormation/BlockchainFormation",
