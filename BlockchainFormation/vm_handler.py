@@ -422,7 +422,7 @@ class VMHandler:
         :return:
         """
         #TODO: enable stopping and not only termination
-        if self.config['proxy_user'] is not None:
+        if self.config['proxy'] is not None:
             os.environ["NO_PROXY"] = f"localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net,{','.join(str(ip) for ip in self.config['ips'])}"
 
         ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
