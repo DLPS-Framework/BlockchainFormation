@@ -195,7 +195,13 @@ class ArgParser:
         parser.add_argument('--public_ip', '-pub_ip',
                             help='True or False if public IP is needed (remember to define correct subnet/security))', default=False, type=bool)
         parser.add_argument('--proxy_user', '-pu',
-                                 help='enter q number for proxy; None for NO proxy ', default='qqdpoc0')
+                                 help='proxy user; None for NO proxy ', default=None)
+        parser.add_argument('--http_proxy', '-http_proxy',
+                            help='HTTP proxy url and port ', default=None)
+        parser.add_argument('--https_proxy', '-https_proxy',
+                            help='HTTPS proxy url and port ', default=None)
+        parser.add_argument('--no_proxy', '-no_proxy',
+                            help='NO PROXY', default=None)
         parser.add_argument('--exp_dir', '-exp_d',
                             help='Directory where experiment folder is created (default=os.getcwd())', default=os.getcwd())
 
@@ -334,7 +340,7 @@ class ArgParser:
             },
             "subnet_id": namespace_dict['subnet_id'],
             "security_group_id": namespace_dict['security_group_id'],
-            "proxy_user": namespace_dict['proxy_user'],
+            "proxy": ArgParser._add_proxy_settings(namespace_dict),
             "user": "ubuntu",
             "profile": namespace_dict['profile'],
             "key_name": namespace_dict['key_name'],
@@ -399,6 +405,26 @@ class ArgParser:
                 }
         else:
             return None
+
+    @staticmethod
+    def _add_proxy_settings(namespace_dict):
+        """
+        Creates proxy settings for the python script, sometimes proxy is needed if you are behind e.g. corporate proxy
+        :param namespace_dict: namespace given by the Argpass CLI
+        :return: proxy dict
+        """
+
+        if 'http_proxy' in namespace_dict and namespace_dict['http_proxy']:
+            return \
+                {
+                    "proxy_user": namespace_dict['proxy_user'] if 'proxy_user' in namespace_dict else None,
+                    "http_proxy": namespace_dict['http_proxy'],
+                    "https_proxy": namespace_dict['https_proxy'],
+                    "no_proxy": namespace_dict['no_proxy']
+                }
+        else:
+            return None
+
 
     @staticmethod
     def _add_load_balancer_config(namespace_dict):

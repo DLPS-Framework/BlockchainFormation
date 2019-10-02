@@ -9,7 +9,7 @@
               },
     "subnet_id": "subnet-0fa70db2bd49231db",
     "security_group_id": ["sg-0a1a62af94278cd07"],
-    "proxy_user": "None",
+    "proxy": null,
     "user": "ubuntu",
     "profile": "default",
     "key_name": "Johannes_test_pub",

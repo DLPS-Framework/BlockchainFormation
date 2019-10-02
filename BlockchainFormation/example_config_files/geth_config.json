@@ -10,6 +10,12 @@
   "subnet_id": "subnet-0ac7aeeec87150dd7",
   "security_group_id": ["sg-0db312b6f84d66889"],
   "proxy_user": "qqdpoc0",
+  "proxy": {
+    "proxy_user": "qqdpoc0",
+    "http_proxy": "proxy.muc:8080",
+    "https_proxy": "proxy.muc:8080",
+    "Nno_proxy": "localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net"
+  },
   "user": "ubuntu",
   "profile": "block_exp",
   "key_name": "blockchain",

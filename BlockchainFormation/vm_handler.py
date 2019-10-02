@@ -69,13 +69,17 @@ class VMHandler:
 
         # no proxy if no proxy user
         # TODO: check if "HTTP_PROXY" not in os.environ is failsafe F
-        if self.config['proxy_user'] != "None" and "HTTP_PROXY" not in os.environ:
+        if self.config['proxy'] is not None and "HTTP_PROXY" not in os.environ:
 
-            # TODO Open Source: Make BMW specific Proxy work non specific
-            password = getpass.getpass(prompt=f"Enter proxy password for {self.config['proxy_user']}:")
-            os.environ["HTTPS_PROXY"] = f"http://{self.config['proxy_user']}:{password}@proxy.muc:8080"
-            os.environ["HTTP_PROXY"] = f"http://{self.config['proxy_user']}:{password}@proxy.muc:8080"
-            os.environ["NO_PROXY"] = "localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net"
+            if self.config['proxy']['proxy_user'] is not None:
+                password = getpass.getpass(prompt=f"Enter proxy password for {self.config['proxy']['proxy_user']}:")
+                os.environ["HTTPS_PROXY"] = f"http://{self.config['proxy']['proxy_user']}:{password}@{self.config['proxy']['http_proxy']}"
+                os.environ["HTTP_PROXY"] = f"http://{self.config['proxy']['proxy_user']}:{password}@{self.config['proxy']['https_proxy']}"
+            else:
+                os.environ["HTTPS_PROXY"] = f"http://{self.config['proxy']['https_proxy']}"
+                os.environ["HTTP_PROXY"] = f"http://{self.config['proxy']['http_proxy']}"
+
+            os.environ["NO_PROXY"] = self.config['proxy']['no_proxy']
         else:
             self.logger.info("No proxy set since proxy user is None or proxy already set")
 
@@ -272,7 +276,7 @@ class VMHandler:
                 public_ips.append(i.public_ip_address)
 
         # add no proxy for all VM IPs
-        if self.config['proxy_user'] != "None":
+        if self.config['proxy'] is not None:
             # Careful that you do NOT delete old NO_PROXY settings, hence the os.environ["NO_PROXY"] + new
             os.environ["NO_PROXY"] = os.environ["NO_PROXY"] + f",{','.join(str(ip) for ip in ips)}"
 
