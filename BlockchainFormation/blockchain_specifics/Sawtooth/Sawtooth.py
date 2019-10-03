@@ -39,29 +39,96 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
     logger.debug("".join(stdout.readlines()))
     logger.debug("".join(stderr.readlines()))
 
+    logger.debug("Get all the public keys for raft")
+    validator_pub_keys = []
+    string_raft_peers = '['
+    string_pbft_peers = '['
+    for index in range(0, len(config['priv_ips'])):
+        stdin, stdout, stderr = ssh_clients[index].exec_command("cat /etc/sawtooth/keys/validator.pub")
+        key = stdout.readlines()[0].replace("\n", "")
+
+        validator_pub_keys.append(key)
+        if index == 0:
+            string_pbft_peers = string_pbft_peers + f'\"{key}\"'
+
+        elif index == 1:
+            string_pbft_peers = string_pbft_peers + f',\"{key}\"'
+            string_raft_peers = string_raft_peers + f'\"{key}\"'
+
+        else:
+            string_pbft_peers = string_pbft_peers + f',\"{key}\"'
+            string_raft_peers = string_raft_peers + f',\"{key}\"'
+
+    string_pbft_peers = string_pbft_peers + f']'
+    string_raft_peers = string_raft_peers + f']'
+
+
     logger.info("Doing special config stuff for first node")
     logger.debug("Creating genesis config on first node")
 
     logger.debug("Creating config-genesis.batch")
     stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawset genesis --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/config-genesis.batch")
     stdout.readlines()
+    stderr.readlines()
 
-    logger.debug("Creating config-consensus.batch")
-    stdin, stdout, stderr = ssh_clients[0].exec_command('sudo -u sawtooth sawset proposal create --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/config-consensus.batch sawtooth.consensus.algorithm.name=PoET sawtooth.consensus.algorithm.version=0.1 sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/simulator_rk_pub.pem)" sawtooth.poet.valid_enclave_measurements=$(poet enclave measurement) sawtooth.poet.valid_enclave_basenames=$(poet enclave basename)')
-    stdout.readlines()
 
-    logger.debug("Creating poet.batch")
-    stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth poet registration create --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/poet.batch")
-    stdout.readlines()
+    if config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "DEVMODE":
+        logger.debug("Creating config-consensus.batch for Devmode")
+        stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawset proposal create --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/config-consensus.batch sawtooth.consensus.algorithm.name=Devmode sawtooth.consensus.algorithm.version=0.1")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
 
-    logger.debug("Creating poet-settings.batch")
-    stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawset proposal create --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/poet-settings.batch sawtooth.poet.target_wait_time=5 sawtooth.poet.initial_wait_time=25 sawtooth.publisher.max_batches_per_block=100")
-    stdout.readlines()
+        logger.debug("Creating genesis block using the just created config.batches")
+        stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawadm genesis /home/sawtooth/temp/config-genesis.batch /home/sawtooth/temp/config-consensus.batch")
+        logger.debug("".join(stdout.readlines()))
+        logger.debug("".join(stderr.readlines()))
 
-    logger.debug("Creating genesis block using the just created config.batches")
-    stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawadm genesis /home/sawtooth/temp/config-genesis.batch /home/sawtooth/temp/config-consensus.batch /home/sawtooth/temp/poet.batch /home/sawtooth/temp/poet-settings.batch")
-    logger.debug("".join(stdout.readlines()))
-    logger.debug("".join(stderr.readlines()))
+
+    elif config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "RAFT":
+        logger.debug("Creating config-consensus.batch for raft")
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f'sudo -u sawtooth sawset proposal create --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/config-consensus.batch sawtooth.consensus.algorithm.name=raft sawtooth.consensus.algorithm.version=0.1 sawtooth.consensus.raft.peers={string_raft_peers}')
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+
+
+        stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawadm genesis /home/sawtooth/temp/config-genesis.batch /home/sawtooth/temp/config-consensus.batch")
+        logger.debug("".join(stdout.readlines()))
+        logger.debug("".join(stderr.readlines()))
+
+
+    elif config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "POET":
+        logger.debug("Creating config-consensus.batch for PoeT")
+        stdin, stdout, stderr = ssh_clients[0].exec_command('sudo -u sawtooth sawset proposal create --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/config-consensus.batch sawtooth.consensus.algorithm.name=PoET sawtooth.consensus.algorithm.version=0.1 sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/simulator_rk_pub.pem)" sawtooth.poet.valid_enclave_measurements=$(poet enclave measurement) sawtooth.poet.valid_enclave_basenames=$(poet enclave basename)')
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+
+        logger.debug("Creating poet.batch")
+        stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth poet registration create --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/poet.batch")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+
+        logger.debug("Creating poet-settings.batch")
+        stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawset proposal create --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/poet-settings.batch sawtooth.poet.target_wait_time=5 sawtooth.poet.initial_wait_time=25 sawtooth.publisher.max_batches_per_block=100")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+
+        logger.debug("Creating genesis block using the just created config.batches")
+        stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawadm genesis /home/sawtooth/temp/config-genesis.batch /home/sawtooth/temp/config-consensus.batch /home/sawtooth/temp/poet.batch /home/sawtooth/temp/poet-settings.batch")
+        logger.debug("".join(stdout.readlines()))
+        logger.debug("".join(stderr.readlines()))
+
+
+    elif config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "PBFT":
+        logger.debug("Creating config-consensus.batch for PBFT")
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"sudo -u sawtooth sawset proposal create --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/config-consensus.batch sawtooth.consensus.algorithm.name=pbft sawtooth.consensus.algorithm.version=0.1 sawtooth.consensus.pbft.members=\'{string_pbft_peers}\'")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+
+        logger.debug("Creating genesis block using the just created config.batches")
+        stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawadm genesis /home/sawtooth/temp/config-genesis.batch /home/sawtooth/temp/config-consensus.batch")
+        logger.debug("".join(stdout.readlines()))
+        logger.debug("".join(stderr.readlines()))
+
 
     logger.info("Adapting config (.toml)-file for validator, starting sawtooth-services and finalizing setup on all nodes")
     for index1, ip1 in enumerate(config['priv_ips']):
@@ -69,15 +136,17 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
         # Creating string for binding specification and replace substitute_binding
         binding_string = f'\\"network:tcp://{ip1}:8800\\",'
         stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_bind#" + binding_string + "#g /home/ubuntu/validator.toml")
-        stdout.readlines()
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
 
         # Creating string for endpoint speficifation and replace substitute_endpoint
         endpoint_string = f'endpoint\ =\ \\"tcp://{ip1}:8800\\"'
         stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_endpoint#" + endpoint_string + "#g /home/ubuntu/validator.toml")
-        stdout.readlines()
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
 
         if len(config['priv_ips']) == 1:
-            peer_string = "# no peers"
+            peer_string = "peers\ = "
         else:
             # create string for peers
             logger.debug(f"finalizing setup on node {index1}")
@@ -133,11 +202,22 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
         channel = ssh_clients[index1].get_transport().open_session()
         channel.exec_command("sudo systemctl start sawtooth-intkey-tp-python.service")
 
-        channel = ssh_clients[index1].get_transport().open_session()
-        channel.exec_command("sudo systemctl start sawtooth-poet-validator-registry-tp.service")
+        if config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "DEVMODE":
+            channel = ssh_clients[index1].get_transport().open_session()
+            channel.exec_command("systemctl status sawtooth-devmode-engine-rust.service ")
 
-        channel = ssh_clients[index1].get_transport().open_session()
-        channel.exec_command("sudo systemctl start sawtooth-poet-engine.service")
+        elif config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "POET":
+
+            channel = ssh_clients[index1].get_transport().open_session()
+            channel.exec_command("sudo systemctl start sawtooth-poet-validator-registry-tp.service")
+
+            channel = ssh_clients[index1].get_transport().open_session()
+            channel.exec_command("sudo systemctl start sawtooth-poet-engine.service")
+
+        elif config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "PBFT":
+            channel = ssh_clients[index1].get_transport().open_session()
+            channel.exec_command("sudo systemctl start sawtooth-pbft-engine.service")
+
 
         logger.debug("Starting BenchContract...")
         scp_clients[index1].put(dir_name + "/processor", "/home/ubuntu", recursive=True)
@@ -169,14 +249,23 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
     if boo1 == True:
             logger.info(f"All nodes seem to have started properly")
 
-    logger.info("Adapting the sawtooth specific properties such as consenus algorithm, block time, ...")
-    for key in config["sawtooth_settings"]:
-        stdin, stdout, stderr = ssh_clients[0].exec_command(f"sudo sawset proposal create --url http://{config['priv_ips'][0]}:8008 --key /etc/sawtooth/keys/validator.priv {key}={config['sawtooth_settings'][key]}")
+    logger.info("Getting the right consensus mechanism")
+    if config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "RAFT":
+        logger.debug("switching to raft")
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f'sudo sawset proposal create --url http://{config["priv_ips"][0]}:8008 --key /etc/sawtooth/keys/validator.priv sawtooth.consensus.algorithm.name=raft sawtooth.consensus.raft.peers={string_raft_peers}')
         logger.debug(stdout.readlines())
         logger.debug(stderr.readlines())
 
-    logger.info("Checking whether these proposals have been adopted")
+    logger.info("Adapting the sawtooth specific properties such as consensus algorithm, block time, ...")
+    for key in config["sawtooth_settings"]:
+        if key != "sawtooth.consensus.algorithm.name":
+            stdin, stdout, stderr = ssh_clients[0].exec_command(f"sudo sawset proposal create --url http://{config['priv_ips'][0]}:8008 --key /etc/sawtooth/keys/validator.priv {key}={config['sawtooth_settings'][key]}")
+            logger.debug(stdout.readlines())
+            logger.debug(stderr.readlines())
+
+    logger.debug("Waiting....")
     time.sleep(10)
+    logger.info("Checking whether these proposals have been adopted")
     stdin, stdout, stderr = ssh_clients[-1].exec_command(f"sawtooth settings list --url http://{config['priv_ips'][-1]}:8008")
     logger.debug("".join(stdout.readlines()))
     logger.debug("".join(stderr.readlines()))
@@ -205,4 +294,3 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
     else:
         logger.info("Sawtooth network setup was NOT successful")
         raise Exception("Blockchain did not start properly - Omitting or repeating")
-

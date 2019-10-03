@@ -62,7 +62,7 @@ class BenchContract extends Contract {
 
     async writeMuchData(ctx, _start, _end) {
         for (var i = _start; i < _end; i++) {
-            await ctx.stub.putState(i.toString(), Buffer.from(i.toString()))
+            await ctx.stub.putState(i.toString(), Buffer.from(Math.floor(Math.random() * 10000000).toString()))
         }
         return Buffer.from('1')
     }
