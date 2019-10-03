@@ -78,8 +78,15 @@ Explanation of common flags (needed for all blockchains, not only e.g. geth):
   --public_ip PUBLIC_IP, -pub_ip PUBLIC_IP
                         True or False if public IP is needed (remember to
                         define correct subnet/security)) [default=False]                   
-  --proxy_user PROXY_USER, -pu PROXY_USER
-                        enter q number for proxy; None for no proxy [default=qqdpoc0]
+   --proxy_user PROXY_USER, -pu PROXY_USER
+                        proxy user; None for NO proxy
+  --http_proxy HTTP_PROXY, -http_proxy HTTP_PROXY
+                        HTTP proxy url and port
+  --https_proxy HTTPS_PROXY, -https_proxy HTTPS_PROXY
+                        HTTPS proxy url and port
+  --no_proxy NO_PROXY, -no_proxy NO_PROXY
+                        NO PROXY
+
 ```
 Explanation of Load Balancer flags:
 ```
@@ -163,8 +170,7 @@ To add another blockchain 4 things need to be added:
 * Make geth/parity setup even more customizable
 * Add logrotate to UserData setup scripts
 *  Support more blockchains
-    * Hyperledger Fabric
-    * Quorum
+    * Libra
     * ...
 
     

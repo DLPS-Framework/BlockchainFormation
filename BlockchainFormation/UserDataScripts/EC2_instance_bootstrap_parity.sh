@@ -19,24 +19,16 @@ EOF
   sudo chown -R ubuntu /data
   sudo chown -R ubuntu /etc/systemd/system/
 
+  # Change open file limit to avoid Too many open files error
+  #sudo bash -c 'echo 100000000 > /proc/sys/fs/file-max'
+  #sudo bash -c 'fs.file-max = 100000000 >> /etc/sysctl.conf'
+  #sudo sysctl -p
+
   #Parity Service
   bash -c  "sudo printf '%s\n' '[Unit]' 'Description=Parity Ethereum client' '[Service]' 'Type=simple' 'ExecStart=/usr/bin/parity --config /data/parityNetwork/node.toml ' 'StandardOutput=file:/var/log/parity.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/parity.service"
 
   #add log rotate
 
-  sudo timedatectl set-ntp no
-  sudo apt install ntp -y || sudo apt install ntp -y || sudo apt install ntp -y
-  ntpq -p
-  #sudo service ntp stop
-  #sudo ntpd -gq
-  #sudo service ntp start
-  timedatectl status
-
-
-  #sudo apt install chrony -y || apt install chrony -y || apt install chrony -y
-  #sudo bash -c "echo 'server 169.254.169.123 prefer iburst' >> sudo /etc/chrony/chrony.conf"
-  #sudo /etc/init.d/chrony restart
-  #timedatectl status
 
   # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log

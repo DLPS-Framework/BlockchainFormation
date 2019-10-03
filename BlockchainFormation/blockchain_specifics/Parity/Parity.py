@@ -1,3 +1,29 @@
+#  Copyright 2019  Bayerische Motoren Werke Aktiengesellschaft (BMW AG)
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
 import glob
 import itertools
 import json
@@ -23,7 +49,7 @@ import requests
 from requests.packages.urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 
-from web3.utils.caching import (
+from web3._utils.caching import (
     generate_cache_key,
 )
 
@@ -44,7 +70,7 @@ def _get_session_new(*args, **kwargs):
         _session_cache[cache_key].mount('https://', adapter)
     return _session_cache[cache_key]
 
-web3.utils.request._get_session = _get_session_new
+web3._utils.request._get_session = _get_session_new
 
 #############################################
 
@@ -113,7 +139,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
 
     with open(f"{config['exp_dir']}/setup/node_basic.toml", 'w') as outfile:
         # dummy signer accounts, gets replaced later anyway with real signers
-        toml.dump(generate_node_dict("0x50fc1dd12e1534704a375f3c9acb14eb5f1f3469"), outfile)
+        toml.dump(generate_node_dict("0x50fc1dd12e1534704a375f3c9acb14eb5f1f3469", config), outfile)
 
     # put spec and node on VM
     for index, _ in enumerate(config['ips']):
@@ -229,7 +255,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         with open(f"{config['exp_dir']}/setup/node_node_{index}.toml", 'w') as outfile:
 
             toml.dump(generate_node_dict(signers=Web3.toChecksumAddress(account_mapping[ip][i]),
-                                         unlock=[Web3.toChecksumAddress(x).lower() for x in account_mapping[ip]]), outfile)
+                                         unlock=[Web3.toChecksumAddress(x).lower() for x in account_mapping[ip]], config=config), outfile)
 
         # add the keyfiles from all relevant accounts to the VMs keystores
         keystore_files = [f for f in glob.glob(acc_path + "**/*/UTC--*", recursive=True)
@@ -308,17 +334,9 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         else:
             web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 5})))
 
-        try:
-            # Renew HTTP Provider
-            # TODO To this for public IP if it works
-            enodes.append((ip, web3_clients[index].parity.enode()))
-        except requests.exceptions.ReadTimeout or urllib3.exceptions.ReadTimeoutError:
-            logger.debug(os.environ["NO_PROXY"])
-            logger.info("TimeoutError: Restarting Service and Trying to add Enode again")
-            ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo service parity restart")
-            time.sleep(10)
-            web3_clients[index] = Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 20}))
-            enodes.append((ip, web3_clients[index].parity.enode()))
+
+        enodes.append((ip, web3_clients[index].parity.enode()))
+
         #web3_clients[index].miner.stop()
         logger.info(f"Coinbase of {ip}: {web3_clients[index].eth.coinbase}")
         coinbase.append(web3_clients[index].eth.coinbase)
@@ -380,7 +398,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         try:
             web3_clients[index].middleware_stack.inject(geth_poa_middleware, layer=0)
         except:
-            logger.info("Middleware already injected")
+            logger.debug("Middleware already injected")
 
     logger.info("testing if new blocks are generated across all nodes; if latest block numbers are not changing over multiple cycles something is wrong")
     for x in range(5):
@@ -391,7 +409,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         time.sleep(10)
 
 
-def generate_node_dict(signers, unlock=None, reserved_peers= False):
+def generate_node_dict(signers, config, unlock=None, reserved_peers= False):
     """
     Generates node dictionary needed for creation of node.toml
     :param signers: which account to be signer
@@ -407,10 +425,13 @@ def generate_node_dict(signers, unlock=None, reserved_peers= False):
                             },
                 'mining': {
                             'engine_signer': signers.lower(),
-                            'reseal_on_txs': 'none'
+                            'reseal_on_txs': 'none',
+                            'tx_queue_mem_limit': config['parity_settings']['tx_queue_mem_limit'],
+                            'tx_queue_size': config['parity_settings']['tx_queue_size']
                             },
                 'network': {
-                            'port': 30300
+                            'port': 30300,
+                            'max_peers': 75
                             },
                 'parity': {
                             'base_path': '/data/parityNetwork', 'chain': '/data/parityNetwork/spec.json'
@@ -420,7 +441,8 @@ def generate_node_dict(signers, unlock=None, reserved_peers= False):
                     'port': 8545,
                     'interface': '0.0.0.0',
                     'hosts': ['all'],
-                    'cors': ['all']
+                    'cors': ['all'],
+                    'server_threads': config['parity_settings']['server_threads']
                        },
                 'websockets': {
                     'port': 8450,
@@ -430,7 +452,11 @@ def generate_node_dict(signers, unlock=None, reserved_peers= False):
                     'hosts' : ["all"]
     },
                 'footprint': {
-                    'pruning': 'archive'
+                    'pruning': 'archive',
+                    'cache_size_db': config['parity_settings']['cache_size_db'],
+                    'cache_size_blocks': config['parity_settings']['cache_size_blocks'],
+                    'cache_size_queue': config['parity_settings']['cache_size_queue'],
+                    'cache_size_state': config['parity_settings']['cache_size_state'],
                 }
 
          }
@@ -472,6 +498,10 @@ def generate_spec(accounts, config):
                          "authorityRound": {
                                      "params": {
                                                  "stepDuration": config['parity_settings']['step_duration'],
+                                                 "emptyStepsTransition": 0,
+                                                 "maximumUncleCountTransition": 0,
+                                                 "maximumEmptySteps": 24,
+                                                 "maximumUncleCount": 0,
                                                  "validators": {
                                                  "list": accounts
                                                                  }

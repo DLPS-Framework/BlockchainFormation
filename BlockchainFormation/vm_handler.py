@@ -1,3 +1,29 @@
+#  Copyright 2019  Bayerische Motoren Werke Aktiengesellschaft (BMW AG)
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
 import sys, os, pprint
 import getpass
 import pytz
@@ -43,13 +69,17 @@ class VMHandler:
 
         # no proxy if no proxy user
         # TODO: check if "HTTP_PROXY" not in os.environ is failsafe F
-        if self.config['proxy_user'] != "None" and "HTTP_PROXY" not in os.environ:
+        if self.config['proxy'] is not None and "HTTP_PROXY" not in os.environ:
 
-            # TODO Open Source: Make BMW specific Proxy work non specific
-            password = getpass.getpass(prompt=f"Enter proxy password for {self.config['proxy_user']}:")
-            os.environ["HTTPS_PROXY"] = f"http://{self.config['proxy_user']}:{password}@proxy.muc:8080"
-            os.environ["HTTP_PROXY"] = f"http://{self.config['proxy_user']}:{password}@proxy.muc:8080"
-            os.environ["NO_PROXY"] = "localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net"
+            if self.config['proxy']['proxy_user'] is not None:
+                password = getpass.getpass(prompt=f"Enter proxy password for {self.config['proxy']['proxy_user']}:")
+                os.environ["HTTPS_PROXY"] = f"http://{self.config['proxy']['proxy_user']}:{password}@{self.config['proxy']['http_proxy']}"
+                os.environ["HTTP_PROXY"] = f"http://{self.config['proxy']['proxy_user']}:{password}@{self.config['proxy']['https_proxy']}"
+            else:
+                os.environ["HTTPS_PROXY"] = f"http://{self.config['proxy']['https_proxy']}"
+                os.environ["HTTP_PROXY"] = f"http://{self.config['proxy']['http_proxy']}"
+
+            os.environ["NO_PROXY"] = self.config['proxy']['no_proxy']
         else:
             self.logger.info("No proxy set since proxy user is None or proxy already set")
 
@@ -246,7 +276,7 @@ class VMHandler:
                 public_ips.append(i.public_ip_address)
 
         # add no proxy for all VM IPs
-        if self.config['proxy_user'] != "None":
+        if self.config['proxy'] is not None:
             # Careful that you do NOT delete old NO_PROXY settings, hence the os.environ["NO_PROXY"] + new
             os.environ["NO_PROXY"] = os.environ["NO_PROXY"] + f",{','.join(str(ip) for ip in ips)}"
 
@@ -392,7 +422,7 @@ class VMHandler:
         :return:
         """
         #TODO: enable stopping and not only termination
-        if self.config['proxy_user'] is not None:
+        if self.config['proxy'] is not None:
             os.environ["NO_PROXY"] = f"localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net,{','.join(str(ip) for ip in self.config['ips'])}"
 
         ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])

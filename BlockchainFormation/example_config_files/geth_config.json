@@ -10,12 +10,23 @@
   "subnet_id": "subnet-0ac7aeeec87150dd7",
   "security_group_id": ["sg-0db312b6f84d66889"],
   "proxy_user": "qqdpoc0",
+  "proxy": {
+    "proxy_user": "qqdpoc0",
+    "http_proxy": "proxy.muc:8080",
+    "https_proxy": "proxy.muc:8080",
+    "no_proxy": "localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net"
+  },
   "user": "ubuntu",
   "profile": "block_exp",
   "key_name": "blockchain",
   "aws_credentials": "/Users/q481264/.aws/credentials",
   "aws_config": "/Users/q481264/.aws/config",
   "aws_region": "eu-central-1",
+  "aws_proxy_settings": {
+        "aws_http_proxy": "http://proxy.ccc.eu-central-1.aws.cloud.bmw:8080",
+        "aws_https_proxy": "http://proxy.ccc.eu-central-1.aws.cloud.bmw:8080",
+        "aws_no_proxy": "localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net"
+    },
   "priv_key_path": "/Users/q481264/.ssh/blockchain",
   "tag_name": "example_conf_geth",
   "public_ip": false,

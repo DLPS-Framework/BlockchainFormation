@@ -1,3 +1,29 @@
+#  Copyright 2019  Bayerische Motoren Werke Aktiengesellschaft (BMW AG)
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
 import glob
 import itertools
 import json
@@ -22,7 +48,7 @@ import requests
 from requests.packages.urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 
-from web3.utils.caching import (
+from web3._utils.caching import (
     generate_cache_key,
 )
 
@@ -43,7 +69,7 @@ def _get_session_new(*args, **kwargs):
         _session_cache[cache_key].mount('https://', adapter)
     return _session_cache[cache_key]
 
-web3.utils.request._get_session = _get_session_new
+web3._utils.request._get_session = _get_session_new
 
 #############################################
 
@@ -116,7 +142,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
         f"--cache.gc {config['geth_settings']['cache.gc']} " \
         f"--txpool.rejournal {config['geth_settings']['txpool.rejournal']} --txpool.accountslots {config['geth_settings']['txpool.accountslots']} " \
         f"--txpool.globalslots {config['geth_settings']['txpool.globalslots']} --txpool.accountqueue {config['geth_settings']['txpool.accountqueue']} " \
-        f"--txpool.globalqueue {config['geth_settings']['txpool.globalqueue']} --txpool.lifetime {config['geth_settings']['txpool.lifetime']} "
+        f"--txpool.globalqueue {config['geth_settings']['txpool.globalqueue']} --txpool.lifetime {config['geth_settings']['txpool.lifetime']} --minerthreads {config['geth_settings']['minerthreads']}"
 
     logger.info(f"Relevant acc: {str(account_mapping)}")
     i = 0
@@ -217,22 +243,12 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
             web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 20})))
         # print(web3.admin)
         #time.sleep(3)
-        try:
-            # Renew HTTP Provider
-            # TODO To this for public IP if it works
-            enodes.append((ip, web3_clients[index].admin.nodeInfo.enode))
-        except requests.exceptions.ReadTimeout or urllib3.exceptions.ReadTimeoutError:
-            logger.info("TimeoutError: Trying to add Enode again")
-            web3_clients[index] = Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 20}))
-            enodes.append((ip, web3_clients[index].admin.nodeInfo.enode))
-        #web3_clients[index].miner.stop()
-        try:
-            logger.info(f"Coinbase of {ip}: {web3_clients[index].eth.coinbase}")
-            coinbase.append(web3_clients[index].eth.coinbase)
-        except requests.exceptions.ReadTimeout or urllib3.exceptions.ReadTimeoutError:
-            logger.info("TimeoutError: Trying to get Coinbase again")
-            logger.info(f"Coinbase of {ip}: {web3_clients[index].eth.coinbase}")
-            coinbase.append(web3_clients[index].eth.coinbase)
+
+        enodes.append((ip, web3_clients[index].geth.admin.node_info()['enode']))
+
+
+        coinbase.append(web3_clients[index].eth.coinbase)
+
 
     config['coinbase'] = coinbase
     logger.info([enode for (ip, enode) in enodes])
@@ -251,9 +267,9 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
         for ip_2, enode in enodes:
             # dont add own enode
             if ip != ip_2:
-                web3_clients[index].admin.addPeer(enode)
+                web3_clients[index].geth.admin.add_peer(enode)
 
-        logger.info("Peers: " + str(web3_clients[index].admin.peers))
+        logger.info("Peers: " + str(web3_clients[index].geth.admin.peers()))
 
 
     # Save geth version
@@ -274,14 +290,14 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
 
     for index, _ in enumerate(config['ips']):
         try:
-            web3_clients[index].middleware_stack.inject(geth_poa_middleware, layer=0)
+            web3_clients[index].middleware_onion.inject(geth_poa_middleware, layer=0)
         except:
             logger.info("Middleware already injected")
 
     logger.info("testing if new blocks are generated across all nodes; if latest block numbers are not changing over multiple cycles something is wrong")
     for x in range(5):
         for index, _ in enumerate(web3_clients):
-            logger.info(web3_clients[index].eth.getBlock('latest')['number'])
+            logger.info(str(web3_clients[index].eth.blockNumber))
 
         logger.info("----------------------------------")
         time.sleep(10)

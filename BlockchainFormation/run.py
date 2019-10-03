@@ -1,3 +1,29 @@
+#  Copyright 2019  Bayerische Motoren Werke Aktiengesellschaft (BMW AG)
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
 import sys, os, argparse
 import json
 import datetime, time
@@ -169,7 +195,13 @@ class ArgParser:
         parser.add_argument('--public_ip', '-pub_ip',
                             help='True or False if public IP is needed (remember to define correct subnet/security))', default=False, type=bool)
         parser.add_argument('--proxy_user', '-pu',
-                                 help='enter q number for proxy; None for NO proxy ', default='qqdpoc0')
+                                 help='proxy user; None for NO proxy ', default=None)
+        parser.add_argument('--http_proxy', '-http_proxy',
+                            help='HTTP proxy url and port ', default=None)
+        parser.add_argument('--https_proxy', '-https_proxy',
+                            help='HTTPS proxy url and port ', default=None)
+        parser.add_argument('--no_proxy', '-no_proxy',
+                            help='NO PROXY', default=None)
         parser.add_argument('--exp_dir', '-exp_d',
                             help='Directory where experiment folder is created (default=os.getcwd())', default=os.getcwd())
 
@@ -236,6 +268,9 @@ class ArgParser:
                             default=1024)
         parser.add_argument('--txpool.lifetime', help='maximum amount of time non-executable transaction are queued',
                             default='3h0m0s')
+        parser.add_argument('--minerthreads',
+                            help=' Number of CPU threads to use for mining (default: 8)',
+                            type=int, default=8)
 
     @staticmethod
     def _add_parity_args(parser):
@@ -244,6 +279,24 @@ class ArgParser:
                             default=None)
         parser.add_argument('--gaslimit', '-gl', help='specify gasLimit', default="0x5B8D80")
         parser.add_argument('--balance', '-bal', help='specify start balance of account', default="0x200000000000000000000000000000000000000000000000000000000000000")
+        parser.add_argument('--tx_queue_mem_limit',
+                            help='Maximum amount of memory that can be used by the transaction queue. Setting this parameter to 0 disables limiting. (default: 4)', type=int, default=4)
+        parser.add_argument('--tx_queue_size',
+                            help='Maximum amount of transactions in the queue (waiting tobe included in next block). (default: 8192)', type=int, default=8192)
+        parser.add_argument('--cache_size_db',
+                            help='Override database cache size. (default: 128)', type=int, default=128)
+        parser.add_argument('--cache_size_blocks',
+                            help='Specify the preferred size of the blockchain cache in megabytes. (default: 8)', type=int, default=8)
+        parser.add_argument('--cache_size_queue',
+                            help='Specify the maximum size of memory to use for blockqueue. (default: 40)', type=int, default=40)
+        parser.add_argument('--cache_size_state',
+                            help='Specify the maximum size of memory to use for the statecache. (default: 25)', type=int, default=25)
+        parser.add_argument('--server_threads',
+                            help='RPC server threads (default: 4)',
+                            type=int, default=4)
+
+
+
 
     @staticmethod
     def _add_quorum_args(parser):
@@ -287,7 +340,7 @@ class ArgParser:
             },
             "subnet_id": namespace_dict['subnet_id'],
             "security_group_id": namespace_dict['security_group_id'],
-            "proxy_user": namespace_dict['proxy_user'],
+            "proxy": ArgParser._add_proxy_settings(namespace_dict),
             "user": "ubuntu",
             "profile": namespace_dict['profile'],
             "key_name": namespace_dict['key_name'],
@@ -352,6 +405,26 @@ class ArgParser:
                 }
         else:
             return None
+
+    @staticmethod
+    def _add_proxy_settings(namespace_dict):
+        """
+        Creates proxy settings for the python script, sometimes proxy is needed if you are behind e.g. corporate proxy
+        :param namespace_dict: namespace given by the Argpass CLI
+        :return: proxy dict
+        """
+
+        if 'http_proxy' in namespace_dict and namespace_dict['http_proxy']:
+            return \
+                {
+                    "proxy_user": namespace_dict['proxy_user'] if 'proxy_user' in namespace_dict else None,
+                    "http_proxy": namespace_dict['http_proxy'],
+                    "https_proxy": namespace_dict['https_proxy'],
+                    "no_proxy": namespace_dict['no_proxy']
+                }
+        else:
+            return None
+
 
     @staticmethod
     def _add_load_balancer_config(namespace_dict):
@@ -420,6 +493,7 @@ class ArgParser:
                     "txpool.accountqueue": namespace_dict['txpool.accountqueue'],
                     "txpool.globalqueue": namespace_dict['txpool.globalqueue'],
                     "txpool.lifetime": namespace_dict['txpool.lifetime'],
+                    "minerthreads": namespace_dict['minerthreads'],
 
                 }
         elif blockchain_type == "parity":
@@ -428,7 +502,14 @@ class ArgParser:
                     "step_duration": namespace_dict['step_duration'],
                     "num_acc": namespace_dict['num_acc'],
                     "gaslimit": namespace_dict['gaslimit'],
-                    "balance": namespace_dict['balance']
+                    "balance": namespace_dict['balance'],
+                    "server_threads": namespace_dict['server_threads'],
+                    "tx_queue_mem_limit": namespace_dict['tx_queue_mem_limit'],
+                    "tx_queue_size": namespace_dict['tx_queue_size'],
+                    "cache_size_db": namespace_dict['cache_size_db'],
+                    "cache_size_blocks": namespace_dict['cache_size_blocks'],
+                    "cache_size_queue": namespace_dict['cache_size_queue'],
+                    "cache_size_state": namespace_dict['cache_size_state']
 
                 }
         elif blockchain_type == "quorum":
