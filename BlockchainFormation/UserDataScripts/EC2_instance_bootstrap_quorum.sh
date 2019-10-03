@@ -59,8 +59,11 @@
   mkdir /home/ubuntu/tessera
   mkdir /home/ubuntu/qdata
   mkdir /home/ubuntu/qdata/tm
-  (cd /home/ubuntu/tessera && wget https://oss.sonatype.org/content/groups/public/com/jpmorgan/quorum/tessera-app/0.9.2/tessera-app-0.9.2-app.jar)
-  java -jar /home/ubuntu/tessera/tessera-app-0.9.2-app.jar -keygen -filename /home/ubuntu/qdata/tm/tm < /dev/null
+
+  # (cd /home/ubuntu/tessera && wget https://oss.sonatype.org/content/groups/public/com/jpmorgan/quorum/tessera-app/0.9.2/tessera-app-0.9.2-app.jar)
+  (cd /home/ubuntu/tessera && wget https://oss.sonatype.org/service/local/repositories/releases/content/com/jpmorgan/quorum/tessera-app/0.10.0/tessera-app-0.10.0-app.jar)
+  # java -jar /home/ubuntu/tessera/tessera-app-0.9.2-app.jar -keygen -filename /home/ubuntu/qdata/tm/tm < /dev/null
+  java -jar /home/ubuntu/tessera/tessera-app-0.10.0-app.jar -keygen -filename /home/ubuntu/qdata/tm/tm < /dev/null
 
   # Preparing sceleton tessera config
   printf '{

@@ -33,6 +33,15 @@ import numpy as np
 from BlockchainFormation.utils.utils import *
 
 
+import os
+import sys
+import json
+import time
+from web3 import Web3
+import numpy as np
+from BlockchainFormation.utils.utils import *
+
+
 def quorum_shutdown(config, logger, ssh_clients, scp_clients):
     """
     runs the quorum specific shutdown operations (e.g. pulling the associated logs from the VMs)
@@ -178,7 +187,8 @@ def start_tessera_nodes(config, ssh_clients, logger):
 
         logger.info(f"Starting tessera on node {index1}")
         channel = ssh_clients[index1].get_transport().open_session()
-        channel.exec_command("java -jar tessera/tessera-app-0.9.2-app.jar -configfile qdata/tm/config.json >> tessera.log 2>&1")
+        # channel.exec_command("java -jar tessera/tessera-app-0.9.2-app.jar -configfile qdata/tm/config.json >> tessera.log 2>&1")
+        channel.exec_command("java -jar tessera/tessera-app-0.10.0-app.jar -configfile qdata/tm/config.json >> tessera.log 2>&1")
 
     logger.info("Waiting until all tessera nodes have started")
     boo = wait_till_done(config, ssh_clients, config['ips'], 60, 10, '/home/ubuntu/qdata/tm/tm.ipc', False, 10, logger)
