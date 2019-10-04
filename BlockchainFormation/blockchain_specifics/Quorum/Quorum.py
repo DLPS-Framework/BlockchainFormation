@@ -284,8 +284,8 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
                     nr = int(out[0].replace("\n", ""))
                     if nr == len(config['priv_ips']) - 1:
                         boo = False
-                        logger.info(f"Node {index} on IP {ip} is fully connected")
                         status_flags[index] = True
+                        logger.info(f"Node {index} on IP {ip} is fully connected")
                     else:
                         logger.info(f"Node {index} on IP {ip} is not yet fully connected (expected: {len(config['priv_ips']) - 1}, actual: {nr} ")
                 except Exception as e:
@@ -348,12 +348,12 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
     if boo == True:
         logger.info("All logs successfully stored")
 
-    logger.info("Success")
-    logger.info("Shutting down each node and restarting it afterwars")
-    for node, _ in enumerate(config['priv_ips']):
-        kill_node(config, ssh_clients, node, logger)
-        delete_pool(ssh_clients, node, logger)
-        revive_node(config, ssh_clients, node, logger)
+    # logger.info("Success")
+    # logger.info("Shutting down each node and restarting it afterwars")
+    # for node, _ in enumerate(config['priv_ips']):
+        # kill_node(config, ssh_clients, node, logger)
+        # delete_pool(ssh_clients, node, logger)
+        # revive_node(config, ssh_clients, node, logger)
 
 """
 
@@ -443,6 +443,15 @@ def revive_node(config, ssh_clients, index, logger):
             pass
         logger.error('Quorum network start was not successful')
         return False
+
+    logger.debug("Unlocking node")
+    stdin, stdout, stderr = ssh_clients[index].exec_command("geth --exec eth.accounts attach /home/ubuntu/nodes/new-node-1/geth.ipc")
+    out = stdout.readlines()
+    sender = out[0].replace("\n", "").replace("[", "").replace("]", "")
+    stdin, stdout, stderr = ssh_clients[index].exec_command("geth --exec " + "\'" + f"personal.unlockAccount({sender}, " + '\"' + "user" + '\"' + ", 0)" + "\'" + " attach /home/ubuntu/nodes/new-node-1/geth.ipc")
+    out = stdout.readlines()
+    if out[0].replace("\n", "") != "true":
+        logger.info(f"Something went wrong on unlocking on node {index} on IP {ip}")
 
     return True
 
