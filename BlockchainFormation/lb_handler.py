@@ -191,7 +191,7 @@ class LBHandler:
         route53_client = self.session.client('route53', region_name=self.config['aws_region'])
         #TODO: Make dns name work for multiple profiles, not just experimental
 
-        route53_dns_name = self.config['blockchain_type'] + "exp" + random.choice(string.ascii_letters).lower() + random.choice(string.ascii_letters).lower() +".blockchainlab.eu-central-1.aws.cloud.bmw."
+        route53_dns_name = self.config['blockchain_type'] + "exp" + random.choice(string.ascii_letters).lower() + random.choice(string.ascii_letters).lower() +self.config['load_balancer_settings']['route53_domain_name']
         #https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/route53.html#Route53.Client.change_resource_record_sets
         response = route53_client.change_resource_record_sets(
             HostedZoneId=self.config['load_balancer_settings']['lb_hosted_zone_id'],

@@ -141,7 +141,8 @@ class ArgParser:
 
     @staticmethod
     def storage_type(x):
-        """Check if the chosen storage is in a given range (Needs to be >1 else the mounting process of the UserData script fails)"""
+        """Check if the chosen storage is in a given range (Needs to be >1 else the mounting process of the UserData
+        script fails)"""
         x = int(x)
         if x < 9 or x > 2048:
             raise argparse.ArgumentTypeError("Minimum storage is 9GB, maximum is 1024 GB")
@@ -204,9 +205,6 @@ class ArgParser:
                             help='NO PROXY', default=None)
         parser.add_argument('--exp_dir', '-exp_d',
                             help='Directory where experiment folder is created (default=os.getcwd())', default=os.getcwd())
-
-
-
 
     @staticmethod
     def _add_fabric_args(parser):
@@ -295,9 +293,6 @@ class ArgParser:
                             help='RPC server threads (default: 4)',
                             type=int, default=4)
 
-
-
-
     @staticmethod
     def _add_quorum_args(parser):
         parser.add_argument('--raftblocktime', help='amount of time between raft block creations in milliseconds', type=int, default=50)
@@ -320,7 +315,6 @@ class ArgParser:
     @staticmethod
     def _add_client_args(parser):
         parser.add_argument('--target_network_conf', '-gl', help='Config where client IPs are attached to', default=None)
-
 
     def create_config(self, namespace_dict, blockchain_type):
         """
@@ -389,6 +383,7 @@ class ArgParser:
                 'Encrypted': True,
                 'KmsKeyId': namespace_dict['KmsKeyId']
                     }
+
     @staticmethod
     def _add_aws_proxy_settings(namespace_dict):
         """
@@ -544,7 +539,6 @@ class ArgParser:
                     "sawtooth.publisher.max_batches_per_block": namespace_dict["sawtooth.publisher.max_batches_per_block"]
                 }
 
-
     def load_config(self, namespace_dict):
         """
         Loads the config from a given JSON file
@@ -580,8 +574,6 @@ if __name__ == '__main__':
     ch.setFormatter(formatter)
     # add the handlers to the logger
     logger.addHandler(ch)
-
-
 
     if namespace.goal == 'start':
 

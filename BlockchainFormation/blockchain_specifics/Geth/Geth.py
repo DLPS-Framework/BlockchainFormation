@@ -92,8 +92,6 @@ def geth_shutdown(config, logger, ssh_clients, scp_clients):
             logger.info("Geth logs could not be pulled from the machines.")
 
 
-
-
 def geth_startup(config, logger, ssh_clients, scp_clients):
     """
     Runs the geth specific startup script
