@@ -107,8 +107,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
     os.mkdir(f"{config['exp_dir']}/setup/accounts")
     # enodes dir not needed anymore since enodes are saved in static-nodes file
     # os.mkdir((f"{path}/{self.config['exp_dir']}/enodes"))
-    os.mkdir((f"{config['exp_dir']}/geth_logs"))
-
+    os.mkdir(f"{config['exp_dir']}/geth_logs")
 
     for index, _ in enumerate(config['ips']):
         scp_clients[index].get("/data/gethNetwork/account.txt",
@@ -171,7 +170,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
                               re.match("(.*--.*--)(.*)", f).group(2) in list(set(itertools.chain(*account_mapping.values())))]
             keystore_files.sort(key=natural_keys)
             logger.info(keystore_files)
-            for index_top, ip in enumerate(config['ips']):
+            for index_top, _ in enumerate(config['ips']):
 
                 ssh_clients[index_top].exec_command("rm /data/gethNetwork/node/keystore/*")
 
@@ -190,8 +189,6 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
                 f"--nat=extip:{config['priv_ips'][index]}  --syncmode full --allow-insecure-unlock --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
                 f"--password /data/gethNetwork/passwords.txt --mine {performance_settings}' 'StandardOutput=file:/var/log/geth.log' '[Install]' "
                 f"'WantedBy=default.target' > /etc/systemd/system/geth.service")
-            #logger.debug(ssh_stdout)
-            #logger.debug(ssh_stderr)
             logger.debug(ssh_stdin)
 
         for _, acc in enumerate(account_mapping[ip]):
@@ -226,13 +223,12 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
 
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo systemctl start geth.service")
 
-
     enodes = []
     coinbase = []
     # collect enodes
     web3_clients = []
-    logger.debug("Sleeping 5sec after starting service")
-    time.sleep(5)
+    logger.debug("Sleeping 3sec after starting service")
+    time.sleep(3)
 
     for index, ip in enumerate(config['ips']):
         if config['public_ip']:
@@ -241,11 +237,8 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
             web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip_pub}:8545", request_kwargs={'timeout': 20})))
         else:
             web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 20})))
-        # print(web3.admin)
-        #time.sleep(3)
 
         enodes.append((ip, web3_clients[index].geth.admin.node_info()['enode']))
-
 
         coinbase.append(web3_clients[index].eth.coinbase)
 
@@ -274,7 +267,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
 
     # Save geth version
     ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[0].exec_command("sudo geth version >> /data/geth_version.txt")
-    time.sleep(3)
+    time.sleep(2)
     scp_clients[0].get("/data/geth_version.txt", f"{config['exp_dir']}/setup/geth_version.txt")
 
     #TODO: move this to unit test section
@@ -286,7 +279,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
                 web3_clients[index].eth.getBalance(Web3.toChecksumAddress(acc))))
 
 
-    time.sleep(5)
+    time.sleep(3)
 
     for index, _ in enumerate(config['ips']):
         try:
@@ -311,18 +304,18 @@ def get_relevant_account_mapping(accounts, config):
     :return:
     """
 
-    if config[f"{config['blockchain_type']}_settings"]['num_acc'] == None:
+    if config[f"{config['blockchain_type']}_settings"]['num_acc'] is None:
         return {ip: [account] for (ip, account) in zip(config['ips'], accounts)}
     else:
         rnd_accounts = np.random.choice(a=accounts, replace=False, size=config[f"{config['blockchain_type']}_settings"]['num_acc'])
         return {ip: rnd_accounts for ip in config['ips']}
 
 
-
 def generate_genesis(accounts, config):
     """
     # TODO make it more dynamic to user desires
     # https://web3py.readthedocs.io/en/stable/middleware.html#geth-style-proof-of-authority
+    :param config: config containing the specs for genesis
     :param accounts: accounts to be added to signers/added some balance
     :return: genesis dictonary
     """
@@ -368,8 +361,10 @@ def generate_genesis(accounts, config):
     }
     return genesis_dict
 
+
 def atoi(text):
     return int(text) if text.isdigit() else text
+
 
 def natural_keys(text):
     """
