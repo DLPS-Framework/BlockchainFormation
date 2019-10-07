@@ -147,15 +147,10 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         scp_clients[index].put(f"{config['exp_dir']}/setup/node_basic.toml", f"~/node.toml")
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo mv ~/spec.json /data/parityNetwork/spec.json")
-        logger.debug(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-        logger.debug(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo mv ~/node.toml /data/parityNetwork/node.toml")
-        logger.debug(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-        logger.debug(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
-
-
-
+        #logger.debug(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
+        #logger.debug(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
 
         # check if install was successful
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
@@ -176,26 +171,19 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
             # trying to install parity
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
                 "sudo bash -c  'bash <(curl https://get.parity.io -L) -r stable'")
-            logger.debug(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-            logger.debug(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
-
 
             # check if install was successful
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
                 "sudo bash -c  'command -v parity'")
             parity_install_check = ssh_stdout.read().decode('ascii')
             logger.info(f"Log node {index} {parity_install_check}")
-            #logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
 
             i += 1
 
         # create account
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo parity account new --config /data/parityNetwork/node.toml > /data/parityNetwork/account.txt")
-        #logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-        #logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
-        #logger.info(ssh_stdin.read().decode('ascii'))
-        time.sleep(1)
+        time.sleep(0.5)
         # get accounts and keys
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo cp -vr /data/parityNetwork/keys/DemoPoA /data")
@@ -236,12 +224,15 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
 
     #get unique accounts from mapping
     spec_dict = generate_spec(accounts=list(set(itertools.chain(*account_mapping.values()))), config=config)
-    #self.pprnt.pprint(genesis_dict)
 
     with open(f"{config['exp_dir']}/setup/spec.json", 'w') as outfile:
         json.dump(spec_dict, outfile, indent=4)
 
-
+    # add the keyfiles from all relevant accounts to the VMs keystores
+    keystore_files = [f for f in glob.glob(acc_path + "**/*/UTC--*", recursive=True)
+                      if verify_key(f, list(set(itertools.chain(*account_mapping.values()))))]
+    keystore_files.sort(key=natural_keys)
+    logger.debug(keystore_files)
 
     i = 0
     for index, ip in enumerate(config['ips']):
@@ -257,26 +248,14 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
             toml.dump(generate_node_dict(signers=Web3.toChecksumAddress(account_mapping[ip][i]),
                                          unlock=[Web3.toChecksumAddress(x).lower() for x in account_mapping[ip]], config=config), outfile)
 
-        # add the keyfiles from all relevant accounts to the VMs keystores
-        keystore_files = [f for f in glob.glob(acc_path + "**/*/UTC--*", recursive=True)
-                          if verify_key(f, list(set(itertools.chain(*account_mapping.values()))))]
-        keystore_files.sort(key=natural_keys)
-        logger.debug(keystore_files)
-        for index_top, ip in enumerate(config['ips']):
+        ssh_clients[index].exec_command("rm /data/parityNetwork/keys/DemoPoA/*")
 
-            ssh_clients[index_top].exec_command("rm /data/parityNetwork/keys/DemoPoA/*")
-
-            for index_lower, file in enumerate(keystore_files):
-                # TODO: only add keyfile to VM if its the right account
-                # distribute all accounts to nodes
-                scp_clients[index_top].put(file, "/data/parityNetwork/keys/DemoPoA")
+        # TODO: only add keyfile to VM if its the right account
+        # distribute all accounts to nodes
+        scp_clients[index].put(keystore_files, "/data/parityNetwork/keys/DemoPoA")
 
         for _, acc in enumerate(account_mapping[ip]):
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("echo 'password' >> /data/parityNetwork/passwords.txt")
-            #logger.debug(ssh_stdout)
-            #logger.debug(ssh_stderr)
-
-        scp_clients[index].put(f"{config['exp_dir']}/setup/spec.json", f"~/spec.json")
 
         # TODO: How to log the execution of the ssh commands in a good way?
         # get account from all instances
@@ -286,25 +265,13 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         # remove old node.toml
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo rm /data/parityNetwork/node.toml")
-        #logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-        #logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo rm /data/parityNetwork/spec.json")
-        #logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-        #logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
         scp_clients[index].put(f"{config['exp_dir']}/setup/node_node_{index}.toml", f"~/node.toml")
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo mv ~/spec.json /data/parityNetwork/spec.json")
-        #logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-        #logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo mv ~/node.toml /data/parityNetwork/node.toml")
-        #logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-        #logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
-
-        #logger.info(f"Log node {index} {ssh_stdout.read().decode('ascii')}")
-        #logger.info(f"Log node {index} {ssh_stderr.read().decode('ascii')}")
-
 
         #start service
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo systemctl daemon-reload")
@@ -313,7 +280,9 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
 
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo systemctl start parity.service")
 
-    logger.debug("service should now have been started")
+        logger.debug(f"service on node {index} started")
+
+    logger.debug("all services should now have been started")
 
     time.sleep(10)
     for index, ip in enumerate(config['ips']):
@@ -334,10 +303,8 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         else:
             web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 5})))
 
-
         enodes.append((ip, web3_clients[index].parity.enode()))
 
-        #web3_clients[index].miner.stop()
         logger.info(f"Coinbase of {ip}: {web3_clients[index].eth.coinbase}")
         coinbase.append(web3_clients[index].eth.coinbase)
 
@@ -370,11 +337,11 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
             "sudo mv ~/peers.txt /data/parityNetwork/peers.txt")
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo service parity stop")
-        time.sleep(3)
+        time.sleep(1)
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo rm /var/log/parity.log")
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo service parity start")
 
-    time.sleep(10)
+    time.sleep(5)
 
 
     # Save parity version
@@ -400,7 +367,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         except:
             logger.debug("Middleware already injected")
 
-    logger.info("testing if new blocks are generated across all nodes; if latest block numbers are not changing over multiple cycles something is wrong")
+    logger.info("testing if new blocks are generated across all nodes; if latest block numbers are not changing over multiple cycles something is maybe wrong")
     for x in range(5):
         for index, _ in enumerate(web3_clients):
             logger.info(web3_clients[index].eth.getBlock('latest')['number'])
