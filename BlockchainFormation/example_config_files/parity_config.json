@@ -28,6 +28,7 @@
     },
   "priv_key_path": "/Users/q481264/.ssh/blockchain",
   "tag_name": "example_conf_geth",
+  "exp_dir": "/Users/q481264/git_repos/BlockchainFormation/BlockchainFormation/experiments",
   "public_ip": false,
   "storage_settings":
   [{

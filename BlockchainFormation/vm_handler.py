@@ -359,8 +359,6 @@ class VMHandler:
 
             self._run_specific_startup(ssh_clients, scp_clients)
 
-
-
             if 'load_balancer_settings' in self.config and 'add_loadbalancer' in self.config['load_balancer_settings']:
                 # Load Balancer
                 if self.config['load_balancer_settings']['add_loadbalancer']:
@@ -417,7 +415,6 @@ class VMHandler:
          Stops and terminates all VMs and calculates causes aws costs.
         :return:
         """
-        #TODO: enable stopping and not only termination
         if self.config['proxy'] is not None:
             os.environ["NO_PROXY"] = f"localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net,{','.join(str(ip) for ip in self.config['ips'])}"
 
@@ -490,7 +487,6 @@ class VMHandler:
     def create_ssh_scp_clients(config):
         """
         Creates ssh/scp connection to aws VMs
-
         :param config:
         :return: array of scp and ssh clients
         """

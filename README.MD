@@ -45,6 +45,7 @@ Explanation of flags can be obtained by typing e.g.:
 python run.py start geth --help
 python run.py start base --help
 python run.py start parity --help
+...
 ```
 
 __Note that you need to enter the password for your proxy user after starting the script__
@@ -73,7 +74,6 @@ To add another blockchain 4 things need to be added:
 * specific user data script in ```/UserDataScripts```
 
 ## Future Steps
-* Support the new aws proxies (proxy.ccc-ng-1.eu-central-1.aws.cloud.bmw.)
 * Add InstanceMarketOptions for cheaper VMs (Does the AWS Calculator take care of this?)
 * Add Windows support
 * Add option to attach no storage at all
