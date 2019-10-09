@@ -30,9 +30,11 @@ from pkg_resources import resource_filename
 import logging
 from BlockchainFormation.utils.utils import *
 
+
 class AWSCostCalculator:
     """
-    Class responsible for calculating the aws costs caused by one or more aws instances during their uptime, including attached ebs storage.
+    Class responsible for calculating the aws costs caused by one or more aws instances during their uptime,
+     including attached ebs storage.
     """
     # TODO: Check if Calculation is correct (30 days vs. 31 days question)
     def __init__(self, session):
@@ -62,7 +64,6 @@ class AWSCostCalculator:
         self.config = config
         ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
         self.ec2_instances = [ec2.Instance(instance_id) for instance_id in self.config['instance_ids']]
-
 
         launch_times = self.config['launch_times']
 
@@ -109,7 +110,6 @@ class AWSCostCalculator:
         # Use AWS Pricing API at eu-central-1
         # 'eu-central-1' not working -> Pricing the same ? 
 
-
         # Get current price for a given instance, region and os
         # make operation system not hardcoded
         instance_price_per_hour = float(self._get_instance_price(self._get_region_name(self.config['aws_region']), self.config['instance_type'], 'Linux'))
@@ -151,7 +151,6 @@ class AWSCostCalculator:
         with open(f"{self.config['exp_dir']}/aws_costs.json", 'w') as outfile:
             json.dump(aws_costs, outfile, default=datetimeconverter)
 
-
     def _get_instance_price(self, region, instance, osys):
         """
         get instance price for given region, instance type and osys
@@ -171,7 +170,6 @@ class AWSCostCalculator:
         id1 = list(od)[0]
         id2 = list(od[id1]['priceDimensions'])[0]
         return od[id1]['priceDimensions'][id2]['pricePerUnit']['USD']
-
 
     def _get_storage_price(self, region, volume_type):
         """
@@ -197,7 +195,6 @@ class AWSCostCalculator:
         id2 = list(od[id1]['priceDimensions'])[0]
         return od[id1]['priceDimensions'][id2]['pricePerUnit']['USD']
 
-
     def _get_region_name(self, region_code):
         """get region name for given region code"""
         default_region = 'EU (Frankfurt)'
@@ -209,13 +206,11 @@ class AWSCostCalculator:
         except IOError:
             return default_region
 
-
     def _extract_ebs_storage_from_blockdevicemapping(self, b_d_mapping):
         """Extracts all ebs storage from a blockdevicemapping and stores them in storage_dict"""
         for device in b_d_mapping:
             if "Ebs" in device:
                 self.storage_dict[device["Ebs"]["VolumeType"]] += device["Ebs"]["VolumeSize"]
-
 
     def _calculate_transition_time(self, instance, new_state="stopped"):
         """Calculate the  stop time of a given VM instance"""

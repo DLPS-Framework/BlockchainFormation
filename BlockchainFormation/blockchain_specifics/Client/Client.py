@@ -57,7 +57,6 @@ def attach_to_blockchain_conf(config, logger):
     except:
         logger.error("ERROR: Problem loading the given config file")
 
-    # TODO: Make it possible to start the client script multiple times for the same parent experiment
     network_config_file["client settings"] = {
 
         "ips": config["ips"],

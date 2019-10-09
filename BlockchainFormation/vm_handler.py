@@ -24,7 +24,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import sys, os, pprint
+import sys, os
 import getpass
 import pytz
 from dateutil import parser
@@ -62,8 +62,6 @@ class VMHandler:
             self.logger.addHandler(ch)
 
         self.config = config
-
-        self.pprnt = pprint.PrettyPrinter(indent=1)
 
         # no proxy if no proxy user
         # TODO: check if "HTTP_PROXY" not in os.environ is failsafe F
@@ -230,7 +228,6 @@ class VMHandler:
             MaxCount=self.config['vm_count'],
             InstanceType=self.config['instance_type'],
             KeyName=self.config['key_name'],
-            #SubnetId=self.config['subnet_id'],
             BlockDeviceMappings=self.config['storage_settings'],
             UserData=self.user_data,
             TagSpecifications=[
@@ -248,7 +245,6 @@ class VMHandler:
                     ]
                 },
             ],
-            # SecurityGroupIds=self.config['security_group_id'],
              NetworkInterfaces = [
                 {
                     'DeviceIndex': 0,
@@ -496,7 +492,7 @@ class VMHandler:
 
         for index, ip in enumerate(config['ips']):
             if config['public_ip']:
-                #use public ip if exists, else it wont work
+                # use public ip if exists, else it wont work
                 ip = config['pub_ips'][index]
             ssh_clients.append(paramiko.SSHClient())
             ssh_clients[index].set_missing_host_key_policy(paramiko.AutoAddPolicy())

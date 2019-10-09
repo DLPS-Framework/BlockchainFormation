@@ -58,8 +58,6 @@ class ArgParser:
         ArgParser._add_blockchain_subparsers(parser_start)
 
         parser_termination.add_argument('--config', '-c', help='enter path to config file')
-        #parser_termination.add_argument('--proxy_user', '-pu',
-         #                        help='enter q number for proxy ', default=None)
         parser_termination.set_defaults(goal='termination')
 
     @staticmethod
@@ -235,6 +233,7 @@ class ArgParser:
 
     @staticmethod
     def _add_geth_args(parser):
+        # https://github.com/ethereum/go-ethereum/wiki/Command-Line-Options
         parser.add_argument('--chainid', '-ci', help='specify chainID', type=int, default=11)
         parser.add_argument('--period', '-pd', help='specify clique period', type=int, default=5)
         parser.add_argument('--epoch', '-eh', help='specify clique epoch', type=int, default=30000)
@@ -242,7 +241,6 @@ class ArgParser:
         parser.add_argument('--timestamp', '-tp', help='specify timestamp of genesis', default="0x00")
         parser.add_argument('--gaslimit', '-gl', help='specify gasLimit', default="0x2fefd8")
         parser.add_argument('--num_acc', '-na', help='specify number of accounts added to each node', type=int, default=None)
-        # https://github.com/ethereum/go-ethereum/wiki/Command-Line-Options
         parser.add_argument('--cache', help='megabytes of memory allocated to internal caching', type=int, default=1024)
         parser.add_argument('--cache.database', help='percentage of cache memory allowance to use for database io',
                             type=int, default=75)
@@ -319,6 +317,7 @@ class ArgParser:
     def create_config(self, namespace_dict, blockchain_type):
         """
         Crates config for vm handler for a given namespace provided by argpass CLI
+        :param blockchain_type: type of blockchain that should be created
         :param namespace_dict: namespace containing the config informations
         :return: config for vm handler
         """
@@ -585,7 +584,6 @@ if __name__ == '__main__':
             config = argparser.load_config(vars(namespace))
         else:
             config = argparser.create_config(vars(namespace), namespace.blockchain_type)
-
 
         vm_handler = VMHandler(config)
         vm_handler.run_general_startup()
