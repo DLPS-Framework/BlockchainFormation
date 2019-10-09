@@ -74,8 +74,8 @@ class AWSCostCalculator:
             stop_times.append(datetime.datetime.strptime(stop_time, '%Y-%m-%d %H:%M:%S %Z'))
 
         self.logger.info("All instances have now reached stopped status")
-        self.logger.info("Launch Times:" + str(launch_times))
-        self.logger.info("Stop Times:" + str(stop_times))
+        self.logger.info("Launch Times:" + str(x.strftime('%Y-%m-%d %H:%M:%S') for x in launch_times))
+        self.logger.info("Stop Times:" + str(x.strftime('%Y-%m-%d %H:%M:%S') for x in stop_times))
 
         if type(launch_times[0]) is str:
             time_differences = np.subtract(stop_times, [
@@ -88,7 +88,7 @@ class AWSCostCalculator:
 
         time_diff_in_hours = list(map(diff_in_hours, time_differences))
 
-        self.logger.info(time_diff_in_hours)
+        # self.logger.info(time_diff_in_hours)
 
         # dict for all storage 
         self.storage_dict = {
@@ -114,25 +114,26 @@ class AWSCostCalculator:
         # make operation system not hardcoded
         instance_price_per_hour = float(self._get_instance_price(self._get_region_name(self.config['aws_region']), self.config['instance_type'], 'Linux'))
 
-        # For example, let's say that you provision a 2000 GB volume for 12 hours (43,200 seconds) in a 30 day month. In a region that charges $0.10 per GB-month, you would be charged $3.33 for the volume ($0.10 per GB-month * 2000 GB * 43,200 seconds / (86,400 seconds/day * 30 day-month)).
+        # For example, let's say that you provision a 2000 GB volume for 12 hours (43,200 seconds) in a 30 day month.
+        # In a region that charges $0.10 per GB-month, you would be charged $3.33 for the volume ($0.10 per GB-month
+        # * 2000 GB * 43,200 seconds / (86,400 seconds/day * 30 day-month)).
         # source: https://aws.amazon.com/ebs/pricing/?nc1=h_ls
-
         # get price of used storage
         storage_price_per_hour = sum(
             [float(self._get_storage_price(self._get_region_name(self.config['aws_region']), volume_type)) * float(volume_size) / 30 / 24 for
              volume_type, volume_size in self.storage_dict.items()])
 
-        self.logger.info("Instance cost per hour: " + str(instance_price_per_hour))
-        self.logger.info("Storage cost per hour: " + str(storage_price_per_hour))
+        self.logger.info("Instance cost per hour: " + str(np.round(instance_price_per_hour, 4)))
+        self.logger.info("Storage cost per hour: " + str(np.round(storage_price_per_hour, 4)))
 
         # calculate price for each instance and then sum up the prices of all instances up to once total price
         total_instance_cost_until_stop = sum(map(lambda x: x * instance_price_per_hour, time_diff_in_hours))
         total_storage_cost_until_stop = sum(map(lambda x: x * storage_price_per_hour, time_diff_in_hours))
 
-        self.logger.info(f"The total instance cost of {self.config['vm_count']} {self.config['instance_type']} instances running for averagely {np.round(np.mean(time_diff_in_hours),4)} hours was: {total_instance_cost_until_stop} USD.")
-        self.logger.info(f"The total storage  cost of {self.config['vm_count']} {self.storage_dict} storage units running for averagely {np.round(np.mean(time_diff_in_hours),4)} hours was: {total_storage_cost_until_stop} USD.")
+        self.logger.info(f"The total instance cost of {self.config['vm_count']} {self.config['instance_type']} instances running for averagely {np.round(np.mean(time_diff_in_hours),4)} hours was: {np.round(total_instance_cost_until_stop, 4)} USD.")
+        self.logger.info(f"The total storage  cost of {self.config['vm_count']} {self.storage_dict} storage units running for averagely {np.round(np.mean(time_diff_in_hours),4)} hours was: {np.round(total_storage_cost_until_stop, 4)} USD.")
         total_cost_until_stop = total_instance_cost_until_stop + total_storage_cost_until_stop
-        self.logger.info(f"Total Cost: {total_cost_until_stop} USD")
+        self.logger.info(f"Total Cost: {np.round(total_cost_until_stop, 4)} USD")
 
         aws_costs = {
             'instance_type': config['instance_type'],
