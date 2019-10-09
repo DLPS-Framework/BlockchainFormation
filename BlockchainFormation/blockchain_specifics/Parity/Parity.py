@@ -401,7 +401,8 @@ def generate_node_dict(signers, config, unlock=None, reserved_peers= False):
                             'max_peers': 75
                             },
                 'parity': {
-                            'base_path': '/data/parityNetwork', 'chain': '/data/parityNetwork/spec.json'
+                            'base_path': '/data/parityNetwork', 'chain': '/data/parityNetwork/spec.json',
+                            'no_persistent_txqueue': 'true'
                           },
                 'rpc': {
                     'apis': ['web3', 'eth', 'net', 'personal', 'parity', 'parity_set', 'traces', 'rpc', 'parity_accounts'],
@@ -512,6 +513,73 @@ def generate_spec(accounts, config):
                 }
 
     return spec_dict
+
+
+def kill_node(config, ssh_clients, index, logger):
+    """
+
+    :param config:
+    :param ssh_clients:
+    :param index:
+    :param logger:
+    :return:
+    """
+    logger.debug("stopping parity service...")
+    channel = ssh_clients[index].get_transport().open_session()
+    channel.exec_command("sudo service parity stop")
+    channel.exec_command("sudo rm /var/log/parity.log")
+
+
+
+def delete_pool(ssh_clients, index, logger):
+    """
+
+    :param ssh_clients:
+    :param index:
+    :param logger:
+    :return:
+    """
+    # happens on its own since 'no_persistent_txqueue': 'true'
+    pass
+
+
+def revive_node(config, ssh_clients, index, logger):
+    """
+
+    :param config:
+    :param ssh_clients:
+    :param index:
+    :param logger:
+    :return:
+    """
+    restart_count = 0
+    while restart_count < 5:
+        logger.debug(f"restarting parity for the {restart_count}x time...")
+        channel = ssh_clients[index].get_transport().open_session()
+        channel.exec_command("sudo service parity start")
+
+        # Give Geth couple of seconds to start
+        time.sleep(5)
+        # test if restart was successful
+        if config['public_ip']:
+            # use public ip if exists, else it wont work
+            web3_client = Web3(
+                Web3.HTTPProvider(f"http://{config['pub_ips'][index]}:8545", request_kwargs={'timeout': 20}))
+        else:
+            web3_client = Web3(Web3.HTTPProvider(f"http://{config['ips'][index]}:8545", request_kwargs={'timeout': 20}))
+
+        web3_client.middleware_onion.inject(geth_poa_middleware, layer=0)
+
+        if web3_client.eth.blockNumber > 0:
+            logger.info(f"blockNumber is {web3_client.eth.blockNumber}. Restart seems successful.")
+            return True
+        else:
+            kill_node(config, ssh_clients, index, logger)
+            delete_pool(ssh_clients, index, logger)
+
+    logger.error("Restart was NOT successful")
+    return False
+
 
 class Error(Exception):
    """Base class for other exceptions"""

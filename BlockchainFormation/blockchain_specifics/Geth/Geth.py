@@ -360,6 +360,73 @@ def generate_genesis(accounts, config):
     return genesis_dict
 
 
+def kill_node(config, ssh_clients, index, logger):
+    """
+
+    :param config:
+    :param ssh_clients:
+    :param index:
+    :param logger:
+    :return:
+    """
+    logger.debug("stopping geth service...")
+    channel = ssh_clients[index].get_transport().open_session()
+    channel.exec_command("sudo service geth stop")
+    channel.exec_command("sudo rm /var/log/geth.log")
+
+
+def delete_pool(ssh_clients, index, logger):
+    """
+
+    :param ssh_clients:
+    :param index:
+    :param logger:
+    :return:
+    """
+    stdin, stdout, stderr = ssh_clients[index].exec_command("sudo rm /data/gethNetwork/node/geth/transactions.rlp")
+    logger.debug(stdout.readlines())
+    logger.debug(stderr.readlines())
+
+
+def revive_node(config, ssh_clients, index, logger):
+    """
+
+    :param config:
+    :param ssh_clients:
+    :param index:
+    :param logger:
+    :return:
+    """
+
+    restart_count = 0
+    while restart_count < 5:
+        logger.debug(f"restarting geth for the {restart_count}x time...")
+        channel = ssh_clients[index].get_transport().open_session()
+        channel.exec_command("sudo service geth start")
+
+        # Give Geth couple of seconds to start
+        time.sleep(3)
+        # test if restart was successful
+        if config['public_ip']:
+            # use public ip if exists, else it wont work
+            web3_client = Web3(Web3.HTTPProvider(f"http://{config['pub_ips'][index]}:8545", request_kwargs={'timeout': 20}))
+        else:
+            web3_client = Web3(Web3.HTTPProvider(f"http://{config['ips'][index]}:8545", request_kwargs={'timeout': 20}))
+
+        web3_client.middleware_onion.inject(geth_poa_middleware, layer=0)
+
+        if web3_client.eth.blockNumber > 0:
+            logger.info(f"blockNumber is {web3_client.eth.blockNumber}. Restart seems successful.")
+            logger.info(f"TxPool Status: {web3_client.geth.txpool.status()}")
+            return True
+        else:
+            kill_node(config, ssh_clients, index, logger)
+            delete_pool(ssh_clients, index, logger)
+
+    logger.error("Restart was NOT successful")
+    return False
+
+
 def atoi(text):
     return int(text) if text.isdigit() else text
 
