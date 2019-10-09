@@ -8,19 +8,17 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
   export hsname=$(cat /etc/hostname)
   bash -c 'echo 127.0.0.1 localhost $hsname >> /etc/hosts'
 
-  # TODO Open Source: Make BMW specific Proxy work non specific; temp fix -> replace placeholder with string.replace in vm_handler.py
+  # Do not delete the following lines, as it is needed to insert proxy; temp fix -> replace placeholder with string.replace in vm_handler.py
   # PROXY_PLACEHOLDER, DO NOT DELETE!
 
 
-  #this is for going through some of the promts for linux packages
+  #this is for going through some of the prompts for linux packages
   export DEBIAN_FRONTEND=noninteractive
   DEBIAN_FRONTEND=noninteractive apt-get update || apt-get update && apt-get upgrade -y || apt-get upgrade -y || echo "upgrading in base_bootstrap failed" >> /home/ubuntu/upgrade_fail.log
   apt-get dist-upgrade -y || apt-get dist-upgrade -y || echo "dist-upgrading in base_bootstrap failed" >> /home/ubuntu/upgrade_fail.log
-  #apt-get install nginx -y
 
   #Automatic Security Updates
   apt install unattended-upgrades || echo "Upgrading unattended upgrades in base_bootstrap failed" >> /home/ubuntu/upgrade_fail.log
-
   echo "APT::Periodic::Update-Package-Lists "1";
   APT::Periodic::Download-Upgradeable-Packages "1";
   APT::Periodic::AutocleanInterval "7";
