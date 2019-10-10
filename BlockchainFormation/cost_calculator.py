@@ -75,8 +75,8 @@ class AWSCostCalculator:
             stop_times.append(datetime.datetime.strptime(stop_time, '%Y-%m-%d %H:%M:%S %Z'))
 
         self.logger.info("All instances have now reached stopped status")
-        self.logger.info("Launch Times:" + str(x.strftime('%Y-%m-%d %H:%M:%S') for x in launch_times))
-        self.logger.info("Stop Times:" + str(x.strftime('%Y-%m-%d %H:%M:%S') for x in stop_times))
+        self.logger.info("Launch Times:" + str(x.strftime('%Y-%m-%d %H:%M:%S')) for x in launch_times)
+        self.logger.info("Stop Times:" + str(x.strftime('%Y-%m-%d %H:%M:%S')) for x in stop_times)
 
         if type(launch_times[0]) is str:
             time_differences = np.subtract(stop_times, [
