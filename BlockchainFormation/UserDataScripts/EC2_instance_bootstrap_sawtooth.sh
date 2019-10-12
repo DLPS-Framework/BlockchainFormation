@@ -13,8 +13,10 @@
   # Installing all sawtooth repositories
   sudo apt-get update
   sudo apt-get install -y sawtooth
+  sudo apt-get install -y sawtooth-devmode-engine-rust
   sudo apt-get install -y python3-sawtooth-poet-engine
   sudo apt-get install -y python3-sawtooth-identity
+
 
   # Generating keys
   sawtooth keygen

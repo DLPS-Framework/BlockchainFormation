@@ -46,10 +46,11 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
     :return:
     """
 
+    dir_name = os.path.dirname(os.path.realpath(__file__))
+
     # the indices of the blockchain nodes
     config['node_indices'] = list(range(0, config['vm_count']))
 
-    dir_name = os.path.dirname(os.path.realpath(__file__))
 
     logger.info("Creating directories for saving data and logs locally")
     os.mkdir(f"{config['exp_dir']}/sawtooth_logs")
@@ -65,49 +66,82 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
     logger.debug("".join(stdout.readlines()))
     logger.debug("".join(stderr.readlines()))
 
-    logger.debug("Get all the public keys for raft")
-    validator_pub_keys = []
-    string_raft_peers = '['
-    string_pbft_peers = '['
-    for index in range(0, len(config['priv_ips'])):
-        stdin, stdout, stderr = ssh_clients[index].exec_command("cat /etc/sawtooth/keys/validator.pub")
-        key = stdout.readlines()[0].replace("\n", "")
-
-        validator_pub_keys.append(key)
-        if index == 0:
-            string_pbft_peers = string_pbft_peers + f'\"{key}\"'
-
-        elif index == 1:
-            string_pbft_peers = string_pbft_peers + f',\"{key}\"'
-            string_raft_peers = string_raft_peers + f'\"{key}\"'
-
-        else:
-            string_pbft_peers = string_pbft_peers + f',\"{key}\"'
-            string_raft_peers = string_raft_peers + f',\"{key}\"'
-
-    string_pbft_peers = string_pbft_peers + f']'
-    string_raft_peers = string_raft_peers + f']'
-
-
-    logger.info("Doing special config stuff for first node")
-    logger.debug("Creating genesis config on first node")
-
-    logger.debug("Creating config-genesis.batch")
-    stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawset genesis --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/config-genesis.batch")
-    stdout.readlines()
-    stderr.readlines()
-
 
     if config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "DEVMODE":
-        logger.debug("Creating config-consensus.batch for Devmode")
-        stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawset proposal create --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/config-consensus.batch sawtooth.consensus.algorithm.name=Devmode sawtooth.consensus.algorithm.version=0.1")
+
+        stdin, stdout, stderr = ssh_clients[0].exec_command("sawset genesis")
         logger.debug(stdout.readlines())
         logger.debug(stderr.readlines())
 
         logger.debug("Creating genesis block using the just created config.batches")
-        stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawadm genesis /home/sawtooth/temp/config-genesis.batch /home/sawtooth/temp/config-consensus.batch")
+        stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawadm genesis config-genesis.batch")
         logger.debug("".join(stdout.readlines()))
         logger.debug("".join(stderr.readlines()))
+
+        channel = ssh_clients[0].get_transport().open_session()
+        channel.exec_command("screen -dmS validator sudo -u sawtooth sawtooth-validator -vv")
+        channel = ssh_clients[0].get_transport().open_session()
+        channel.exec_command("screen -dmS engine sudo -u sawtooth devmode-engine-rust -vv --connect tcp://localhost:5050")
+        channel = ssh_clients[0].get_transport().open_session()
+        # channel.exec_command(f"sudo -u sawtooth sawtooth-rest-api -v --bind {config['priv_ips'][0]}:8008")
+        channel.exec_command(f"screen -dmS rest sudo -u sawtooth sawtooth-rest-api -v --bind {config['priv_ips'][0]}:8008")
+        channel = ssh_clients[0].get_transport().open_session()
+        channel.exec_command("screen -dmS settings sudo -u sawtooth settings-tp -v")
+        channel = ssh_clients[0].get_transport().open_session()
+        channel.exec_command("screen -dmS intkey sudo -u sawtooth intkey-tp-python -v")
+
+        dir_name = os.path.dirname(os.path.realpath(__file__))
+        logger.debug("Starting BenchContract...")
+        scp_clients[0].put(dir_name + "/processor", "/home/ubuntu", recursive=True)
+        channel = ssh_clients[0].get_transport().open_session()
+        channel.exec_command("python3 /home/ubuntu/processor/main.py > bench.log")
+
+    else:
+
+        logger.debug("Get all the public keys")
+        validator_pub_keys = []
+        string_raft_peers = '['
+        string_pbft_peers = '['
+        for index in range(0, len(config['priv_ips'])):
+            stdin, stdout, stderr = ssh_clients[index].exec_command("cat /etc/sawtooth/keys/validator.pub")
+            key = stdout.readlines()[0].replace("\n", "")
+
+            validator_pub_keys.append(key)
+            if index == 0:
+                string_pbft_peers = string_pbft_peers + f'\"{key}\"'
+
+            elif index == 1:
+                string_pbft_peers = string_pbft_peers + f',\"{key}\"'
+                string_raft_peers = string_raft_peers + f'\"{key}\"'
+
+            else:
+                string_pbft_peers = string_pbft_peers + f',\"{key}\"'
+                string_raft_peers = string_raft_peers + f',\"{key}\"'
+
+        string_pbft_peers = string_pbft_peers + f']'
+        string_raft_peers = string_raft_peers + f']'
+
+        logger.info("Doing special config stuff for first node")
+        logger.debug("Creating genesis config on first node")
+
+        logger.debug("Creating config-genesis.batch")
+        stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawset genesis --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/config-genesis.batch")
+        stdout.readlines()
+        stderr.readlines()
+
+
+    if config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "DEVMODE":
+        pass
+        # logger.debug("Creating config-consensus.batch for Devmode")
+        # stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawset proposal create --key /etc/sawtooth/keys/validator.priv -o /home/sawtooth/temp/config-consensus.batch sawtooth.consensus.algorithm.name=Devmode sawtooth.consensus.algorithm.version=0.1")
+        # stdin, stdout, stderr = ssh_clients[0].exec_command("sawset genesis")
+        # logger.debug(stdout.readlines())
+        # logger.debug(stderr.readlines())
+
+        # logger.debug("Creating genesis block using the just created config.batches")
+        # stdin, stdout, stderr = ssh_clients[0].exec_command("sudo -u sawtooth sawadm genesis config-genesis.batch")
+        # logger.debug("".join(stdout.readlines()))
+        # logger.debug("".join(stderr.readlines()))
 
 
     elif config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "RAFT":
@@ -155,82 +189,85 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
         logger.debug("".join(stdout.readlines()))
         logger.debug("".join(stderr.readlines()))
 
+    if config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() != "DEVMODE":
 
-    logger.info("Adapting config (.toml)-file for validator, starting sawtooth-services and finalizing setup on all nodes")
-    for index1, ip1 in enumerate(config['priv_ips']):
+        logger.info("Adapting config (.toml)-file for validator, starting sawtooth-services and finalizing setup on all nodes")
+        for index1, ip1 in enumerate(config['priv_ips']):
 
-        # Creating string for binding specification and replace substitute_binding
-        binding_string = f'\\"network:tcp://{ip1}:8800\\",'
-        stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_bind#" + binding_string + "#g /home/ubuntu/validator.toml")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
+            # Creating string for binding specification and replace substitute_binding
+            binding_string = f'\\"network:tcp://{ip1}:8800\\",'
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_bind#" + binding_string + "#g /home/ubuntu/validator.toml")
+            logger.debug(stdout.readlines())
+            logger.debug(stderr.readlines())
 
-        # Creating string for endpoint speficifation and replace substitute_endpoint
-        endpoint_string = f'endpoint\ =\ \\"tcp://{ip1}:8800\\"'
-        stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_endpoint#" + endpoint_string + "#g /home/ubuntu/validator.toml")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
+            # Creating string for endpoint speficifation and replace substitute_endpoint
+            endpoint_string = f'endpoint\ =\ \\"tcp://{ip1}:8800\\"'
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_endpoint#" + endpoint_string + "#g /home/ubuntu/validator.toml")
+            logger.debug(stdout.readlines())
+            logger.debug(stderr.readlines())
 
-        if len(config['priv_ips']) == 1:
-            peer_string = "peers\ = "
-        else:
-            # create string for peers
-            logger.debug(f"finalizing setup on node {index1}")
-            peer_string = "peers\ =\ ["
-            for index2, ip2 in enumerate(config['priv_ips']):
-                if index2 != index1:
-                    if peer_string != "peers\ =\ [":
-                        peer_string = peer_string + ",\ "
-                    peer_string = peer_string + f'\\"tcp://{ip2}:8800\\"'
+            if len(config['priv_ips']) == 1:
+                ip = config['priv_ips'][0]
+                peer_string = 'peers\ =\ [\\"tcp://{ip}\\"]'
+            else:
+                # create string for peers
+                logger.debug(f"finalizing setup on node {index1}")
+                peer_string = "peers\ =\ ["
+                for index2, ip2 in enumerate(config['priv_ips']):
+                    if index2 != index1:
+                        if peer_string != "peers\ =\ [":
+                            peer_string = peer_string + ",\ "
+                        peer_string = peer_string + f'\\"tcp://{ip2}:8800\\"'
 
-            peer_string = peer_string + "]"
+                peer_string = peer_string + "]"
 
-        stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_peers#" + peer_string + "#g /home/ubuntu/validator.toml")
-        logger.debug("".join(stdout.readlines()))
-        logger.debug("".join(stderr.readlines()))
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_peers#" + peer_string + "#g /home/ubuntu/validator.toml")
+            logger.debug("".join(stdout.readlines()))
+            logger.debug("".join(stderr.readlines()))
 
-        logger.debug("Adjusting minimum and maximum peer connectivity")
-        min_connectivity_string = f"{len(config['priv_ips']) - 1}"
-        max_connectivity_string = f"{2 * (len(config['priv_ips']) - 1)}"
-        stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_min_connectivity#" + min_connectivity_string + "#g /home/ubuntu/validator.toml")
-        stdout.readlines()
+            logger.debug("Adjusting minimum and maximum peer connectivity")
+            min_connectivity_string = f"{len(config['priv_ips']) - 1}"
+            max_connectivity_string = f"{2 * (len(config['priv_ips']) - 1)}"
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_min_connectivity#" + min_connectivity_string + "#g /home/ubuntu/validator.toml")
+            stdout.readlines()
 
-        stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_max_connectivity#" + max_connectivity_string + "#g /home/ubuntu/validator.toml")
-        stdout.readlines()
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_max_connectivity#" + max_connectivity_string + "#g /home/ubuntu/validator.toml")
+            stdout.readlines()
 
-        logger.debug("adjusting REST-API config")
-        stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_local_private_ip#" + ip1 + "#g /home/ubuntu/rest_api.toml")
-        stdout.readlines()
+            logger.debug("adjusting REST-API config")
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_local_private_ip#" + ip1 + "#g /home/ubuntu/rest_api.toml")
+            stdout.readlines()
 
-        logger.debug("Replacing the configs in /etc/sawtooth by the customized configs")
-        stdin, stdout, stderr = ssh_clients[index1].exec_command("sudo mv /home/ubuntu/validator.toml /etc/sawtooth/validator.toml")
-        stdout.readlines()
+            logger.debug("Replacing the configs in /etc/sawtooth by the customized configs")
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sudo mv /home/ubuntu/validator.toml /etc/sawtooth/validator.toml")
+            stdout.readlines()
 
-        stdin, stdout, stderr = ssh_clients[index1].exec_command("sudo mv /home/ubuntu/rest_api.toml /etc/sawtooth/rest_api.toml")
-        stdout.readlines()
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sudo mv /home/ubuntu/rest_api.toml /etc/sawtooth/rest_api.toml")
+            stdout.readlines()
 
-        stdin, stdout, stderr = ssh_clients[index1].exec_command("sudo mv /home/ubuntu/cli.toml /etc/sawtooth/cli.toml")
-        stdout.readlines()
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sudo mv /home/ubuntu/cli.toml /etc/sawtooth/cli.toml")
+            stdout.readlines()
 
-        logger.debug("Starting all services")
-        channel = ssh_clients[index1].get_transport().open_session()
-        channel.exec_command("sudo systemctl start sawtooth-rest-api.service")
+            logger.debug("Starting all services")
+            channel = ssh_clients[index1].get_transport().open_session()
+            channel.exec_command("sudo systemctl start sawtooth-rest-api.service")
 
-        channel = ssh_clients[index1].get_transport().open_session()
-        channel.exec_command("sudo systemctl start sawtooth-validator.service")
+            channel = ssh_clients[index1].get_transport().open_session()
+            channel.exec_command("sudo systemctl start sawtooth-validator.service")
 
-        channel = ssh_clients[index1].get_transport().open_session()
-        channel.exec_command("sudo systemctl start sawtooth-settings-tp.service")
+            channel = ssh_clients[index1].get_transport().open_session()
+            channel.exec_command("sudo systemctl start sawtooth-settings-tp.service")
 
-        channel = ssh_clients[index1].get_transport().open_session()
-        channel.exec_command("sudo systemctl start sawtooth-identity-tp.service")
+            channel = ssh_clients[index1].get_transport().open_session()
+            channel.exec_command("sudo systemctl start sawtooth-identity-tp.service")
 
-        channel = ssh_clients[index1].get_transport().open_session()
-        channel.exec_command("sudo systemctl start sawtooth-intkey-tp-python.service")
+            channel = ssh_clients[index1].get_transport().open_session()
+            channel.exec_command("sudo systemctl start sawtooth-intkey-tp-python.service")
 
         if config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "DEVMODE":
-            channel = ssh_clients[index1].get_transport().open_session()
-            channel.exec_command("systemctl status sawtooth-devmode-engine-rust.service ")
+            pass
+            # channel = ssh_clients[index1].get_transport().open_session()
+            # channel.exec_command("systemctl start sawtooth-devmode-engine-rust.service")
 
         elif config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "POET":
 
@@ -252,49 +289,53 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info("Waiting for 10s until all nodes have started")
 
-    # TODO wait until all peers are in list instead of hard-coded network
     time.sleep(10)
-    logger.info("All nodes have started")
-    logger.info("Checking whether setup has been successful by searching for every peer in sawtooth peer list")
+    if config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "DEVMODE":
+        boo1 = True
 
-    boo1 = True
-    for index, ip in enumerate(config['ips']):
+    else:
 
-        stdin, stdout, stderr = ssh_clients[index].exec_command(f"sawtooth peer list --url http://{config['priv_ips'][index]}:8008")
-        out = stdout.readlines()
-        try:
-            peer_list = set(out[0].replace("\n", "").split(","))
-            if len(peer_list) != len(config['priv_ips'])-1:
+        logger.info("All nodes have started")
+        logger.info("Checking whether setup has been successful by searching for every peer in sawtooth peer list")
+
+        boo1 = True
+        for index, ip in enumerate(config['ips']):
+
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"sawtooth peer list --url http://{config['priv_ips'][index]}:8008")
+            out = stdout.readlines()
+            try:
+                peer_list = set(out[0].replace("\n", "").split(","))
+                if len(peer_list) != len(config['priv_ips'])-1:
+                    boo1 = False
+                    logger.info(f"Node {index} on IP {ip} has not started properly")
+
+            except:
+                logger.info(f"Something went wrong - sawtooth peer list not working")
                 boo1 = False
-                logger.info(f"Node {index} on IP {ip} has not started properly")
 
-        except:
-            logger.info(f"Something went wrong - sawtooth peer list not working")
-            boo1 = False
+        if boo1 == True:
+                logger.info(f"All nodes seem to have started properly")
 
-    if boo1 == True:
-            logger.info(f"All nodes seem to have started properly")
-
-    logger.info("Getting the right consensus mechanism")
-    if config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "RAFT":
-        logger.debug("switching to raft")
-        stdin, stdout, stderr = ssh_clients[0].exec_command(f'sudo sawset proposal create --url http://{config["priv_ips"][0]}:8008 --key /etc/sawtooth/keys/validator.priv sawtooth.consensus.algorithm.name=raft sawtooth.consensus.raft.peers={string_raft_peers}')
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
-
-    logger.info("Adapting the sawtooth specific properties such as consensus algorithm, block time, ...")
-    for key in config["sawtooth_settings"]:
-        if key != "sawtooth.consensus.algorithm.name":
-            stdin, stdout, stderr = ssh_clients[0].exec_command(f"sudo sawset proposal create --url http://{config['priv_ips'][0]}:8008 --key /etc/sawtooth/keys/validator.priv {key}={config['sawtooth_settings'][key]}")
+        logger.info("Getting the right consensus mechanism")
+        if config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "RAFT":
+            logger.debug("switching to raft")
+            stdin, stdout, stderr = ssh_clients[0].exec_command(f'sudo sawset proposal create --url http://{config["priv_ips"][0]}:8008 --key /etc/sawtooth/keys/validator.priv sawtooth.consensus.algorithm.name=raft sawtooth.consensus.raft.peers={string_raft_peers}')
             logger.debug(stdout.readlines())
             logger.debug(stderr.readlines())
 
-    logger.debug("Waiting....")
-    time.sleep(10)
-    logger.info("Checking whether these proposals have been adopted")
-    stdin, stdout, stderr = ssh_clients[-1].exec_command(f"sawtooth settings list --url http://{config['priv_ips'][-1]}:8008")
-    logger.debug("".join(stdout.readlines()))
-    logger.debug("".join(stderr.readlines()))
+        logger.info("Adapting the sawtooth specific properties such as consensus algorithm, block time, ...")
+        for key in config["sawtooth_settings"]:
+            if key != "sawtooth.consensus.algorithm.name":
+                stdin, stdout, stderr = ssh_clients[0].exec_command(f"sudo sawset proposal create --url http://{config['priv_ips'][0]}:8008 --key /etc/sawtooth/keys/validator.priv {key}={config['sawtooth_settings'][key]}")
+                logger.debug(stdout.readlines())
+                logger.debug(stderr.readlines())
+
+        logger.debug("Waiting....")
+        time.sleep(10)
+        logger.info("Checking whether these proposals have been adopted")
+        stdin, stdout, stderr = ssh_clients[-1].exec_command(f"sawtooth settings list --url http://{config['priv_ips'][-1]}:8008")
+        logger.debug("".join(stdout.readlines()))
+        logger.debug("".join(stderr.readlines()))
 
 
     logger.info("Checking whether intkey is working on every peer by making one set operation and reading on all nodes")

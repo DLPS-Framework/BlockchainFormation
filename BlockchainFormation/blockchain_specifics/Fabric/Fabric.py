@@ -368,6 +368,7 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
             string_database_base = string_database_base + f" --network='{my_net}' --name couchdb{peer}.org{org} -p 5984:5984"
             string_database_base = string_database_base + f" -e COUCHDB_USER= -e COUCHDB_PASSWORD="
             string_database_base = string_database_base + f" -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE={my_net}"
+            string_database_base = string_database_base + f" -e =10000"
 
             # Starting the couchdbs
             logger.debug(f" - Starting database couchdb{peer}.org{org} on {ip}")
