@@ -239,9 +239,10 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
     for index, ip in enumerate(config['priv_ips']):
 
         if index == 0:
-            logger.info(f" --> Starting node {index} and wait for 5s until it is running")
+            logger.info(f" --> Starting node {index} and waiting for 5s until it is running")
             channel = ssh_clients[index].get_transport().open_session()
             channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --maxpeers {config['vm_count']} --raftport 50000 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip}{string_geth_settings} >>node.log 2>&1")
+            stdin, stdout, stderr = ssh_clients[0].exec_command(f"echo '#/bin/bash\nPRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --maxpeers {config['vm_count']} --raftport 50000 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip}{string_geth_settings} >>node.log 2>&1\n' >> start_geth.sh")
             time.sleep(5)
 
         else:
@@ -255,6 +256,8 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
 
             channel = ssh_clients[index].get_transport().open_session()
             channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --maxpeers {config['vm_count']} --raftport 50000 --raftjoinexisting {raftID} --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip}{string_geth_settings} >>node.log 2>&1")
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"echo '#/bin/bash\nPRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --maxpeers {config['vm_count']} --raftport 50000 --raftjoinexisting {raftID} --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{ip}{string_geth_settings} >>node.log 2>&1\n' >> start_geth.sh")
+
 
     boo = wait_till_done(config, ssh_clients, config['ips'], 60, 10, '/home/ubuntu/nodes/new-node-1/geth.ipc', False, 10, logger)
     if boo == False:
@@ -281,8 +284,8 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
                     nr = int(out[0].replace("\n", ""))
                     if nr == len(config['priv_ips']) - 1:
                         boo = False
-                        logger.info(f"Node {index} on IP {ip} is fully connected")
                         status_flags[index] = True
+                        logger.info(f"Node {index} on IP {ip} is fully connected")
                     else:
                         logger.info(f"Node {index} on IP {ip} is not yet fully connected (expected: {len(config['priv_ips']) - 1}, actual: {nr} ")
                 except Exception as e:
@@ -291,10 +294,17 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
 
     if (False in status_flags):
         try:
-            logger.error(f"Failed Quorum nodes: {[config['priv_ips'][x] for x in np.where(status_flags != True)]}")
+            logger.error(f"Failed Quorum nodes: {[config['priv_ips'][x] for x in np.where(status_flags != True)[0]]}")
         except:
             pass
         logger.error('Quorum network start was not successful')
+        logger.info("Trying to revive the failed nodes")
+        for x in np.where(status_flags == False)[0]:
+            kill_node(config, ssh_clients, x, logger)
+            delete_pool(ssh_clients, x, logger)
+            status_flags[x] = revive_node(config, ssh_clients, x, logger)
+
+    if (False in status_flags):
         raise Exception("Blockchain did not start properly - Omitting or repeating")
 
 
@@ -338,13 +348,21 @@ def start_quorum_nodes(config, ssh_clients, scp_clients, logger):
     if boo == True:
         logger.info("All logs successfully stored")
 
+    # logger.info("Success")
+    # logger.info("Shutting down each node and restarting it afterwars")
+    # for node, _ in enumerate(config['priv_ips']):
+        # kill_node(config, ssh_clients, node, logger)
+        # delete_pool(ssh_clients, node, logger)
+        # revive_node(config, ssh_clients, node, logger)
 
 """
 
 methods in development - necessary for more compact stdout logging resp. node killing and reviving in case the network breaks down
 not prioritized since full setup is okay, does not take too long and time is sparse
 
-def kill_node(ssh_clients, index, logger):
+"""
+
+def kill_node(config, ssh_clients, index, logger):
     # stdin, stdout, stderr = ssh_clients[index].exec_command("pidof java")
     # pid = stdout.readlines()[0].replace("\n", "")
     # stdin, stdout, stderr = ssh_clients.exec_command(f"kill {pid}")
@@ -352,10 +370,91 @@ def kill_node(ssh_clients, index, logger):
     stdin, stdout, stderr = ssh_clients[index].exec_command("pidof geth")
     pid = stdout.readlines()[0].replace("\n", "")
     logger.debug(f"geth pid: {pid}")
-    stdin, stdout, stderr = ssh_clients[index].exec_comand(f"kill {pid}")
+    stdin, stdout, stderr = ssh_clients[index].exec_command(f"kill {pid}")
+    logger.debug(stdout.readlines())
+    logger.debug(stdout.readlines())
+    logger.info("Testing whether the node is disconnected")
+    status_flags = []
+    for index2, ip in enumerate(config['ips']):
+        if index2 != index:
+            stdin, stdout, stderr = ssh_clients[index].exec_command("geth --exec " + '\"' + "admin.peers.length" + '\"' + " attach /home/ubuntu/nodes/new-node-1/geth.ipc")
+            out = stdout.readlines()
+            try:
+                nr = int(out[0].replace("\n", ""))
+                if nr == len(config['priv_ips']) - 2:
+                    boo = False
+                    logger.info(f"Node {index} on IP {ip} is fully connected")
+                    status_flags[index] = True
+                else:
+                    logger.info(f"Node {index} on IP {ip} is not yet fully connected (expected: {len(config['priv_ips']) - 1}, actual: {nr} ")
+            except Exception as e:
+                logger.debug(f"Node {index} might not have started at all - retrying though")
+                logger.debug(str(Exception))
+
+    if (False in status_flags):
+        try:
+            logger.error(f"Failed Quorum nodes: {[config['priv_ips'][x] for x in np.where(status_flags != True)]}")
+        except:
+            pass
+        logger.error('Quorum node shutdown was successful')
+
+def delete_pool(ssh_clients, index, logger):
+    stdin, stdout, stderr = ssh_clients[index].exec_command("rm /home/ubuntu/nodes/new-node-1/geth/transactions.rlp")
+    logger.debug(stdout.readlines())
+    logger.debug(stderr.readlines())
 
 def revive_node(config, ssh_clients, index, logger):
-    pass
+    logger.debug("restarting geth...")
+    channel = ssh_clients[index].get_transport().open_session()
+    channel.exec_command("bash start_geth.sh")
+    logger.info("Testing whether the system is fully connected")
+    status_flags = np.zeros(config['vm_count'], dtype=bool)
+    timer = 0
+    while (False in status_flags and timer < 3):
+        time.sleep(10)
+        timer += 1
+        logger.info(
+            f" --> Waited {timer * 10} seconds so far, {30 - timer * 10} seconds left before abort (it usually takes around 10 seconds)")
+        for index, ip in enumerate(config['ips']):
+
+            if (status_flags[index] == False):
+                try:
+                    stdin, stdout, stderr = ssh_clients[index].exec_command("geth --exec " + '\"' + "admin.peers.length" + '\"' + " attach /home/ubuntu/nodes/new-node-1/geth.ipc")
+                    out = stdout.readlines()
+                except Exception as e:
+                    logger.debug("Geth exec failing...")
+                    logger.debug(str(e))
+                try:
+                    nr = int(out[0].replace("\n", ""))
+                    if nr == len(config['priv_ips']) - 1:
+                        boo = False
+                        logger.info(f"Node {index} on IP {ip} is fully connected")
+                        status_flags[index] = True
+                    else:
+                        logger.info(f"Node {index} on IP {ip} is not yet fully connected (expected: {len(config['priv_ips']) - 1}, actual: {nr} ")
+                except Exception as e:
+                    logger.debug(f"Node {index} might not have started at all - retrying though")
+                    logger.debug(str(Exception))
+
+    if (False in status_flags):
+        try:
+            logger.error(f"Failed Quorum nodes: {[config['priv_ips'][x] for x in np.where(status_flags != True)]}")
+        except:
+            pass
+        logger.error('Quorum network start was not successful')
+        return False
+
+    logger.debug("Unlocking node")
+    stdin, stdout, stderr = ssh_clients[index].exec_command("geth --exec eth.accounts attach /home/ubuntu/nodes/new-node-1/geth.ipc")
+    out = stdout.readlines()
+    sender = out[0].replace("\n", "").replace("[", "").replace("]", "")
+    stdin, stdout, stderr = ssh_clients[index].exec_command("geth --exec " + "\'" + f"personal.unlockAccount({sender}, " + '\"' + "user" + '\"' + ", 0)" + "\'" + " attach /home/ubuntu/nodes/new-node-1/geth.ipc")
+    out = stdout.readlines()
+    if out[0].replace("\n", "") != "true":
+        logger.info(f"Something went wrong on unlocking on node {index} on IP {ip}")
+
+    return True
+
 
 def log_outs(stdout, stderr, logger):
     out0 = stdout.readlines()
@@ -364,5 +463,3 @@ def log_outs(stdout, stderr, logger):
         logger.debug(f"{out1[1]}")
     except:
         pass
-
-"""

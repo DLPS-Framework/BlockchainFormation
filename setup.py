@@ -27,11 +27,6 @@
 import setuptools
 import glob
 
-
-#with open("README.MD", "r") as fh:
- #   long_description = fh.read()
-#print(setuptools.find_packages())
-
 # source: https://github.com/pminkov/kubeutils
 
 setuptools.setup(
@@ -43,7 +38,6 @@ setuptools.setup(
     license="Apache License 2.0",
     #long_description=long_description,
     #long_description_content_type="text/markdown",
-    #url="https://atc.bmwgroup.net/bitbucket/projects/BLOCKCHAIN/repos/blockchainformation/",
     include_package_data=True,
     packages=setuptools.find_packages(),
     #scripts=glob.glob("BlockchainFormation/UserDataScripts"), #/*.sh

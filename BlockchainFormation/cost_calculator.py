@@ -30,9 +30,11 @@ from pkg_resources import resource_filename
 import logging
 from BlockchainFormation.utils.utils import *
 
+
 class AWSCostCalculator:
     """
-    Class responsible for calculating the aws costs caused by one or more aws instances during their uptime, including attached ebs storage.
+    Class responsible for calculating the aws costs caused by one or more aws instances during their uptime,
+     including attached ebs storage.
     """
     # TODO: Check if Calculation is correct (30 days vs. 31 days question)
     def __init__(self, session):
@@ -63,7 +65,6 @@ class AWSCostCalculator:
         ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
         self.ec2_instances = [ec2.Instance(instance_id) for instance_id in self.config['instance_ids']]
 
-
         launch_times = self.config['launch_times']
 
         stop_times = []
@@ -75,7 +76,7 @@ class AWSCostCalculator:
 
         self.logger.info("All instances have now reached stopped status")
         self.logger.info("Launch Times:" + str(launch_times))
-        self.logger.info("Stop Times:" + str(stop_times))
+        self.logger.info("Stop Times:" + str([x.strftime('%Y-%m-%d %H:%M:%S') for x in stop_times]))
 
         if type(launch_times[0]) is str:
             time_differences = np.subtract(stop_times, [
@@ -88,7 +89,7 @@ class AWSCostCalculator:
 
         time_diff_in_hours = list(map(diff_in_hours, time_differences))
 
-        self.logger.info(time_diff_in_hours)
+        # self.logger.info(time_diff_in_hours)
 
         # dict for all storage 
         self.storage_dict = {
@@ -109,30 +110,30 @@ class AWSCostCalculator:
         # Use AWS Pricing API at eu-central-1
         # 'eu-central-1' not working -> Pricing the same ? 
 
-
         # Get current price for a given instance, region and os
         # make operation system not hardcoded
         instance_price_per_hour = float(self._get_instance_price(self._get_region_name(self.config['aws_region']), self.config['instance_type'], 'Linux'))
 
-        # For example, let's say that you provision a 2000 GB volume for 12 hours (43,200 seconds) in a 30 day month. In a region that charges $0.10 per GB-month, you would be charged $3.33 for the volume ($0.10 per GB-month * 2000 GB * 43,200 seconds / (86,400 seconds/day * 30 day-month)).
+        # For example, let's say that you provision a 2000 GB volume for 12 hours (43,200 seconds) in a 30 day month.
+        # In a region that charges $0.10 per GB-month, you would be charged $3.33 for the volume ($0.10 per GB-month
+        # * 2000 GB * 43,200 seconds / (86,400 seconds/day * 30 day-month)).
         # source: https://aws.amazon.com/ebs/pricing/?nc1=h_ls
-
         # get price of used storage
         storage_price_per_hour = sum(
             [float(self._get_storage_price(self._get_region_name(self.config['aws_region']), volume_type)) * float(volume_size) / 30 / 24 for
              volume_type, volume_size in self.storage_dict.items()])
 
-        self.logger.info("Instance cost per hour: " + str(instance_price_per_hour))
-        self.logger.info("Storage cost per hour: " + str(storage_price_per_hour))
+        self.logger.info("Instance cost per hour: " + str(np.round(instance_price_per_hour, 4)))
+        self.logger.info("Storage cost per hour: " + str(np.round(storage_price_per_hour, 4)))
 
         # calculate price for each instance and then sum up the prices of all instances up to once total price
         total_instance_cost_until_stop = sum(map(lambda x: x * instance_price_per_hour, time_diff_in_hours))
         total_storage_cost_until_stop = sum(map(lambda x: x * storage_price_per_hour, time_diff_in_hours))
 
-        self.logger.info(f"The total instance cost of {self.config['vm_count']} {self.config['instance_type']} instances running for averagely {np.round(np.mean(time_diff_in_hours),4)} hours was: {total_instance_cost_until_stop} USD.")
-        self.logger.info(f"The total storage  cost of {self.config['vm_count']} {self.storage_dict} storage units running for averagely {np.round(np.mean(time_diff_in_hours),4)} hours was: {total_storage_cost_until_stop} USD.")
+        self.logger.info(f"The total instance cost of {self.config['vm_count']} {self.config['instance_type']} instances running for averagely {np.round(np.mean(time_diff_in_hours),4)} hours was: {np.round(total_instance_cost_until_stop, 4)} USD.")
+        self.logger.info(f"The total storage  cost of {self.config['vm_count']} {self.storage_dict} storage units running for averagely {np.round(np.mean(time_diff_in_hours),4)} hours was: {np.round(total_storage_cost_until_stop, 4)} USD.")
         total_cost_until_stop = total_instance_cost_until_stop + total_storage_cost_until_stop
-        self.logger.info(f"Total Cost: {total_cost_until_stop} USD")
+        self.logger.info(f"Total Cost: {np.round(total_cost_until_stop, 4)} USD")
 
         aws_costs = {
             'instance_type': config['instance_type'],
@@ -149,7 +150,6 @@ class AWSCostCalculator:
 
         with open(f"{self.config['exp_dir']}/aws_costs.json", 'w') as outfile:
             json.dump(aws_costs, outfile, default=datetimeconverter)
-
 
     def _get_instance_price(self, region, instance, osys):
         """
@@ -170,7 +170,6 @@ class AWSCostCalculator:
         id1 = list(od)[0]
         id2 = list(od[id1]['priceDimensions'])[0]
         return od[id1]['priceDimensions'][id2]['pricePerUnit']['USD']
-
 
     def _get_storage_price(self, region, volume_type):
         """
@@ -196,7 +195,6 @@ class AWSCostCalculator:
         id2 = list(od[id1]['priceDimensions'])[0]
         return od[id1]['priceDimensions'][id2]['pricePerUnit']['USD']
 
-
     def _get_region_name(self, region_code):
         """get region name for given region code"""
         default_region = 'EU (Frankfurt)'
@@ -208,13 +206,11 @@ class AWSCostCalculator:
         except IOError:
             return default_region
 
-
     def _extract_ebs_storage_from_blockdevicemapping(self, b_d_mapping):
         """Extracts all ebs storage from a blockdevicemapping and stores them in storage_dict"""
         for device in b_d_mapping:
             if "Ebs" in device:
                 self.storage_dict[device["Ebs"]["VolumeType"]] += device["Ebs"]["VolumeSize"]
-
 
     def _calculate_transition_time(self, instance, new_state="stopped"):
         """Calculate the  stop time of a given VM instance"""

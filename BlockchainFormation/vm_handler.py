@@ -24,7 +24,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import sys, os, pprint
+import sys, os
 import getpass
 import pytz
 from dateutil import parser
@@ -63,10 +63,6 @@ class VMHandler:
 
         self.config = config
 
-        self.pprnt = pprint.PrettyPrinter(indent=1)
-
-
-
         # no proxy if no proxy user
         # TODO: check if "HTTP_PROXY" not in os.environ is failsafe F
         if self.config['proxy'] is not None and "HTTP_PROXY" not in os.environ:
@@ -96,7 +92,8 @@ class VMHandler:
 
 
     def create_user_data(self):
-        """creates the user data script depending on experiment type. The user data is built out of base script and specific script depending on experiment type"""
+        """creates the user data script depending on experiment type. The user data is built out of base script and
+        specific script depending on experiment type"""
 
         dir_name = os.path.dirname(os.path.realpath(__file__))
 
@@ -122,7 +119,6 @@ class VMHandler:
                               f"  bash -c \"sudo echo no_proxy=$NO_PROXY >> /etc/profile.d/environment_mods.sh\"\n"
 
             user_data_base = user_data_base.replace("  # PROXY_PLACEHOLDER, DO NOT DELETE!", proxy_user_data)
-
 
         # If blockchain type is base, no specific startup script is needed
         if self.config['blockchain_type'] == 'base':
@@ -219,7 +215,6 @@ class VMHandler:
                 self.logger.info(f"Setting vm_count to {count}")
                 self.config['vm_count'] = count
 
-
         ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
         image = ec2.Image(self.config['image']['image_id'])
 
@@ -233,7 +228,6 @@ class VMHandler:
             MaxCount=self.config['vm_count'],
             InstanceType=self.config['instance_type'],
             KeyName=self.config['key_name'],
-            #SubnetId=self.config['subnet_id'],
             BlockDeviceMappings=self.config['storage_settings'],
             UserData=self.user_data,
             TagSpecifications=[
@@ -251,7 +245,6 @@ class VMHandler:
                     ]
                 },
             ],
-            #SecurityGroupIds=self.config['security_group_id'],
              NetworkInterfaces = [
                 {
                     'DeviceIndex': 0,
@@ -316,9 +309,8 @@ class VMHandler:
             # get launch time
             self.launch_times.append(i.launch_time.replace(tzinfo=None))
 
-        #create experiment directory structure
+        # create experiment directory structure
         self.config['launch_times'] = self.launch_times
-        #path = os.getcwd()
         self.config['exp_dir'] = f"{self.config['exp_dir']}/experiments/exp_{st}_{self.config['blockchain_type']}"
 
         try:
@@ -343,7 +335,7 @@ class VMHandler:
         self.logger.info("Waiting for all VMs to finish the userData setup...")
 
         # Wait until user Data is finished
-        if (wait_till_done(self.config, ssh_clients, self.config['ips'], 30*60, 60, "/var/log/user_data_success.log", False, 10*60, self.logger) is False):
+        if wait_till_done(self.config, ssh_clients, self.config['ips'], 30*60, 60, "/var/log/user_data_success.log", False, 10*60, self.logger) is False:
             self.logger.error('Boot up NOT successful')
 
 
@@ -362,8 +354,6 @@ class VMHandler:
             ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
 
             self._run_specific_startup(ssh_clients, scp_clients)
-
-
 
             if 'load_balancer_settings' in self.config and 'add_loadbalancer' in self.config['load_balancer_settings']:
                 # Load Balancer
@@ -421,7 +411,6 @@ class VMHandler:
          Stops and terminates all VMs and calculates causes aws costs.
         :return:
         """
-        #TODO: enable stopping and not only termination
         if self.config['proxy'] is not None:
             os.environ["NO_PROXY"] = f"localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net,{','.join(str(ip) for ip in self.config['ips'])}"
 
@@ -459,7 +448,6 @@ class VMHandler:
         for instance in ec2_instances:
             instance.terminate()
 
-
         self.logger.info("All instances terminated -  script is finished")
 
     def _run_specific_shutdown(self, ssh_clients, scp_clients):
@@ -495,7 +483,6 @@ class VMHandler:
     def create_ssh_scp_clients(config):
         """
         Creates ssh/scp connection to aws VMs
-
         :param config:
         :return: array of scp and ssh clients
         """
@@ -505,7 +492,7 @@ class VMHandler:
 
         for index, ip in enumerate(config['ips']):
             if config['public_ip']:
-                #use public ip if exists, else it wont work
+                # use public ip if exists, else it wont work
                 ip = config['pub_ips'][index]
             ssh_clients.append(paramiko.SSHClient())
             ssh_clients[index].set_missing_host_key_policy(paramiko.AutoAddPolicy())

@@ -58,7 +58,6 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 export.sh
 
 # PyInstaller
@@ -163,3 +162,5 @@ dmypy.json
 
 experiments/*
 BlockchainFormation/experiments/*
+BlockchainFormation/example_config_files/*
+BlockchainFormation/export.sh

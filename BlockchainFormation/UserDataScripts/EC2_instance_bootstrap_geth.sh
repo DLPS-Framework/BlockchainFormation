@@ -37,42 +37,6 @@ EOF
   chown -R ubuntu /data/gethNetwork/node/keystore/ 
   chown -R ubuntu /data/gethNetwork 
   chown -R ubuntu /etc/systemd/system/ 
-   
-  #Geth service setup 
-  #https://github.com/bas-vk/config/blob/master/geth-systemd-service.md 
-  #https://gist.github.com/xiaoping378/4eabb1915ec2b64a06e5b7d996bb8214 
-  #--unlock $FORMATTED_ACC_ID 
-  #--unlock $FORMATTED_ACC_ID --password /data/gethNetwork/password.txt --mine 
-  IP=$( hostname -I ) 
-  #bash -c  "sudo printf '%s\n' '[Unit]' 'Description=Ethereum go client' '[Service]' 'Type=simple' 'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 --port 30310 --rpc --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool --nat=extip:$IP  --syncmode full --mine ' 'StandardOutput=file:/var/log/geth.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/geth.service" 
-  #systemctl --user enable geth.service 
-   
-  #add log rotate 
-   
-  # ======= DOCKER Configs ========== 
- 
-  #bash -c "wget https://download.docker.com/linux/ubuntu/gpg" 
-  #bash -c "sudo apt-key add gpg" 
-  ##sudo add-apt-repository  "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" 
-  ##bash -c "apt update" 
-  #add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable" 
-  #apt update 
- 
-  #apt-get install docker-ce -y 
- 
-  ##sudo apt-get install docker-ce docker-ce-cli containerd.io 
- 
-  #mkdir /etc/systemd/system/docker.service.d 
-  #touch /etc/systemd/system/docker.service.d/no_proxy.conf 
-  #touch /etc/systemd/system/docker.service.d/http_proxy.conf 
-  #touch /etc/systemd/system/docker.service.d/https_proxy.conf 
- 
-  #bash -c "printf '[Service]\nEnvironment=\"no_proxy=%s$NO_PROXY\"' >> /etc/systemd/system/docker.service.d/no_proxy.conf" 
-  #bash -c "printf '[Service]\nEnvironment=\"http_proxy=%s$HTTP_PROXY\"' >> /etc/systemd/system/docker.service.d/http_proxy.conf" 
-  #bash -c "printf '[Service]\nEnvironment=\"https_proxy=%s$HTTP_PROXY\"' >> /etc/systemd/system/docker.service.d/https_proxy.conf" 
- 
-  #systemctl daemon-reload 
-  #service docker restart 
 
    
   # =======  Create success indicator at end of this script ========== 
