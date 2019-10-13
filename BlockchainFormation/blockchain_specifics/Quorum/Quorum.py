@@ -202,6 +202,7 @@ def start_network(config, ssh_clients, logger):
         if index == 0:
 
             start_node(config, ssh_clients, index, logger)
+            time.sleep(5)
 
         else:
 
