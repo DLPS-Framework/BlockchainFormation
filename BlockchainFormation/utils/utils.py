@@ -119,15 +119,7 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
                     # logger.exception(e)
                     logger.debug(f"   --> not yet ready on {ip}")
 
-
-    if (False in status_flags):
-        try:
-            logger.error(f"Failed VMs: {[ips[x] for x in np.where(status_flags != True)]}")
-        except:
-            pass
-        return False
-    else:
-        return True
+    return status_flags
 
 def datetimeconverter(o):
     """Converter to make datetime objects json dumpable"""

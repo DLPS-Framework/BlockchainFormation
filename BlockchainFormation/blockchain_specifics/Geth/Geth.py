@@ -360,6 +360,28 @@ def generate_genesis(accounts, config):
     return genesis_dict
 
 
+def restart_network(config, ssh_clients, logger):
+    """
+    Restarts the services of all networks and cleans the transaction pools
+    :param config:
+    :param ssh_clients:
+    :param index:
+    :param logger:
+    :return:
+    """
+
+    # first stop all nodes
+    for index, client in enumerate(ssh_clients):
+        kill_node(config, ssh_clients, index, logger)
+        delete_pool(ssh_clients, index, logger)
+
+    # second start all nodes again
+    for index, client in enumerate(ssh_clients):
+        revive_node(config, ssh_clients, index, logger)
+
+    logger.debug("All nodes should now be restarted")
+
+
 def kill_node(config, ssh_clients, index, logger):
     """
 

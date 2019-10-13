@@ -335,7 +335,7 @@ class VMHandler:
         self.logger.info("Waiting for all VMs to finish the userData setup...")
 
         # Wait until user Data is finished
-        if wait_till_done(self.config, ssh_clients, self.config['ips'], 30*60, 60, "/var/log/user_data_success.log", False, 10*60, self.logger) is False:
+        if False in wait_till_done(self.config, ssh_clients, self.config['ips'], 30*60, 60, "/var/log/user_data_success.log", False, 10*60, self.logger):
             self.logger.error('Boot up NOT successful')
 
 
