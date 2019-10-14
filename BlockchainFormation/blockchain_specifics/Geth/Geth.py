@@ -391,10 +391,10 @@ def kill_node(config, ssh_clients, index, logger):
     :param logger:
     :return:
     """
-    logger.debug("stopping geth service...")
-    channel = ssh_clients[index].get_transport().open_session()
-    channel.exec_command("sudo service geth stop")
-    channel.exec_command("sudo rm /var/log/geth.log")
+    logger.debug(f"Stopping geth service on node {index}")
+    #channel = ssh_clients[index].get_transport().open_session()
+    ssh_clients[index].exec_command("sudo service geth stop")
+    ssh_clients[index].exec_command("sudo rm /var/log/geth.log")
 
 
 def delete_pool(ssh_clients, index, logger):
@@ -406,8 +406,8 @@ def delete_pool(ssh_clients, index, logger):
     :return:
     """
     stdin, stdout, stderr = ssh_clients[index].exec_command("sudo rm /data/gethNetwork/node/geth/transactions.rlp")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
+    #logger.debug(stdout.readlines())
+    #logger.debug(stderr.readlines())
 
 
 def revive_node(config, ssh_clients, index, logger):
@@ -422,9 +422,9 @@ def revive_node(config, ssh_clients, index, logger):
 
     restart_count = 0
     while restart_count < 5:
-        logger.debug(f"restarting geth for the {restart_count}x time...")
-        channel = ssh_clients[index].get_transport().open_session()
-        channel.exec_command("sudo service geth start")
+        logger.debug(f"Restarting geth for the {restart_count + 1}x time...")
+        #channel = ssh_clients[index].get_transport().open_session()
+        ssh_clients[index].exec_command("sudo service geth start")
 
         # Give Geth couple of seconds to start
         time.sleep(3)

@@ -544,10 +544,10 @@ def kill_node(config, ssh_clients, index, logger):
     :param logger:
     :return:
     """
-    logger.debug("stopping parity service...")
-    channel = ssh_clients[index].get_transport().open_session()
-    channel.exec_command("sudo service parity stop")
-    channel.exec_command("sudo rm /var/log/parity.log")
+    logger.debug(f"Stopping parity service on node {index}")
+    #channel = ssh_clients[index].get_transport().open_session()
+    ssh_clients[index].exec_command("sudo service parity stop")
+    ssh_clients[index].exec_command("sudo rm /var/log/parity.log")
 
 
 
@@ -574,9 +574,9 @@ def revive_node(config, ssh_clients, index, logger):
     """
     restart_count = 0
     while restart_count < 5:
-        logger.debug(f"restarting parity for the {restart_count}x time...")
-        channel = ssh_clients[index].get_transport().open_session()
-        channel.exec_command("sudo service parity start")
+        logger.debug(f"Restarting parity for the {restart_count + 1}x time...")
+        #channel = ssh_clients[index].get_transport().open_session()
+        ssh_clients[index].exec_command("sudo service parity start")
 
         # Give Geth couple of seconds to start
         time.sleep(5)
