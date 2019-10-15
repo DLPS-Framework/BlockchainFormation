@@ -496,7 +496,7 @@ class VMHandler:
                 ip = config['pub_ips'][index]
             ssh_clients.append(paramiko.SSHClient())
             ssh_clients[index].set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh_clients[index].connect(hostname=ip, username=config['user'], pkey=ssh_key_priv)
+            ssh_clients[index].connect(hostname=ip, username=config['user'], pkey=ssh_key_priv, timeout=86400)
             # ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd_to_execute)
 
             # SCPCLient takes a paramiko transport as an argument
