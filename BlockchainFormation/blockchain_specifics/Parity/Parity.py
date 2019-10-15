@@ -402,7 +402,7 @@ def generate_node_dict(signers, config, unlock=None, reserved_peers= False):
                             },
                 'parity': {
                             'base_path': '/data/parityNetwork', 'chain': '/data/parityNetwork/spec.json',
-                            'no_persistent_txqueue': 'true'
+                            'no_persistent_txqueue': True
                           },
                 'rpc': {
                     'apis': ['web3', 'eth', 'net', 'personal', 'parity', 'parity_set', 'traces', 'rpc', 'parity_accounts'],
