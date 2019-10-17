@@ -480,10 +480,11 @@ class VMHandler:
             json.dump(self.config, outfile, default=datetimeconverter, indent=4)
 
     @staticmethod
-    def create_ssh_scp_clients(config):
+    def create_ssh_scp_clients(config, logger=None):
         """
         Creates ssh/scp connection to aws VMs
         :param config:
+        :param logger:
         :return: array of scp and ssh clients
         """
         ssh_clients = []
@@ -496,10 +497,25 @@ class VMHandler:
                 ip = config['pub_ips'][index]
             ssh_clients.append(paramiko.SSHClient())
             ssh_clients[index].set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh_clients[index].connect(hostname=ip, username=config['user'], pkey=ssh_key_priv, timeout=86400)
+            if logger is not None:
+                logger.debug(f"Trying to connect the ssh clients")
+            while True:
+                try:
+                    ssh_clients[index].connect(hostname=ip, username=config['user'], pkey=ssh_key_priv, timeout=86400, banner_timeout=3, auth_timeout=3)
+
+                except Exception as e:
+                    if logger is not None:
+                        logger.error(f"{e} on IP {ip}")
+                    else:
+                        print(f"{e} on IP {ip}")
+                else:
+                    break
             # ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd_to_execute)
 
             # SCPCLient takes a paramiko transport as an argument
-            scp_clients.append(SCPClient(ssh_clients[index].get_transport()))
+            scp_clients.append(SCPClient(ssh_clients[index].get_transport(), socket_timeout=86400))
+
+        if logger is not None:
+            logger.debug(f"All scp/ssh clients got created and connected")
 
         return ssh_clients, scp_clients
