@@ -491,14 +491,16 @@ class VMHandler:
         scp_clients = []
         ssh_key_priv = paramiko.RSAKey.from_private_key_file(config['priv_key_path'])
 
+        if logger is not None:
+            logger.debug(f"Trying to connect the ssh clients")
+
         for index, ip in enumerate(config['ips']):
             if config['public_ip']:
                 # use public ip if exists, else it wont work
                 ip = config['pub_ips'][index]
             ssh_clients.append(paramiko.SSHClient())
             ssh_clients[index].set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            if logger is not None:
-                logger.debug(f"Trying to connect the ssh clients")
+
             while True:
                 try:
                     ssh_clients[index].connect(hostname=ip, username=config['user'], pkey=ssh_key_priv, timeout=86400, banner_timeout=3, auth_timeout=3)
