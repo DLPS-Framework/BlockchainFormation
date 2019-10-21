@@ -1,9 +1,10 @@
 include BlockchainFormation/UserDataScripts/*
 include BlockchainFormation/blockchain_specifics/*
+include BlockchainFormation/blockchain_specifics/Fabric/chaincode/benchcontract/*
+include BlockchainFormation/blockchain_specifics/Fabric/setup/*
 include BlockchainFormation/blockchain_specifics/Fabric/*
 include BlockchainFormation/blockchain_specifics/Sawtooth/*
 include BlockchainFormation/blockchain_specifics/Quorum/*
-include BlockchainFormation/blockchain_specifics/Quorum/Quorum.py
 include BlockchainFormation/blockchain_specifics/Geth/*
 include BlockchainFormation/blockchain_specifics/Parity/*
 include BlockchainFormation/blockchain_specifics/Client/*
