@@ -25,6 +25,7 @@
 #  limitations under the License.
 
 import sys, os
+import boto3
 import getpass
 import pytz
 from dateutil import parser
@@ -508,6 +509,17 @@ class VMHandler:
                         logger.error(f"{e} on IP {ip}")
                     else:
                         print(f"{e} on IP {ip}")
+                    try:
+                        ssh_clients[index].close()
+                        ssh_clients[index] = paramiko.SSHClient()
+                        ssh_clients[index].set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+                    except Exception as e:
+                        if logger is not None:
+                            logger.error(f"{e} on IP {ip}")
+                        else:
+                            print(f"{e} on IP {ip}")
+
                 else:
                     break
             # ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd_to_execute)
