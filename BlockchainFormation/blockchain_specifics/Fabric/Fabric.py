@@ -50,13 +50,12 @@ def fabric_shutdown(config, logger, ssh_clients, scp_clients):
 def fabric_startup(config, logger, ssh_clients, scp_clients):
 
     # the indices of the different roles
-    config['ca_indices'] = list(range(0, config['fabric_settings']['org_count']))
-    config['orderer_indices'] = list(range(config['fabric_settings']['org_count'], config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count']))
-    config['peer_indices'] = list(range(config['fabric_settings']['org_count'] + config['fabric_settings']['orderer_count'], config['fabric_settings']['org_count'] * (config['fabric_settings']['peer_count'] + 1) + config['fabric_settings']['orderer_count']))
+    config['orderer_indices'] = list(range(0, config['fabric_settings']['orderer_count']))
+    config['peer_indices'] = list(range(config['fabric_settings']['orderer_count'], config['fabric_settings']['orderer_count'] + config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count']))
 
     if config['fabric_settings']['orderer_type'].upper() == "KAFKA":
-        config['zookeeper_indices'] = list(range(config['fabric_settings']['orderer_count'] + (config['fabric_settings']['peer_count'] + 1) * config['fabric_settings']['org_count'], config['fabric_settings']['orderer_count'] + (config['fabric_settings']['peer_count'] + 1) * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count']))
-        config['kafka_indices'] = list(range(config['fabric_settings']['orderer_count'] + (config['fabric_settings']['peer_count'] + 1) * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count'], config['fabric_settings']['orderer_count'] + (config['fabric_settings']['peer_count'] + 1) * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count'] + config['fabric_settings']['kafka_count']))
+        config['zookeeper_indices'] = list(range(config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'], config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count']))
+        config['kafka_indices'] = list(range(config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count'], config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count'] + config['fabric_settings']['kafka_count']))
     else:
         config['zookeeper_indices'] = []
         config['kafka_indices'] = []
@@ -456,7 +455,7 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
 
     time.sleep(10)
 
-    index_last_node = config['fabric_settings']['orderer_count'] + (config['fabric_settings']['peer_count'] + 1) * config['fabric_settings']['org_count'] - 1
+    index_last_node = config['peer_indices'][-1]
     # Creating script and pushing it to the last node
     logger.debug(f"Executing script on {config['ips'][index_last_node]}  which creates channel, adds peers to channel, installs and instantiates all chaincode - can take some minutes")
     write_script(config, logger)

@@ -20,8 +20,11 @@
   . ~/.bashrc
   echo "node version: $(node -v)"
   echo "npm version: $(npm -v)"
+  # for installing truffle/contract
+  npm config set strict-ssl false
   echo "nvm version: $(nvm version)"
   sudo apt update
+
 
   # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log
