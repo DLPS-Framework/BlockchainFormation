@@ -194,7 +194,7 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
             string_zookeeper_base = string_zookeeper_base + f" -e ZOO_LOG4J_ROOT_LOGLEVEL=DEBUG"
 
             string_zookeeper_servers = ""
-            for zookeeper1, index1 in enumerate(config['fabric_settings']['zookeeper_count']):
+            for zookeeper1, index1 in enumerate(config['zookeeper_indices']):
                 if string_zookeeper_servers != "":
                     string_zookeeper_servers = string_zookeeper_servers + " "
                 string_zookeeper_servers = string_zookeeper_servers + f"server.{zookeeper1 + 1}=zookeeper{zookeeper1}:2888:3888"
@@ -213,7 +213,7 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
 
         # Starting kafka nodes
         logger.info(f"Starting kafka nodes")
-        for kafka, index in enumerate(config['fabric_settings']['kafka_count']):
+        for kafka, index in enumerate(config['kafka_indices']):
             string_kafka_base = ""
             string_kafka_base = string_kafka_base + f" --network='{my_net}' --name kafka{kafka} -p 9092"
             string_kafka_base = string_kafka_base + f" -e KAFKA_MESSAGE_MAX_BYTES={config['fabric_settings']['absolute_max_bytes'] * 1024 * 1024}"
@@ -231,7 +231,7 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
             string_kafka_zookeeper = string_kafka_zookeeper + f" -e KAFKA_ZOOKEEPER_SESSION_TIMEOUT_MS=360000"
 
             string_kafka_zookeeper_connect = ""
-            for zookeeper, _ in enumerate(config['fabric_settings']['zookeeper_count']):
+            for zookeeper, _ in enumerate(config['kafka_indices']):
                 if string_kafka_zookeeper_connect != "":
                     string_kafka_zookeeper_connect = string_kafka_zookeeper_connect + ","
                 string_kafka_zookeeper_connect = string_kafka_zookeeper_connect + f"zookeeper{zookeeper}:2181"
@@ -243,12 +243,12 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
             logger.debug(f" - Starting kafka{kafka} on {config['ips'][index]}")
             channel = ssh_clients[index].get_transport().open_session()
             channel.exec_command(f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /home/ubuntu/kafka{kafka}.log)")
-            stdin, stdout, stderr = ssh_clients[index + kafka].exec_command(f"echo '(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /home/ubuntu/kafka{kafka}.log)' >> /home/ubuntu/starting_command.log")
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"echo '(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /home/ubuntu/kafka{kafka}.log)' >> /home/ubuntu/starting_command.log")
             stdout.readlines()
 
         time.sleep(10)
 
-        # Starting Certificate Authorities
+    # Starting Certificate Authorities
     """
     peer_orgs_secret_keys = []
     logger.info(f"Starting Certificate Authorities")

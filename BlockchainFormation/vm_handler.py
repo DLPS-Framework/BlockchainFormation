@@ -191,7 +191,7 @@ class VMHandler:
             self.config['image']['image_id'] = image["ImageId"]
 
         # catching errors
-        self.logger.debug(f"vm_count: {self.config['vm_count']}")
+        # self.logger.debug(f"vm_count: {self.config['vm_count']}")
 
         if self.config['blockchain_type'] == 'fabric':
             # self.logger.debug(f"Checking whether vm_count equals the expected number of necessary nodes")
@@ -210,7 +210,7 @@ class VMHandler:
                 raise Exception("No valid orderer type")
 
             if count != self.config['vm_count']:
-                self.logger.info(f"It seems that vm_count ({self.config['vm_count']} is different from the expected number of necessary nodes ({self.config['vm_count']})")
+                self.logger.info(f"It seems that vm_count ({self.config['vm_count']}) is different from the expected number of necessary nodes ({count})")
                 self.logger.info(f"Setting vm_count to {count}")
                 self.config['vm_count'] = count
 
