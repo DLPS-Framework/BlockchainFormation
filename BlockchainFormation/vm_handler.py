@@ -45,6 +45,7 @@ from BlockchainFormation.utils.utils import *
 
 utc = pytz.utc
 
+
 class VMHandler:
     """
     Class for handling startup and shutdown of aws VM instances
@@ -65,7 +66,6 @@ class VMHandler:
         self.config = config
 
         # no proxy if no proxy user
-        # TODO: check if "HTTP_PROXY" not in os.environ is failsafe F
         if self.config['proxy'] is not None and "HTTP_PROXY" not in os.environ:
 
             if self.config['proxy']['proxy_user'] is not None:
@@ -90,7 +90,6 @@ class VMHandler:
         self.ec2_instances = None
 
         self.aws_calculator = AWSCostCalculator(self.session)
-
 
     def create_user_data(self):
         """creates the user data script depending on experiment type. The user data is built out of base script and
@@ -135,7 +134,6 @@ class VMHandler:
             user_data_combined = user_data_base + user_data_specific
 
         return user_data_combined
-
 
     def run_general_startup(self):
         """
@@ -286,7 +284,6 @@ class VMHandler:
         self.logger.info(f"You can now access machines via: ssh -i \"path to {self.config['key_name']} key\" ubuntu@{self.config['ips']} (if user is ubuntu) ")
         self.logger.info(f"e.g. ssh -i {self.config['priv_key_path']} ubuntu@{self.config['ips'][0]}")
 
-
         # Give launched instances tag with time/type of experiment/number of node
         ts = time.time()
         st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H-%M-%S')
@@ -337,7 +334,6 @@ class VMHandler:
         if False in wait_till_done(self.config, ssh_clients, self.config['ips'], 30*60, 60, "/var/log/user_data_success.log", False, 10*60, self.logger):
             self.logger.error('Boot up NOT successful')
 
-
             if yes_or_no("Do you want to shut down the VMs?"):
 
                 self.logger.info(f"Running the shutdown script now")
@@ -349,7 +345,7 @@ class VMHandler:
         else:
             self.logger.info(f"Boot up of all {self.config['blockchain_type']}-VMs was successful")
 
-            #Recreating the ssh_clients
+            # Recreating the ssh_clients
             ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
 
             self._run_specific_startup(ssh_clients, scp_clients)
