@@ -25,14 +25,11 @@
 #  limitations under the License.
 
 import setuptools
-import glob
-
-# source: https://github.com/pminkov/kubeutils
 
 setuptools.setup(
     name="BlockchainFormation",
     version="0.0.1",
-    author="BMW Blockchain Team",
+    author="ChainLab",
     author_email="Philipp.P.Ross@bmw.de",
     description="Script which sets up multiple blockchains",
     license="Apache License 2.0",
@@ -43,5 +40,4 @@ setuptools.setup(
     #scripts=glob.glob("BlockchainFormation/UserDataScripts"), #/*.sh
     classifiers=[
         "Programming Language :: Python :: 3"
-    ],
-)
+                ])
