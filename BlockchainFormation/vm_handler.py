@@ -80,15 +80,13 @@ class VMHandler:
         else:
             self.logger.info("No proxy set since proxy user is None or proxy already set")
 
+        # This is needed that boto3 knows where to find the aws config and credentials
         os.environ["AWS_SHARED_CREDENTIALS_FILE"] = self.config['aws_credentials']
         os.environ["AWS_CONFIG_FILE"] = self.config['aws_config']
 
         self.user_data = self.create_user_data()
-
         self.session = boto3.Session(profile_name=self.config['profile'])
-
         self.ec2_instances = None
-
         self.aws_calculator = AWSCostCalculator(self.session)
 
     def create_user_data(self):
@@ -192,6 +190,7 @@ class VMHandler:
         # self.logger.debug(f"vm_count: {self.config['vm_count']}")
 
         if self.config['blockchain_type'] == 'fabric':
+            # FIXME: Can this be moved to Blockchain specifics? (Implementing a Get function or something like that)
             # self.logger.debug(f"Checking whether vm_count equals the expected number of necessary nodes")
 
             if self.config['fabric_settings']['orderer_type'].upper() == "KAFKA":
@@ -242,7 +241,7 @@ class VMHandler:
                     ]
                 },
             ],
-             NetworkInterfaces = [
+             NetworkInterfaces=[
                 {
                     'DeviceIndex': 0,
                     'SubnetId': self.config['subnet_id'],
@@ -258,11 +257,9 @@ class VMHandler:
         for i in self.ec2_instances:
             i.wait_until_running()
             i.load()
-            # self.logger.info(f"ID: {i.id}, State: {i.state['Name']}, IP: {i.private_ip_address}")
             ips.append(i.private_ip_address)
             vpc_ids.append(i.vpc_id)
             if self.config['public_ip']:
-                # self.logger.info(f"ID: {i.id}, PUBLIC IP: {i.public_ip_address}")
                 public_ips.append(i.public_ip_address)
 
         # add no proxy for all VM IPs
@@ -311,8 +308,8 @@ class VMHandler:
 
         try:
 
-            os.makedirs((f"{self.config['exp_dir']}/user_data_logs"))
-            os.makedirs((f"/{self.config['exp_dir']}/setup"))
+            os.makedirs(f"{self.config['exp_dir']}/user_data_logs")
+            os.makedirs(f"/{self.config['exp_dir']}/setup")
             self.logger.info(f"Created {str(self.config['exp_dir'])} directory")
         except OSError:
             self.logger.error("Creation of the directories failed")
@@ -325,8 +322,6 @@ class VMHandler:
         self.logger.info("Waiting 60 seconds before creating ssh connection to VMs")
         time.sleep(60)
         ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
-
-        # convert to timedelta for nicer waiting time calcs
 
         self.logger.info("Waiting for all VMs to finish the userData setup...")
 
