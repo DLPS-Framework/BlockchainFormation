@@ -398,7 +398,7 @@ def generate_node_dict(signers, config, unlock=None, reserved_peers= False):
                             },
                 'network': {
                             'port': 30300,
-                            'max_peers': 75
+                            'max_peers': 128
                             },
                 'parity': {
                             'base_path': '/data/parityNetwork', 'chain': '/data/parityNetwork/spec.json',
