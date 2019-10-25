@@ -87,13 +87,7 @@ To add another blockchain 4 things need to be added:
     
 ## Needed Python packages (apart from standard packages)
      
-* boto3  
-* scp   
-* paramiko 
-* web3   
-* pytz     
-* numpy 
-* toml
+See [requirements.txt](requirements.txt)
 
 # Install BlockFormation via pip
 
