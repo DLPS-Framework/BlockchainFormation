@@ -1,0 +1,46 @@
+{
+  "vm_count": 1,
+  "instance_type": "t2.small",
+  "image": {
+    "image_id": null,
+    "os": "ubuntu",
+    "version": 16,
+    "permissions": "default"
+  },
+  "subnet_id": "subnet-123123",
+  "security_group_id": [
+      "sg-123123"
+  ],
+  "proxy": null,
+  "user": "ubuntu",
+  "profile": "default",
+  "key_name": "test",
+  "aws_credentials": "/home/user/.aws/credentials",
+  "aws_config": "/home/user/.aws/config",
+  "aws_region": "eu-central-1",
+  "aws_proxy_settings": null,
+  "priv_key_path": "/path_to_key",
+  "tag_name": "blclab_sawtooth",
+    "exp_dir": "/home/user/BlockchainFormation",
+  "public_ip": true,
+  "storage_settings": [
+    {
+      "DeviceName": "/dev/sdb",
+      "VirtualName": "string",
+      "Ebs": {
+        "DeleteOnTermination": true,
+        "VolumeSize": 32,
+        "VolumeType": "gp2",
+        "Encrypted": false
+      }
+    }
+  ],
+  "blockchain_type": "sawtooth",
+  "sawtooth_settings":
+  {
+      "sawtooth.consensus.algorithm.name": "Devmode",
+      "sawtooth.poet.initial_wait_time": 25,
+      "sawtooth.poet.target_wait_time":  5,
+      "sawtooth.publisher.max_batches_per_block": 100
+  }
+}
