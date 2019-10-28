@@ -129,21 +129,37 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
     all_accounts = [x.rstrip() for x in all_accounts]
     logger.info(all_accounts)
 
+    # Calculate number of signers
+    if 'signers' in config['geth_settings'] and config['geth_settings']['signers']:
+        number_of_signers = round(float(len(config['ips']) * config['geth_settings']['signers']))
+    else:
+        number_of_signers = len(config['ips'])
+
+    logger.info(f"There are {number_of_signers} signers")
+
     # which node gets which account unlocked
     account_mapping = get_relevant_account_mapping(all_accounts, config)
 
-    # https://github.com/ethereum/go-ethereum/wiki/Command-Line-Options
-    # Put all performance setting from config into one string to make service creation in the following lines more lean
-    # FIXME --trie-cache-gens {config['geth_settings']['trie-cache-gens']}  trie-cache-gens not available but it is listed in docs
-    performance_settings = f"--cache {config['geth_settings']['cache']} --cache.database {config['geth_settings']['cache.database']} " \
-        f"--cache.gc {config['geth_settings']['cache.gc']} " \
-        f"--txpool.rejournal {config['geth_settings']['txpool.rejournal']} --txpool.accountslots {config['geth_settings']['txpool.accountslots']} " \
-        f"--txpool.globalslots {config['geth_settings']['txpool.globalslots']} --txpool.accountqueue {config['geth_settings']['txpool.accountqueue']} " \
-        f"--txpool.globalqueue {config['geth_settings']['txpool.globalqueue']} --txpool.lifetime {config['geth_settings']['txpool.lifetime']} --minerthreads {config['geth_settings']['minerthreads']}"
-
     logger.info(f"Relevant acc: {str(account_mapping)}")
     i = 0
+    signer_accounts = []
     for index, ip in enumerate(config['ips']):
+
+        # if index in range of number of signers then node is a signer
+        if index in range(number_of_signers):
+            mining_settings = f"--mine --miner.threads {config['geth_settings']['minerthreads']} --miner.gasprice 1"
+
+            # https://github.com/ethereum/go-ethereum/wiki/Command-Line-Options
+            # Put all performance setting from config into one string to make service creation in the following lines more lean
+            performance_settings = f"--cache {config['geth_settings']['cache']} --cache.database {config['geth_settings']['cache.database']} " \
+                f"--cache.gc {config['geth_settings']['cache.gc']} " \
+                f"--txpool.rejournal {config['geth_settings']['txpool.rejournal']} --txpool.accountslots {config['geth_settings']['txpool.accountslots']} " \
+                f"--txpool.globalslots {config['geth_settings']['txpool.globalslots']} --txpool.accountqueue {config['geth_settings']['txpool.accountqueue']} " \
+                f"--txpool.globalqueue {config['geth_settings']['txpool.globalqueue']} --txpool.lifetime {config['geth_settings']['txpool.lifetime']} "
+
+        else:
+            mining_settings = " "
+            performance_settings = " "
         if config['geth_settings']['num_acc'] != None:
             if len(account_mapping[ip]) == (i + 1):
                 i = 0
@@ -157,10 +173,8 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
                 f"'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 "
                 f"--port 30310 --targetgaslimit '30000000' --maxpeers 128 --rpc --rpcvhosts='*' --rpccorsdomain='*' --wsorigins='*' --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool "
                 f"--nat=extip:{config['priv_ips'][index]}  --syncmode full --allow-insecure-unlock --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
-                f"--password /data/gethNetwork/passwords.txt --mine  --etherbase {Web3.toChecksumAddress(account_mapping[ip][i])} {performance_settings}'"
+                f"--password /data/gethNetwork/passwords.txt {mining_settings} --miner.etherbase {Web3.toChecksumAddress(account_mapping[ip][i])} {performance_settings}'"
                 f" 'StandardOutput=file:/var/log/geth.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/geth.service")
-            #logger.debug(ssh_stdout)
-            #logger.debug(ssh_stderr)
             logger.debug(ssh_stdin)
 
             # add the keyfiles from all relevant accounts to the VMs keystores
@@ -176,7 +190,9 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
                     # TODO: only add keyfile to VM if its the right account
                     scp_clients[index_top].put(file, "/data/gethNetwork/node/keystore")
 
-
+            # Add account of this node to signer array if this node is signer
+            if index in range(number_of_signers):
+                signer_accounts.append(account_mapping[ip][i])
         else:
             # create service file on each machine
             # --targetgaslimit '30000000'
@@ -185,9 +201,13 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
                 f"'ExecStart=/usr/bin/geth --datadir /data/gethNetwork/node/ --networkid 11 --verbosity 3 "
                 f"--port 30310 --targetgaslimit '30000000' --maxpeers 128 --rpc --rpcvhosts='*' --rpccorsdomain='*' --wsorigins='*' --rpcaddr 0.0.0.0  --rpcapi db,clique,miner,eth,net,web3,personal,web3,admin,txpool "
                 f"--nat=extip:{config['priv_ips'][index]}  --syncmode full --allow-insecure-unlock --unlock {','.join([Web3.toChecksumAddress(x) for x in account_mapping[ip]])} "
-                f"--password /data/gethNetwork/passwords.txt --mine {performance_settings}' 'StandardOutput=file:/var/log/geth.log' '[Install]' "
+                f"--password /data/gethNetwork/passwords.txt {mining_settings} {performance_settings}' 'StandardOutput=file:/var/log/geth.log' '[Install]' "
                 f"'WantedBy=default.target' > /etc/systemd/system/geth.service")
             logger.debug(ssh_stdin)
+
+            # Add account of this node to signer array if this node is signer
+            if index in range(number_of_signers):
+                signer_accounts.append(account_mapping[ip][0])
 
         for _, acc in enumerate(account_mapping[ip]):
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("echo 'password' >> /data/gethNetwork/passwords.txt")
@@ -198,7 +218,7 @@ def geth_startup(config, logger, ssh_clients, scp_clients):
 
     # create genesis json
     # get unique accounts from mapping
-    genesis_dict = generate_genesis(accounts=list(set(itertools.chain(*account_mapping.values()))), config=config)
+    genesis_dict = generate_genesis(accounts=list(set(itertools.chain(*account_mapping.values()))), config=config, signer_accounts=signer_accounts)
 
     with open(f"{config['exp_dir']}/setup/genesis.json", 'w') as outfile:
         json.dump(genesis_dict, outfile, indent=4)
@@ -309,12 +329,13 @@ def get_relevant_account_mapping(accounts, config):
         return {ip: rnd_accounts for ip in config['ips']}
 
 
-def generate_genesis(accounts, config):
+def generate_genesis(accounts, config, signer_accounts):
     """
     # TODO make it more dynamic to user desires
     # https://web3py.readthedocs.io/en/stable/middleware.html#geth-style-proof-of-authority
     :param config: config containing the specs for genesis
     :param accounts: accounts to be added to signers/added some balance
+    :param signer_accounts: Array with all signer accounts
     :return: genesis dictonary
     """
 
@@ -329,6 +350,7 @@ def generate_genesis(accounts, config):
                      "0000000000000000000000000000000000000008": {"balance": "1"}}
     additional_balances = {str(x): {"balance": str(y)} for x, y in zip(accounts, balances)}
     merged_balances = {**base_balances, **additional_balances}
+
 
     # clique genesis at beginning
     genesis_dict = {
@@ -349,7 +371,7 @@ def generate_genesis(accounts, config):
         "alloc": merged_balances,
         "coinbase": "0x0000000000000000000000000000000000000000",
         "difficulty": "0x1",
-        "extraData": f"0x0000000000000000000000000000000000000000000000000000000000000000{''.join(accounts)}"
+        "extraData": f"0x0000000000000000000000000000000000000000000000000000000000000000{''.join(signer_accounts)}"
         f"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         "gasLimit": config['geth_settings']['gaslimit'],
         "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",

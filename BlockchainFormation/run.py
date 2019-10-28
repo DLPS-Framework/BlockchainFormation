@@ -267,6 +267,9 @@ class ArgParser:
         parser.add_argument('--minerthreads',
                             help=' Number of CPU threads to use for mining (default: 8)',
                             type=int, default=8)
+        parser.add_argument('--signers',
+                            help='Percentage of nodes who are signers (default: 1.0)',
+                            type=float, default=1.0)
 
     @staticmethod
     def _add_parity_args(parser):
@@ -488,6 +491,7 @@ class ArgParser:
                     "txpool.globalqueue": namespace_dict['txpool.globalqueue'],
                     "txpool.lifetime": namespace_dict['txpool.lifetime'],
                     "minerthreads": namespace_dict['minerthreads'],
+                    "signers": namespace_dict['signers']
 
                 }
         elif blockchain_type == "parity":
