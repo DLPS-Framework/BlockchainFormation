@@ -325,6 +325,8 @@ def get_relevant_account_mapping(accounts, config):
     if config[f"{config['blockchain_type']}_settings"]['num_acc'] is None:
         return {ip: [account] for (ip, account) in zip(config['ips'], accounts)}
     else:
+        if config[f"{config['blockchain_type']}_settings"]['num_acc'] > len(config['ips']):
+            config[f"{config['blockchain_type']}_settings"]['num_acc'] = len(config['ips'])
         rnd_accounts = np.random.choice(a=accounts, replace=False, size=config[f"{config['blockchain_type']}_settings"]['num_acc'])
         return {ip: rnd_accounts for ip in config['ips']}
 

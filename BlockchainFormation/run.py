@@ -293,6 +293,9 @@ class ArgParser:
         parser.add_argument('--server_threads',
                             help='RPC server threads (default: 4)',
                             type=int, default=4)
+        parser.add_argument('--signers',
+                            help='Percentage of nodes who are signers (default: 1.0)',
+                            type=float, default=1.0)
 
     @staticmethod
     def _add_quorum_args(parser):
@@ -507,7 +510,8 @@ class ArgParser:
                     "cache_size_db": namespace_dict['cache_size_db'],
                     "cache_size_blocks": namespace_dict['cache_size_blocks'],
                     "cache_size_queue": namespace_dict['cache_size_queue'],
-                    "cache_size_state": namespace_dict['cache_size_state']
+                    "cache_size_state": namespace_dict['cache_size_state'],
+                    "signers": namespace_dict['signers']
 
                 }
         elif blockchain_type == "quorum":

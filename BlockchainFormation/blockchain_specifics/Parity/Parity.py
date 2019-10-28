@@ -133,7 +133,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
     os.mkdir((f"{config['exp_dir']}/parity_logs"))
 
     # generate basic spec and node.toml
-    spec_dict = generate_spec(accounts=None, config=config)
+    spec_dict = generate_spec(accounts=None, config=config, signer_accounts=[])
     with open(f"{config['exp_dir']}/setup/spec_basic.json", 'w') as outfile:
         json.dump(spec_dict, outfile, indent=4)
 
@@ -202,6 +202,16 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         time.sleep(0.5)
     all_accounts = []
 
+    # Calculate number of signers
+    if 'signers' in config['parity_settings'] and config['parity_settings']['signers']:
+        number_of_signers = round(float(len(config['ips']) * config['parity_settings']['signers']))
+    else:
+        number_of_signers = len(config['ips'])
+
+    logger.info(f"There are {number_of_signers} signers")
+
+    signer_accounts = []
+
     acc_path = f"{config['exp_dir']}/setup/accounts"
     file_list = os.listdir(acc_path)
     # Sorting to get matching accounts to ip
@@ -222,11 +232,6 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info(f"Relevant acc: {str(account_mapping)}")
 
-    #get unique accounts from mapping
-    spec_dict = generate_spec(accounts=list(set(itertools.chain(*account_mapping.values()))), config=config)
-
-    with open(f"{config['exp_dir']}/setup/spec.json", 'w') as outfile:
-        json.dump(spec_dict, outfile, indent=4)
 
     # add the keyfiles from all relevant accounts to the VMs keystores
     keystore_files = [f for f in glob.glob(acc_path + "**/*/UTC--*", recursive=True)
@@ -246,8 +251,23 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         with open(f"{config['exp_dir']}/setup/node_node_{index}.toml", 'w') as outfile:
 
             toml.dump(generate_node_dict(signers=Web3.toChecksumAddress(account_mapping[ip][i]),
-                                         unlock=[Web3.toChecksumAddress(x).lower() for x in account_mapping[ip]], config=config), outfile)
+                                         unlock=[Web3.toChecksumAddress(x).lower() for x in account_mapping[ip]], config=config, miner=True if index in range(number_of_signers) else False), outfile)
 
+        if index in range(number_of_signers):
+            signer_accounts.append(account_mapping[ip][i])
+
+
+
+    # get unique accounts from mapping
+    spec_dict = generate_spec(accounts=list(set(itertools.chain(*account_mapping.values()))), config=config,
+                              signer_accounts=signer_accounts)
+
+    with open(f"{config['exp_dir']}/setup/spec.json", 'w') as outfile:
+        json.dump(spec_dict, outfile, indent=4)
+
+
+
+    for index, ip in enumerate(config['ips']):
         ssh_clients[index].exec_command("rm /data/parityNetwork/keys/DemoPoA/*")
 
         # TODO: only add keyfile to VM if its the right account
@@ -341,14 +361,14 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo rm /var/log/parity.log")
         ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command("sudo service parity start")
 
-    time.sleep(5)
+    time.sleep(3)
 
 
     # Save parity version
     ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[0].exec_command("parity --version > /data/parity_version.txt")
     scp_clients[0].get("/data/parity_version.txt", f"{config['exp_dir']}/setup/parity_version.txt")
 
-    #TODO: move this to unit test section
+
     for index, ip in enumerate(config['ips']):
         # web3 = Web3(Web3.HTTPProvider(f"http://{i.private_ip_address}:8545"))
         logger.info("IsMining:" + str(web3_clients[index].eth.mining))
@@ -363,7 +383,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
 
     for index, _ in enumerate(config['ips']):
         try:
-            web3_clients[index].middleware_stack.inject(geth_poa_middleware, layer=0)
+            web3_clients[index].middleware_onion.inject(geth_poa_middleware, layer=0)
         except:
             logger.debug("Middleware already injected")
 
@@ -376,12 +396,13 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
         time.sleep(10)
 
 
-def generate_node_dict(signers, config, unlock=None, reserved_peers= False):
+def generate_node_dict(signers, config, unlock=None, reserved_peers=False, miner=True):
     """
     Generates node dictionary needed for creation of node.toml
     :param signers: which account to be signer
     :param unlock: which accounts to unlock
     :param reserved_peers: which nodes are connected to each other
+    :param miner: True if node is miner
     :return:
     """
 
@@ -389,12 +410,6 @@ def generate_node_dict(signers, config, unlock=None, reserved_peers= False):
         {
                 'account': {'password': ['/data/parityNetwork/password.txt']
 
-                            },
-                'mining': {
-                            'engine_signer': signers.lower(),
-                            'reseal_on_txs': 'none',
-                            'tx_queue_mem_limit': config['parity_settings']['tx_queue_mem_limit'],
-                            'tx_queue_size': config['parity_settings']['tx_queue_size']
                             },
                 'network': {
                             'port': 30300,
@@ -414,11 +429,11 @@ def generate_node_dict(signers, config, unlock=None, reserved_peers= False):
                        },
                 'websockets': {
                     'port': 8450,
-                    'interface' : "0.0.0.0",
-                    'origins' : ["all"],
-                    'apis' : ["web3", "eth", "pubsub", "net", "parity", "parity_pubsub", "traces", "rpc", "shh", "shh_pubsub"],
-                    'hosts' : ["all"]
-    },
+                    'interface': "0.0.0.0",
+                    'origins': ["all"],
+                    'apis': ["web3", "eth", "pubsub", "net", "parity", "parity_pubsub", "traces", "rpc", "shh", "shh_pubsub"],
+                    'hosts': ["all"]
+                                 },
                 'footprint': {
                     'pruning': 'archive',
                     'cache_size_db': config['parity_settings']['cache_size_db'],
@@ -429,6 +444,15 @@ def generate_node_dict(signers, config, unlock=None, reserved_peers= False):
 
          }
 
+    if miner:
+        node_dict['mining'] = {
+                             'engine_signer': signers.lower(),
+                             'reseal_on_txs': 'none',
+                             'tx_queue_mem_limit': config['parity_settings']['tx_queue_mem_limit'],
+                             'tx_queue_size': config['parity_settings']['tx_queue_size'],
+                             'usd_per_tx': '0'
+                             }
+
     if unlock is not None:
         node_dict['account']['unlock'] = unlock
 
@@ -438,12 +462,13 @@ def generate_node_dict(signers, config, unlock=None, reserved_peers= False):
 
     return node_dict
 
-def generate_spec(accounts, config):
+
+def generate_spec(accounts, config, signer_accounts):
     """
-    #TODO make it more dynamic to user desires
     # https://web3py.readthedocs.io/en/stable/middleware.html#geth-style-proof-of-authority
     :param accounts: accounts to be added to signers/added some balance
     :param config: config dict
+    :param signer_accounts: Array with all signer accounts
     :return: spec dictonary
     """
 
@@ -471,7 +496,7 @@ def generate_spec(accounts, config):
                                                  "maximumEmptySteps": 24,
                                                  "maximumUncleCount": 0,
                                                  "validators": {
-                                                 "list": accounts
+                                                 "list": signer_accounts
                                                                  }
                                                  }
                                             }
