@@ -342,11 +342,19 @@ def check_network(config, ssh_clients, logger):
 def kill_node(config, ssh_clients, node, logger):
 
     logger.debug(f" --> Shutting down and resetting node {node}")
-    stdin, stdout, stderr = ssh_clients[node].exec_command("pidof geth")
-    pid = stdout.readlines()[0].replace("\n", "")
-    # logger.debug(f"geth pid: {pid}")
-    stdin, stdout, stderr = ssh_clients[node].exec_command(f"kill {pid}")
-    stdout.readlines()
+    try:
+        stdin, stdout, stderr = ssh_clients[node].exec_command("pidof geth")
+        pid = stdout.readlines()[0].replace("\n", "")
+        # logger.debug(f"geth pid: {pid}")
+        stdin, stdout, stderr = ssh_clients[node].exec_command(f"kill {pid}")
+        stdout.readlines()
+    except:
+        logger.info(f"It seems that geth on node {node} is already killed")
+        logger.info(f"Checking this")
+        stdin, stdout, stderr = ssh_clients[node].exec_command("ps aux | grep geth")
+        logger.info(f"stdout for ps aux | grep geth: {stdout.readlines()}")
+        logger.info(f"stderr for ps aux | grep geth: {stderr.readlines()}")
+
     # logger.debug(f" --> Clearing the tx-pool")
     stdin, stdout, stderr = ssh_clients[node].exec_command("rm /home/ubuntu/nodes/new-node-1/geth/transactions.rlp")
     stdout.readlines()
