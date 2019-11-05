@@ -70,7 +70,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info("Replacing the genesis_raw.json on each node by genesis_raw where the first two nodes have some ether")
     for index, _ in enumerate(config['priv_ips']):
-        stdin, stdout, stderr = ssh_clients[index].exec_command("(sed -i -e 's/substitute_first_address/'" + f"'{addresses[0]}'" + "'/g' /home/ubuntu/genesis_raw.json && sed -i -e 's/substitute_second_address/'" + f"'{addresses[1]}'" + "'/g' /home/ubuntu/genesis_raw.json && mv /home/ubuntu/genesis_raw.json /home/ubuntu/nodes/genesis.json)")
+        stdin, stdout, stderr = ssh_clients[index].exec_command("(sed -i -e 's/substitute_address/'" + f"'{addresses[0]}'" + "'/g' /home/ubuntu/genesis_raw.json && mv /home/ubuntu/genesis_raw.json /home/ubuntu/nodes/genesis.json)")
         stdout.readlines()
         # logger.debug("".join(stdout.readlines()))
         # logger.debug("".join(stderr.readlines()))
@@ -222,7 +222,7 @@ def start_network(config, ssh_clients, logger):
 
                 restart_node(node)
 
-            status_flags = check_network(config, logger)
+            status_flags = check_network(config, ssh_clients, logger)
 
         except:
             pass
@@ -232,7 +232,7 @@ def start_network(config, ssh_clients, logger):
     while (False in status_flags and retries < 3):
         retries = retries + 1
 
-        status_flags = check_network(config, logger)
+        status_flags = check_network(config, ssh_clients, logger)
         restart_network(config, ssh_clients, logger)
 
     if False in status_flags:
@@ -376,7 +376,7 @@ def kill_network(config, ssh_clients, logger):
         kill_node(config, ssh_clients, node, logger)
 
 
-def restart_network(config, ssh_clients, logger):
+def quorum_restart(config, ssh_clients, logger):
 
     kill_network(config, ssh_clients, logger)
     start_network(config, ssh_clients, logger)

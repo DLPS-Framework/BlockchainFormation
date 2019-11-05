@@ -19,10 +19,7 @@
   # Creating skeleton genesis block
   printf '{
   "alloc": {
-    "0xsubstitute_first_address": {
-      "balance": "10000000000000000000000000"
-    },
-    "0xsubstitute_second_address": {
+    "0xsubstitute_address": {
       "balance": "10000000000000000000000000"
     }
   },
