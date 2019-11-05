@@ -1,4 +1,4 @@
-#  Copyright 2019  Bayerische Motoren Werke Aktiengesellschaft (BMW AG)
+#  Copyright 2019  ChainLab
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -11,18 +11,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
+
+
 
 import sys, os, argparse
 import json
@@ -38,14 +28,11 @@ class ArgParser:
         """Initialize an ArgParser object.
         The general structure of calls from the command line is:
 
-        run.py start --vm_count 4 --instance_type t2.micro --blockchain_type geth --ssh_key ~/.ssh/blockchain --tag blockchain_philipp --subnet subnet-0ac7aeeec87150dd7 --security_group sg-0db312b6f84d66889
-        run.py terminate --config /Users/q481264/PycharmProjects/scripts/ec2_automation/experiments/exp_2019-05-13_11-20-50_geth/config.json
-
         """
 
         self.parser = argparse.ArgumentParser(description='This script automizes setup for various blockchain networks on aws and calculates aws costs after finshing'\
-                                    , usage = 'run.py start geth --vm_count 4 --instance_type t2.micro  --priv_key_path ~/.ssh/blockchain --tag_name blockchain_philipp --subnet_id subnet-0ac7aeeec87150dd7 --security_group_id sg-0db312b6f84d66889 '
-                                             'run.py terminate --config /Users/q481264/PycharmProjects/scripts/ec2_automation/experiments/exp_2019-05-13_16-32-49_geth/config.json')
+                                    , usage = 'run.py start geth --vm_count 4 --instance_type t2.micro  --priv_key_path ~/.ssh/blockchain --tag_name blockchain_test --subnet_id subnet-345 --security_group_id sg-345 '
+                                             'run.py terminate --config /home/config.json')
 
         subparsers_start_terminate = self.parser.add_subparsers(help='start instances or terminate them')
 
@@ -128,12 +115,12 @@ class ArgParser:
                             help='True or False whether you want a application load balancer',
                             default=False, type=bool)
         parser.add_argument('--lb_subnet_ids', '-lb_st',
-                            help='load balancer subnet ids (at least two from different availability zones)', default=['subnet-0ac7aeeec87150dd7','subnet-0af1a4489042c2d42'], nargs='+')
+                            help='load balancer subnet ids (at least two from different availability zones)', default=['subnet-123','subnet-234'], nargs='+')
         parser.add_argument('--lb_security_group_ids', '-lb_sg',
-                            help='security group, multiple values allowed', default=["sg-0db312b6f84d66889"], nargs='+')
+                            help='security group, multiple values allowed', default=["sg-123123"], nargs='+')
         parser.add_argument('--lb_port', '-lb_p', help='which port should load balancer listen AND hit', type=int, default=8545)
         parser.add_argument('--lb_hosted_zone_id', '-hzi',
-                            help='hosted zone id for route 53', default='Z1M5DW26LY28R0')
+                            help='hosted zone id for route 53', default='iuiuiut')
 
 
 
@@ -156,7 +143,7 @@ class ArgParser:
 
         parser.add_argument('--vm_count', '-vmc', help='specify how many VM you want to start', type=int)
         parser.add_argument('--instance_type', '-it', help='specify what type of instances you want to start',
-                                 default='t2.micro', choices=['t2.nano','t2.micro','t2.small','t2.medium','t2.large', 't2.xlarge','t2.2xlarge','m5.large','m5.xlarge','m5.2xlarge'])
+                                 default='t2.micro', choices=['t2.nano','t2.micro','t2.small','t2.medium','t2.large', 't2.xlarge','t2.2xlarge','m5.large','m5.xlarge','m5.2xlarge','m5.8xlarge'])
         parser.add_argument('--aws_credentials', '-cred',
                                  help='path to aws credentials', default=os.path.expanduser('~/.aws/credentials'))
         parser.add_argument('--key_name', '-kn',
@@ -166,13 +153,13 @@ class ArgParser:
         parser.add_argument('--aws_region', '-aws_r',
                             help='aws region where images should be hosted', default='eu-central-1')
         parser.add_argument('--aws_http_proxy', '-aws_http_proxy',
-                            help='aws http proxy (only needed for private VPCs)', default='http://proxy.ccc.eu-central-1.aws.cloud.bmw:8080')
+                            help='aws http proxy (only needed for private VPCs)', default=None)
         parser.add_argument('--aws_https_proxy', '-aws_https_proxy',
                             help='aws https proxy (only needed for private VPCs)',
-                            default='http://proxy.ccc.eu-central-1.aws.cloud.bmw:8080')
+                            default=None)
         parser.add_argument('--aws_no_proxy', '-aws_no_proxy',
                             help='aws no proxy (only needed for private VPCs)',
-                            default='localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net')
+                            default='localhost,127.0.0.1')
         parser.add_argument('--priv_key_path', '-key',
                                  help='path to  ssh key', default=os.path.expanduser('~/.ssh/blockchain'))
         parser.add_argument('--image_id', '-img_id',
@@ -182,15 +169,15 @@ class ArgParser:
         parser.add_argument('--VolumeSize', '-s',
                                  help='amount of VolumeSize in GB: min 8, max 1024', type=ArgParser.storage_type, default=32)
         parser.add_argument('--KmsKeyId', '-KId',
-                                 help='KmsKeyId for Encryption, None for no Encryption', default='arn:aws:kms:eu-central-1:731899578576:key/a808826d-e460-4271-a23b-29e1e0807c1d')
+                                 help='KmsKeyId for Encryption, None for no Encryption', default=None)
         parser.add_argument('--profile', '-p',
                                  help='name of aws profile, None for no profile switching', default='block_exp')
         parser.add_argument('--tag_name', '-t',
                                  help='tag for aws', default='blockchain_experiment')
         parser.add_argument('--subnet_id', '-st',
-                                 help='subnet id', default='subnet-0ac7aeeec87150dd7')
+                                 help='subnet id', default='subnet-123')
         parser.add_argument('--security_group_id', '-sg',
-                                 help='security group, multiple values allowed', default=["sg-0db312b6f84d66889"],nargs='+')
+                                 help='security group, multiple values allowed', default=["sg-123"],nargs='+')
         parser.add_argument('--public_ip', '-pub_ip',
                             help='True or False if public IP is needed (remember to define correct subnet/security))', default=False, type=bool)
         parser.add_argument('--proxy_user', '-pu',

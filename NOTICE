@@ -1,5 +1,5 @@
 This project includes software developed by
-Bayerische Motoren Werke Aktiengesellschaft (BMW AG)
+ChainLab
 
 Licensed under the Apache License, Version 2.0 (the
 "License"); you may not use this file except in compliance
@@ -30,3 +30,65 @@ This project has dependencies to:
     python_dateutil under Apache Software License, BSD License (Dual License)
     sawtooth_sdk under Apache License, Version 2.0
     TODO
+
+
+ PyNaCl               under Apache License 2.0
+ attrdict             under MIT License
+ attrs                under MIT
+ base58               under MIT
+ bcrypt               under Apache License, Version 2.0
+ boto3                under Apache License 2.0
+ botocore             under Apache License 2.0
+ certifi              under MPL-2.0
+ cffi                 under MIT
+ chardet              under LGPL
+ colorlog             under MIT License
+ cryptography         under BSD or Apache License, Version 2.0
+ cycler               under BSD
+ cytoolz              under BSD
+ docutils             under public domain, Python, 2-Clause BSD, GPL 3 (see COPYING.txt)
+ eth-abi              under MIT
+ eth-account          under MIT
+ eth-hash             under MIT
+ eth-keyfile          under MIT
+ eth-keys             under MIT
+ eth-rlp              under MIT
+ eth-typing           under MIT
+ eth-utils            under MIT
+ hexbytes             under MIT
+ idna                 under BSD-like
+ importlib-metadata   under Apache Software License
+ ipfshttpclient       under MIT License
+ jmespath             under MIT
+ jsonschema           under UNKNOWN
+ kiwisolver           under BSD
+ lru-dict             under MIT
+ matplotlib           under PSF
+ more-itertools       under MIT
+ multiaddr            under MIT License
+ netaddr              under BSD License
+ numpy                under BSD
+ pandas               under BSD
+ paramiko             under LGPL
+ parsimonious         under MIT
+ protobuf             under 3-Clause BSD License
+ pycparser            under BSD
+ pycryptodome         under BSD, Public Domain, Apache
+ pyparsing            under MIT License
+ pyrsistent           under MIT
+ python-dateutil      under Dual License
+ pytz                 under MIT
+ pyzmq                under LGPL+BSD
+ requests             under Apache 2.0
+ rlp                  under MIT
+ s3transfer           under Apache License 2.0
+ scipy                under BSD
+ scp                  under LGPL
+ seaborn              under BSD (3-clause)
+ six                  under MIT
+ toml                 under MIT
+ toolz                under BSD
+ urllib3              under MIT
+ varint               under MIT
+ web3                 under MIT
+ websockets           under BSD
