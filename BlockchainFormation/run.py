@@ -190,6 +190,10 @@ class ArgParser:
                             help='NO PROXY', default=None)
         parser.add_argument('--exp_dir', '-exp_d',
                             help='Directory where experiment folder is created (default=os.getcwd())', default=os.getcwd())
+        parser.add_argument('--aws_spot_instances',
+                            help='Boolean if spot instances should be used for aws', default=False, type=bool)
+
+
 
     @staticmethod
     def _add_fabric_args(parser):
@@ -334,6 +338,7 @@ class ArgParser:
             "aws_config": os.path.expanduser(namespace_dict['aws_config']),
             "aws_region": namespace_dict['aws_region'],
             "aws_proxy_settings": ArgParser._add_aws_proxy_settings(namespace_dict),
+            "aws_spot_instances": namespace_dict['aws_spot_instances'],
             "priv_key_path": os.path.expanduser(namespace_dict['priv_key_path']),
             "public_ip": namespace_dict['public_ip'],
             "tag_name": namespace_dict['tag_name'],
