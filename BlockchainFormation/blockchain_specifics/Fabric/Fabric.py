@@ -50,14 +50,14 @@ def fabric_shutdown(config, logger, ssh_clients, scp_clients):
 
     for index, _ in enumerate(ssh_clients):
         stdin, stdout, stderr = ssh_clients[index].exec_command("docker stop $(docker ps -a -q) && docker rm -f $(docker ps -a -q) && docker rmi $(docker images | grep 'my-net' | awk '{print $1}')")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
-        # stdin, stdout, stderr = ssh_clients[index].exec_command("docker volume rm $(docker volume ls -q)")
+        # logger.debug(stdout.readlines())
+        # logger.debug(stderr.readlines())
+        stdin, stdout, stderr = ssh_clients[index].exec_command("docker volume rm $(docker volume ls -q)")
         # logger.debug(stdout.readlines())
         # logger.debug(stderr.readlines())
         stdin, stdout, stderr = ssh_clients[index].exec_command("docker ps -a && docker volume ls && docker images")
-        logger.debug("".join(stdout.readlines()))
-        logger.debug("".join(stderr.readlines()))
+        # logger.debug("".join(stdout.readlines()))
+        # logger.debug("".join(stderr.readlines()))
 
     """
 
