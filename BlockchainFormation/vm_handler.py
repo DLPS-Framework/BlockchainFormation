@@ -231,6 +231,16 @@ class VMHandler:
                     ]
                 },
             ],
+            InstanceMarketOptions={
+                'MarketType': 'spot',
+                'SpotOptions': {
+                    #'MaxPrice': 'string',
+                    'SpotInstanceType': 'one-time', # | 'persistent'
+                    'BlockDurationMinutes': 240,
+                    'InstanceInterruptionBehavior': 'terminate'
+                }
+
+            } if 'aws_spot_instances' in self.config and self.config['aws_spot_instances'] else {},
              NetworkInterfaces=[
                 {
                     'DeviceIndex': 0,
