@@ -40,6 +40,7 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
   # Change Keep Alive Time of sshd
   sudo bash -c 'echo ClientAliveInterval 120 >> /etc/ssh/sshd_config'
   sudo bash -c 'echo ClientAliveCountMax 720 >> /etc/ssh/sshd_config'
+  sudo bash -c 'echo MaxSessions 720 >> /etc/ssh/sshd_config'
   sudo service ssh restart
 
   #THIS ONLY WORKS IF THE UNMOUNTED DISK IS THE BIGGEST DISK ON VM

@@ -1,9 +1,7 @@
 # BlockchainFormation
 
-## Major Updates:
- * *July 22 2019:* Added Quorum/Fabric/Sawtooth Support (WIP)
- * *July 1 2019:* Added Application LoadBalancer Support (so far only for private VPCs)
- * *June 17 2019:* Added Parity Support
+## Updates:
+ * *November 2019:* Added InstanceMarketOptions for cheaper VMs (TODO: Does the AWS Calculator take care of this?)
 
 ## General Information
 
@@ -74,7 +72,6 @@ To add another blockchain 4 things need to be added:
 * specific user data script in ```/UserDataScripts```
 
 ## Future Steps
-* Add InstanceMarketOptions for cheaper VMs (Does the AWS Calculator take care of this?)
 * Add Windows support
 * Add option to attach no storage at all
 * Make geth/parity setup even more customizable
