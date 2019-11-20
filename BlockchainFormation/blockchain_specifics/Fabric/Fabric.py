@@ -50,12 +50,15 @@ def fabric_shutdown(config, logger, ssh_clients, scp_clients):
 
     for index, _ in enumerate(ssh_clients):
         stdin, stdout, stderr = ssh_clients[index].exec_command("docker stop $(docker ps -a -q) && docker rm -f $(docker ps -a -q) && docker rmi $(docker images | grep 'my-net' | awk '{print $1}')")
+        stdout.readlines()
         # logger.debug(stdout.readlines())
         # logger.debug(stderr.readlines())
         stdin, stdout, stderr = ssh_clients[index].exec_command("docker volume rm $(docker volume ls -q)")
+        stdout.readlines()
         # logger.debug(stdout.readlines())
         # logger.debug(stderr.readlines())
         stdin, stdout, stderr = ssh_clients[index].exec_command("docker ps -a && docker volume ls && docker images")
+        stdout.readlines()
         # logger.debug("".join(stdout.readlines()))
         # logger.debug("".join(stderr.readlines()))
 
@@ -964,5 +967,10 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
 
 
 def fabric_restart(config, logger, ssh_clients, scp_clients):
-    fabric_shutdown(config, logger, ssh_clients, scp_clients)
-    start_docker_containers(config, logger, ssh_clients, scp_clients)
+    try:
+        fabric_shutdown(config, logger, ssh_clients, scp_clients)
+        start_docker_containers(config, logger, ssh_clients, scp_clients)
+    except Exception as e:
+        logger.exception(e)
+        fabric_shutdown(config, logger, ssh_clients, scp_clients)
+        start_docker_containers(config, logger, ssh_clients, scp_clients)
