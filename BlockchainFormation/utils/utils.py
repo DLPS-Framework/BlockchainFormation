@@ -63,15 +63,15 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
                         # Check if stdout equals the wanted message
                         if stdout_line == f"{message}\n":
                             status_flags[index] = True
-                            logger.debug(f"   --> ready on {ip}")
+                            # logger.debug(f"   --> ready on {ip}")
                             continue
                         else:
-                            logger.debug(f"   --> not yet ready on {ip}")
+                            # logger.debug(f"   --> not yet ready on {ip}")
                             continue
 
                     # If there is no message we just need to check if path exists (client_sftp.stat(path))
                     status_flags[index] = True
-                    logger.debug(f"   --> ready on {ip}")
+                    # logger.debug(f"   --> ready on {ip}")
 
                 # Try again if SSHException
                 except paramiko.SSHException:
@@ -87,18 +87,19 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
                                 stdin, stdout, stderr = ssh_clients[index].exec_command(f"tail -n 1 {path}")
                                 if stdout.readlines()[0] == f"{message}\n":
                                    status_flags[index] = True
-                                   logger.debug(f"   --> ready on {ip}")
+                                   # logger.debug(f"   --> ready on {ip}")
                                    continue
                                 else:
-                                   logger.debug(f"   --> not yet ready on {ip}")
+                                   # logger.debug(f"   --> not yet ready on {ip}")
                                    continue
 
                             status_flags[index] = True
-                            logger.debug(f"   --> ready on {ip}")
+                            # logger.debug(f"   --> ready on {ip}")
 
                         except Exception as e:
                             # logger.exception(e)
-                            logger.debug(f"   --> still not yet ready on {ip}")
+                            # logger.debug(f"   --> still not yet ready on {ip}")
+                            pass
 
                     except Exception as e:
                         # logger.exception(e)
@@ -107,7 +108,10 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
 
                 except Exception as e:
                     # logger.exception(e)
-                    logger.debug(f"   --> not yet ready on {ip}")
+                    # logger.debug(f"   --> not yet ready on {ip}")
+                    pass
+
+        # logger.info(f" --> Ready on {len(np.where(status_flags == True)[0])} out of {len(ips)}")
 
     return status_flags
 
