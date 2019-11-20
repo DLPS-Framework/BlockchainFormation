@@ -31,7 +31,7 @@ class ArgParser:
         """
 
         self.parser = argparse.ArgumentParser(description='This script automizes setup for various blockchain networks on aws and calculates aws costs after finshing'\
-                                    , usage = 'run.py start geth --vm_count 4 --instance_type t2.micro  --priv_key_path ~/.ssh/blockchain --tag_name blockchain_test --subnet_id subnet-345 --security_group_id sg-345 '
+                                    ,usage = 'run.py start geth --vm_count 4 --instance_type t2.micro  --priv_key_path ~/.ssh/blockchain --tag_name blockchain_test --subnet_id subnet-345 --security_group_id sg-345 '
                                              'run.py terminate --config /home/config.json')
 
         subparsers_start_terminate = self.parser.add_subparsers(help='start instances or terminate them')
@@ -578,8 +578,6 @@ if __name__ == '__main__':
 
         # if no config file is given, a config file is created with the passed argpass commands
         if namespace.config is not None:
-            # TODO check why the first does not work
-            # logger.info(f"Given config file ({namespace.config}) will be used")
             logger.info("Given config file will be used")
             config = argparser.load_config(vars(namespace))
         else:

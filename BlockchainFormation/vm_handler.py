@@ -184,7 +184,9 @@ class VMHandler:
             # self.logger.debug(f"Checking whether vm_count equals the expected number of necessary nodes")
 
             if self.config['fabric_settings']['orderer_type'].upper() == "KAFKA":
-                count = self.config['fabric_settings']['org_count'] * self.config['fabric_settings']['peer_count'] + self.config['fabric_settings']['orderer_count'] + self.config['fabric_settings']['zookeeper_count'] + self.config['fabric_settings']['kafka_count']
+                count = self.config['fabric_settings']['org_count'] * self.config['fabric_settings']['peer_count'] \
+                        + self.config['fabric_settings']['orderer_count'] + self.config['fabric_settings']['zookeeper_count']\
+                        + self.config['fabric_settings']['kafka_count']
             elif self.config['fabric_settings']['orderer_type'].upper() == "RAFT":
                 count = self.config['fabric_settings']['org_count'] * self.config['fabric_settings']['peer_count'] + self.config['fabric_settings']['orderer_count']
             elif self.config['fabric_settings']['orderer_type'].upper() == "SOLO":
@@ -326,7 +328,8 @@ class VMHandler:
         self.logger.info("Waiting for all VMs to finish the userData setup...")
 
         # Wait until user Data is finished
-        if False in wait_till_done(self.config, ssh_clients, self.config['ips'], 30*60, 60, "/var/log/user_data_success.log", False, 10*60, self.logger):
+        if False in wait_till_done(self.config, ssh_clients, self.config['ips'], 30*60, 60,
+                                   "/var/log/user_data_success.log", False, 10*60, self.logger):
             self.logger.error('Boot up NOT successful')
 
             if yes_or_no("Do you want to shut down the VMs?"):
@@ -402,7 +405,7 @@ class VMHandler:
         :return:
         """
         if self.config['proxy'] is not None:
-            os.environ["NO_PROXY"] = f"localhost,127.0.0.1,.muc,.aws.cloud.bmw,.azure.cloud.bmw,.bmw.corp,.bmwgroup.net,{','.join(str(ip) for ip in self.config['ips'])}"
+            os.environ["NO_PROXY"] = f"{self.config['proxy']['no_proxy']},{','.join(str(ip) for ip in self.config['ips'])}"
 
         ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
         ec2_instances = ec2.instances.filter(InstanceIds=self.config['instance_ids'])
