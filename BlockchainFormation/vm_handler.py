@@ -485,7 +485,8 @@ class VMHandler:
         ssh_key_priv = paramiko.RSAKey.from_private_key_file(config['priv_key_path'])
 
         if logger is not None:
-            logger.debug(f"Trying to connect the ssh clients")
+            # logger.debug(f"Trying to connect the ssh clients")
+            pass
 
         for index, ip in enumerate(config['ips']):
             if config['public_ip']:
@@ -522,6 +523,7 @@ class VMHandler:
             scp_clients.append(SCPClient(ssh_clients[index].get_transport(), socket_timeout=86400))
 
         if logger is not None:
-            logger.debug(f"All scp/ssh clients got created and connected")
+            # logger.debug(f"All scp/ssh clients got created and connected")
+            pass
 
         return ssh_clients, scp_clients
