@@ -223,7 +223,7 @@ def start_network(config, ssh_clients, logger):
         retries = retries + 1
 
         status_flags = check_network(config, ssh_clients, logger)
-        restart_network(config, ssh_clients, logger)
+        quorum_restart(config, ssh_clients, logger)
 
     if False in status_flags:
         logger.error("Quorum network did not start successfully")
