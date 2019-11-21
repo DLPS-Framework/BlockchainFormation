@@ -76,8 +76,8 @@ class BenchContract extends Contract {
         return Buffer.from(tmp.toString())
     }
 
-    async writeMuchData(ctx, number, delta) {
-        for (var i = 0; i < number; i++) {
+    async writeMuchData(ctx, len, start, delta) {
+        for (var i = start; i < start+len; i++) {
             await ctx.stub.putState(i.toString(), (delta + i).toString())
         }
         return Buffer.from('1')
