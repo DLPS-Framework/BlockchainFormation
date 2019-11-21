@@ -497,7 +497,7 @@ class VMHandler:
 
             while True:
                 try:
-                    ssh_clients[index].connect(hostname=ip, username=config['user'], pkey=ssh_key_priv, timeout=86400, banner_timeout=3, auth_timeout=3)
+                    ssh_clients[index].connect(hostname=ip, username=config['user'], pkey=ssh_key_priv, timeout=86400, banner_timeout=100, auth_timeout=30)
 
                 except Exception as e:
                     if logger is not None:
