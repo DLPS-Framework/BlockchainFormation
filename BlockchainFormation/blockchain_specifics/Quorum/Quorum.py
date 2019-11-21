@@ -185,17 +185,15 @@ def start_tessera(config, ssh_clients, logger):
     return tessera_public_keys, tessera_private_keys
 
 
-def start_network(config, ssh_clients, logger):
+def start_network_attempt(config, ssh_clients, logger):
 
     for index, ip in enumerate(config['priv_ips']):
 
         if index == 0:
-
             start_node(config, ssh_clients, index, logger)
             time.sleep(5)
 
         else:
-
             add_node(config, ssh_clients, index, logger)
             time.sleep(2)
             start_node(config, ssh_clients, index, logger)
@@ -204,26 +202,36 @@ def start_network(config, ssh_clients, logger):
     status_flags = check_network(config, ssh_clients, logger)
 
     if (False in status_flags):
-
+        logger.info("Restart was not successful")
         try:
-
             logger.info("Restarting failed VMs")
             for node in np.where(status_flags != True):
-
                 restart_node(node)
 
             status_flags = check_network(config, ssh_clients, logger)
 
-        except:
+        except Exception as e:
+            logger.exception(e)
             pass
+    else:
+        logger.info("Restart was successul")
 
+    return status_flags
+
+def start_network(config, ssh_clients, logger):
+
+    status_flags = start_network_attempt(config, ssh_clients, logger)
+
+    if (False in status_flags):
+        logger.info("Making a complete restart since it was not successful")
 
     retries = 0
     while (False in status_flags and retries < 3):
+        logger.info(f"Retry {retries+1} out of 3")
         retries = retries + 1
 
-        status_flags = check_network(config, ssh_clients, logger)
-        quorum_restart(config, ssh_clients, logger)
+        kill_network(config, ssh_clients, logger)
+        status_flags = start_network_attempt(config, ssh_clients, logger)
 
     if False in status_flags:
         logger.error("Quorum network did not start successfully")
@@ -271,7 +279,7 @@ def add_node(config, ssh_clients, node, logger):
 
 def unlock_node(config, ssh_clients, node, logger):
 
-    logger.debug(f" --> Unlocking node {node}")
+    # logger.debug(f" --> Unlocking node {node}")
     stdin, stdout, stderr = ssh_clients[node].exec_command("geth --exec eth.accounts attach /home/ubuntu/nodes/new-node-1/geth.ipc")
     out = stdout.readlines()
     sender = out[0].replace("\n", "").replace("[", "").replace("]", "")
@@ -305,8 +313,8 @@ def check_network(config, ssh_clients, logger):
                     stdin, stdout, stderr = ssh_clients[index].exec_command("geth --exec " + '\"' + "admin.peers.length" + '\"' + " attach /home/ubuntu/nodes/new-node-1/geth.ipc")
                     out = stdout.readlines()
                 except Exception as e:
+                    logger.exception(e)
                     logger.debug("Geth exec failing...")
-                    logger.debug(str(e))
                 try:
                     nr = int(out[0].replace("\n", ""))
                     if nr == len(config['priv_ips']) - 1:
@@ -316,8 +324,8 @@ def check_network(config, ssh_clients, logger):
                     else:
                         logger.info(f"Node {index} on IP {ip} is not yet fully connected (expected: {len(config['priv_ips']) - 1}, actual: {nr} ")
                 except Exception as e:
+                    logger.exception(e)
                     logger.debug(f"Node {index} might not have started at all - retrying though")
-                    logger.debug(str(Exception))
 
     if (False in status_flags):
         try:
@@ -335,7 +343,6 @@ def kill_node(config, ssh_clients, node, logger):
     try:
         stdin, stdout, stderr = ssh_clients[node].exec_command("pidof geth")
         pid = stdout.readlines()[0].replace("\n", "")
-        # logger.debug(f"geth pid: {pid}")
         stdin, stdout, stderr = ssh_clients[node].exec_command(f"kill {pid}")
         stdout.readlines()
     except:
@@ -344,8 +351,17 @@ def kill_node(config, ssh_clients, node, logger):
         stdin, stdout, stderr = ssh_clients[node].exec_command("ps aux | grep geth")
         logger.info(f"stdout for ps aux | grep geth: {stdout.readlines()}")
         logger.info(f"stderr for ps aux | grep geth: {stderr.readlines()}")
+        # checking whether the other geth-files are deleted
+        stdin, stdout, stderr = ssh_clients[node].exec_command("ls /home/ubuntu/nodes/new-node-1")
+        logger.info(f"Files in /nodes/new-node-1: {stdout.readlines}")
+        logger.debug(stdout.readlines())
+        # deleting the remaining geth-related files
+        logger.info("Deleting relevant files")
+        stdin, stdout, stderr = ssh_clients[node].exec_command("rm geth.ipc; rm -r quorum-raft-state; rm -r raft-snap; rm -r raft-wal")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
 
-    # logger.debug(f" --> Clearing the tx-pool")
+    # Clearing the tx-pool
     stdin, stdout, stderr = ssh_clients[node].exec_command("rm /home/ubuntu/nodes/new-node-1/geth/transactions.rlp")
     stdout.readlines()
 
@@ -362,7 +378,6 @@ def kill_network(config, ssh_clients, logger):
 
     logger.info("Killing geth on all nodes")
     for node, _ in enumerate(config['priv_ips']):
-
         kill_node(config, ssh_clients, node, logger)
 
 
