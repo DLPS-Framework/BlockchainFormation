@@ -366,9 +366,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
             logger.info(str(web3_clients[index].toChecksumAddress(acc)) + ": " + str(
                 web3_clients[index].eth.getBalance(Web3.toChecksumAddress(acc))))
 
-    logger.info("Since parity takes ages for the first blocks, it is time to sleep for two minutes zZz")
-    time.sleep(120)
-    logger.info("zZz Just one more minute zZz")
+    logger.info("Since parity takes ages for the first blocks, it is time to sleep for one minutes zZz")
     time.sleep(60)
 
     for index, _ in enumerate(config['ips']):
