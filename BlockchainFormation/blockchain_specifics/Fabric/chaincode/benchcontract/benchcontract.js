@@ -67,17 +67,17 @@ class BenchContract extends Contract {
      * @param {String|Object} value: value to store
      */
 
-    async writeData(ctx, key, _value) {
+    async writeData(ctx, key, value) {
         await ctx.stub.putState("key_" + key, Buffer.from("value_" + value))
         return Buffer.from('1')
     }
 
     /** Standard setters and getters
      * @param {Context} ctx the transaction context
-     * @param {String} _key  Primary key
+     * @param {String} key  Primary key
      */
 
-    async readData(ctx, _key) {
+    async readData(ctx, key) {
         var tmp = await ctx.stub.getState("key_" + key)
         return Buffer.from(tmp.toString())
     }
