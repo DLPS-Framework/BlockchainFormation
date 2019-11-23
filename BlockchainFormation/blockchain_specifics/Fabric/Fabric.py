@@ -84,6 +84,8 @@ def fabric_shutdown(config, logger, ssh_clients, scp_clients):
 
 def fabric_startup(config, logger, ssh_clients, scp_clients):
 
+    dir_name = os.path.dirname(os.path.realpath(__file__))
+
     # the indices of the different roles
     config['orderer_indices'] = list(range(0, config['fabric_settings']['orderer_count']))
     config['peer_indices'] = list(range(config['fabric_settings']['orderer_count'], config['fabric_settings']['orderer_count'] + config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count']))
@@ -97,8 +99,6 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
 
     # the indices of the blockchain nodes
     config['node_indices'] = config['peer_indices']
-
-    dir_name = os.path.dirname(os.path.realpath(__file__))
     
     # create directories for the fabric logs and all the setup data (crypto-stuff, config files and scripts which are exchanged with the VMs)
     os.mkdir(f"{config['exp_dir']}/fabric_logs")
