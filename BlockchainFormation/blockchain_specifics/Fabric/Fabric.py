@@ -207,10 +207,30 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
     scp_clients[0].get("/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts", f"{config['exp_dir']}/setup", recursive=True)
 
     logger.info("Pushing crypto-config, channel-artifacts, and chaincode to all remaining other nodes")
-    # logger.debug(f"Indices: {config['orderer_indices'] + config['peer_indices']}")
+    indices = config['orderer_indices'] + config['peer_indices']
 
-    # num_cores = multiprocessing.cpu_count()
-    inputs = config['orderer_indices'] + config['peer_indices']
+    # writing the ssh-key to the first vm described by indices in order to start the cascade
+    scp_clients[0].put(f"{config['priv_key_path']}", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem")
+    scp_clients[0].put(f"{dir_name}/chaincode/benchcontract", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode", recursive=True)
+    logger.debug("Successfully pushed to index 0.")
+
+    finished_indices = [indices[0]]
+    remaining_indices = indices[1:len(indices)-1]
+    while remaining_indices != []:
+        n_targets = min(len(finished_indices), len(remaining_indices))
+        indices_sources = finished_indices[0:n_targets]
+        indices_targets = remaining_indices[0:n_targets]
+
+        push_stuff(config, ssh_clients, scp_clients, indices_sources, indices_targets, logger)
+
+        finished_indices = indices_sources + indices_targets
+        remaining_indices = remaining_indices[n_targets:]
+
+    # deleting the ssh-keys after having finished
+    for _, index in enumerate(indices):
+        stdin, stdout, stderr = ssh_clients[index].exec_command(f"rm /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem")
+        stdout.readlines()
+
     # with concurrent.futures.ProcessPoolExecutor() as executor:
         # for _ in executor.map(push_stuff, repeat(config), repeat(ssh_clients), repeat(scp_clients), repeat(dir_name), pushing_indices, repeat(logger)):
             # print(_)
@@ -224,16 +244,16 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
     # pool.close()
     # logger.debug(results)
 
-    jobs = []
-    for _, index in enumerate(config['orderer_indices'] + config['peer_indices']):
-        thread = threading.Thread(target=push_stuff(config, ssh_clients, scp_clients, dir_name, index, logger))
-        jobs.append(thread)
+    # jobs = []
+    # for _, index in enumerate(config['orderer_indices'] + config['peer_indices']):
+    #     thread = threading.Thread(target=push_stuff(config, ssh_clients, scp_clients, dir_name, index, logger))
+    #     jobs.append(thread)
 
-    for j in jobs:
-        j.start()
+    # for j in jobs:
+    #     j.start()
 
-    for j in jobs:
-        j.join()
+    # for j in jobs:
+    #     j.join()
 
     start_docker_containers(config, logger, ssh_clients, scp_clients)
 
@@ -995,12 +1015,19 @@ def fabric_restart(config, logger, ssh_clients, scp_clients):
         fabric_shutdown(config, logger, ssh_clients, scp_clients)
         start_docker_containers(config, logger, ssh_clients, scp_clients)
 
-def push_stuff(config, ssh_clients, scp_clients, dir_name, index, logger):
-    scp_clients[index].put(f"{dir_name}/chaincode/benchcontract", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode", recursive=True)
-    if index != 0:
-        stdin, stdout, stderr = ssh_clients[index].exec_command("sudo rm -rf /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts")
+def push_stuff(config, ssh_clients, scp_clients, indices_sources, indices_targets, logger):
+    for index, index_source in enumerate(indices_sources):
+        index_target = indices_targets[index]
+        # deleting data at the vm associated with source_index and copying it to the vm associated with the target index
+        stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"echo y | ssh -i /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem ubuntu@{config['priv_ips'][index_target]} 'sudo rm -rf /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts'")
         stdout.readlines()
-        scp_clients[index].put(f"{config['exp_dir']}/setup/crypto-config", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger", recursive=True)
-        scp_clients[index].put(f"{config['exp_dir']}/setup/channel-artifacts", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger", recursive=True)
+        stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"echo y | scp -ri /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config ubuntu@{config['priv_ips'][index_target]}:/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger")
+        stdout.readlines()
+        stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"echo y | scp -ri /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode ubuntu@{config['priv_ips'][index_target]}:/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger")
+        stdout.readlines()
+        stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"echo y | scp -i /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /home/ubuntu/crypto-config/key.pem ubuntu@{config['priv_ips'][index_target]}:/home/ubuntu/crypto-config/key.pem")
+        stdout.readlines()
+        logger.debug(f"Successfully pushed to index {index_target}")
 
-        logger.debug(f"Done on node {index}")
+
+
