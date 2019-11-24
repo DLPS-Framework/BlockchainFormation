@@ -206,15 +206,13 @@ def start_network_attempt(config, ssh_clients, logger):
         try:
             logger.info("Restarting failed VMs")
             for node in np.where(status_flags != True):
-                restart_node(node)
+                restart_node(config, ssh_clients, node, logger)
 
             status_flags = check_network(config, ssh_clients, logger)
 
         except Exception as e:
             logger.exception(e)
             pass
-    else:
-        logger.info("Restart was successul")
 
     return status_flags
 
