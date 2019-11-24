@@ -155,7 +155,7 @@ function generateChannelArtifacts() {
     # Note: For some unknown reason (at least for now) the block file can't be
     # named orderer.genesis.block or the orderer will fail to launch!
     # configtxgen -profile OneOrgOrdererGenesis -outputBlock ./channel-artifacts/genesis.block
-    configtxgen -profile OrdererGenesis -outputBlock ./channel-artifacts/genesis.block
+    configtxgen -profile OrdererGenesis -outputBlock ./channel-artifacts/genesis.block -channelID my-sys-channel
 
 
     if [ "$?" -ne 0 ]; then

@@ -186,7 +186,7 @@ wait
 echo "$(date +'%Y-%m-%d %H:%M:%S:%3N') Querying benchcontract chaincode on all peers"
 for PEER in substitute_enum_peers; do
     for ORG in substitute_enum_orgs; do
-        benchcont   ractChaincodeQuery $PEER $ORG &
+        benchcontractChaincodeQuery $PEER $ORG &
     done
 done
 
