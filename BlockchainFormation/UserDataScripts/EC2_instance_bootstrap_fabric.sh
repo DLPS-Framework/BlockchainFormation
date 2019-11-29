@@ -1,5 +1,7 @@
 #!/bin/bash -xe
 
+  cd /data
+
   # Getting updates and upgrades
   sudo apt-get update
   sudo apt-get -y upgrade || echo "Upgrading in fabric_bootstrap failed" >> /home/ubuntu/upgrade_fail2.log
@@ -37,19 +39,21 @@
   rm go1.12.7.linux-amd64.tar.gz
 
   # Cloning hyperledger fabric + docker images
-  curl -sSL http://bit.ly/2ysbOFE | sudo bash -s 1.4.2
+  # curl -sSL http://bit.ly/2ysbOFE | sudo bash -s 2.0.0-alpha 2.0.0-alpha 0.4.18
+  curl -sSL http://bit.ly/2ysbOFE | sudo bash -s 1.4.4 1.4.4. 0.4.18
+
 
   # Cloning github repository with helping material for Multi-Host-Network
   git clone https://github.com/wahabjawed/Build-Multi-Host-Network-Hyperledger.git
   sudo mv Build-Multi-Host-Network-Hyperledger fabric-samples
 
   # Putting fabric bins to path
-  echo "export PATH=$PATH:/usr/local/go/bin:/home/ubuntu/fabric-samples/bin" >> /home/ubuntu/.profile
-  # echo "export PATH=$PATH:/usr/local/go/bin:/home/ubuntu/fabric-samples/bin" | sudo tee -a /etc/profile > /dev/null
+  echo "export PATH=$PATH:/usr/local/go/bin:/data/fabric-samples/bin" >> /home/ubuntu/.profile
+  # echo "export PATH=$PATH:/usr/local/go/bin:/data/fabric-samples/bin" | sudo tee -a /etc/profile > /dev/null
   source ~/.profile
 
   # Changing permissions for fabric-samples repository
-  sudo chown --recursive ubuntu:ubuntu ~/fabric-samples/
+  sudo chown -R ubuntu:ubuntu /data/fabric-samples/
 
 # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log

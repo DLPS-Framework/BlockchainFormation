@@ -13,12 +13,10 @@
 #  limitations under the License.
 
 
-
 import datetime
 import time
 import numpy as np
 import paramiko
-from scp import SCPClient
 
 # File containing helper functions
 
@@ -33,14 +31,18 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
     :param delta: time between two successive attempts
     :param path: path of the file which is created at completion
     :param message: content of the file which is created at completion, if message equals False then no message is required
-    :param typicalTime: the time which it usually takes
+    :param typical_time: the time which it usually takes
     :param logger: the logger of the parent (calling) script
+    :param func_part_one: String command called before the path
+    :param func_part_two: String command called after the path
 
     :return: True if all files with the desired content were created, False otherwise
     """
 
     status_flags = np.zeros(len(ssh_clients), dtype=bool)
     timer = 0
+
+    # TODO: Can this while loop be refactored to be more lean?
 
     while (False in status_flags and timer < total_time):
         time.sleep(delta)
@@ -55,25 +57,23 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
                     if (message != False):
                         stdin, stdout, stderr = ssh_clients[index].exec_command(f"{func_part_one} {path} {func_part_two}")
 
-                        # logger.debug(f"Expected message: {message}")
-
                         # read line from stdout
                         stdout_line = stdout.readlines()[0]
 
-                        # logger.debug(f"Received message: {stdout_line}")
-
-
+                        # Check if stdout equals the wanted message
                         if stdout_line == f"{message}\n":
                             status_flags[index] = True
-                            logger.debug(f"   --> ready on {ip}")
+                            # logger.debug(f"   --> ready on {ip}")
                             continue
                         else:
-                            logger.debug(f"   --> not yet ready on {ip}")
+                            # logger.debug(f"   --> not yet ready on {ip}")
                             continue
 
+                    # If there is no message we just need to check if path exists (client_sftp.stat(path))
                     status_flags[index] = True
-                    logger.debug(f"   --> ready on {ip}")
+                    # logger.debug(f"   --> ready on {ip}")
 
+                # Try again if SSHException
                 except paramiko.SSHException:
                     try:
                         # logger.debug(f"    --> Reconnecting {ip}...")
@@ -87,18 +87,19 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
                                 stdin, stdout, stderr = ssh_clients[index].exec_command(f"tail -n 1 {path}")
                                 if stdout.readlines()[0] == f"{message}\n":
                                    status_flags[index] = True
-                                   logger.debug(f"   --> ready on {ip}")
+                                   # logger.debug(f"   --> ready on {ip}")
                                    continue
                                 else:
-                                   logger.debug(f"   --> not yet ready on {ip}")
+                                   # logger.debug(f"   --> not yet ready on {ip}")
                                    continue
 
                             status_flags[index] = True
-                            logger.debug(f"   --> ready on {ip}")
+                            # logger.debug(f"   --> ready on {ip}")
 
                         except Exception as e:
                             # logger.exception(e)
-                            logger.debug(f"   --> still not yet ready on {ip}")
+                            # logger.debug(f"   --> still not yet ready on {ip}")
+                            pass
 
                     except Exception as e:
                         # logger.exception(e)
@@ -107,14 +108,19 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
 
                 except Exception as e:
                     # logger.exception(e)
-                    logger.debug(f"   --> not yet ready on {ip}")
+                    # logger.debug(f"   --> not yet ready on {ip}")
+                    pass
+
+        # logger.info(f" --> Ready on {len(np.where(status_flags == True)[0])} out of {len(ips)}")
 
     return status_flags
+
 
 def datetimeconverter(o):
     """Converter to make datetime objects json dumpable"""
     if isinstance(o, datetime.datetime):
         return o.__str__()
+
 
 def yes_or_no(question):
     reply = str(input(question + ' (y/n): ')).lower().strip()

@@ -26,6 +26,8 @@ from scp import SCPClient
 from BlockchainFormation import vm_handler
 from BlockchainFormation.utils.utils import *
 
+import threading
+
 
 def fabric_shutdown(config, logger, ssh_clients, scp_clients):
     """
@@ -50,12 +52,15 @@ def fabric_shutdown(config, logger, ssh_clients, scp_clients):
 
     for index, _ in enumerate(ssh_clients):
         stdin, stdout, stderr = ssh_clients[index].exec_command("docker stop $(docker ps -a -q) && docker rm -f $(docker ps -a -q) && docker rmi $(docker images | grep 'my-net' | awk '{print $1}')")
+        stdout.readlines()
         # logger.debug(stdout.readlines())
         # logger.debug(stderr.readlines())
         stdin, stdout, stderr = ssh_clients[index].exec_command("docker volume rm $(docker volume ls -q)")
+        stdout.readlines()
         # logger.debug(stdout.readlines())
         # logger.debug(stderr.readlines())
         stdin, stdout, stderr = ssh_clients[index].exec_command("docker ps -a && docker volume ls && docker images")
+        stdout.readlines()
         # logger.debug("".join(stdout.readlines()))
         # logger.debug("".join(stderr.readlines()))
 
@@ -81,6 +86,8 @@ def fabric_shutdown(config, logger, ssh_clients, scp_clients):
 
 def fabric_startup(config, logger, ssh_clients, scp_clients):
 
+    dir_name = os.path.dirname(os.path.realpath(__file__))
+
     # the indices of the different roles
     config['orderer_indices'] = list(range(0, config['fabric_settings']['orderer_count']))
     config['peer_indices'] = list(range(config['fabric_settings']['orderer_count'], config['fabric_settings']['orderer_count'] + config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count']))
@@ -95,8 +102,6 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
     # the indices of the blockchain nodes
     config['node_indices'] = config['peer_indices']
 
-    dir_name = os.path.dirname(os.path.realpath(__file__))
-    
     # create directories for the fabric logs and all the setup data (crypto-stuff, config files and scripts which are exchanged with the VMs)
     os.mkdir(f"{config['exp_dir']}/fabric_logs")
     os.mkdir(f"{config['exp_dir']}/api")
@@ -152,19 +157,19 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
     logger.info(f"Creating crypto-config.yaml and pushing it to {config['ips'][0]}")
     write_crypto_config(config, logger)
 
-    stdin, stdout, stderr = ssh_clients[0].exec_command("rm -f /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config.yaml")
+    stdin, stdout, stderr = ssh_clients[0].exec_command("rm -f /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config.yaml")
     stdout.readlines()
     # logger.debug("".join(stdout.readlines()))
-    # logger.debug("".join(stderr.readlines()))
-    scp_clients[0].put(f"{config['exp_dir']}/setup/crypto-config.yaml", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config.yaml")
+    # logger.debug("".join(stderr.readlines()))f
+    scp_clients[0].put(f"{config['exp_dir']}/setup/crypto-config.yaml", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config.yaml")
 
     logger.info(f"Creating configtx and pushing it to {config['ips'][0]}")
     write_configtx(config, logger)
-    stdin, stdout, stderr = ssh_clients[0].exec_command("rm -f /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/configtx.yaml")
+    stdin, stdout, stderr = ssh_clients[0].exec_command("rm -f /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/configtx.yaml")
     stdout.readlines()
     # logger.debug("".join(stdout.readlines()))
     # logger.debug("".join(stderr.readlines()))
-    scp_clients[0].put(f"{config['exp_dir']}/setup/configtx.yaml", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/configtx.yaml")
+    scp_clients[0].put(f"{config['exp_dir']}/setup/configtx.yaml", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/configtx.yaml")
 
     logger.info(f"Creating bmhn.sh and pushing it to {config['ips'][0]}")
     os.system(f"cp {dir_name}/setup/bmhn_raw.sh {config['exp_dir']}/setup/bmhn.sh")
@@ -173,19 +178,19 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
         enum_orgs = enum_orgs + f" {org}"
 
     os.system(f"sed -i -e 's/substitute_enum_orgs/{enum_orgs}/g' {config['exp_dir']}/setup/bmhn.sh")
-    stdin, stdout, stderr = ssh_clients[0].exec_command("rm -f /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/bmhn.sh")
+    stdin, stdout, stderr = ssh_clients[0].exec_command("rm -f /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/bmhn.sh")
     stdout.readlines()
     # logger.debug("".join(stdout.readlines()))
     # logger.debug("".join(stderr.readlines()))
-    scp_clients[0].put(f"{config['exp_dir']}/setup/bmhn.sh", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/bmhn.sh")
+    scp_clients[0].put(f"{config['exp_dir']}/setup/bmhn.sh", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/bmhn.sh")
 
     logger.info(f"Creating crypto-stuff on {config['ips'][0]} by executing bmhn.sh")
-    stdin, stdout, stderr = ssh_clients[0].exec_command("rm -rf /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config")
+    stdin, stdout, stderr = ssh_clients[0].exec_command("rm -rf /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config")
     stdout.readlines()
     # logger.debug("".join(stdout.readlines()))
     # logger.debug("".join(stderr.readlines()))
 
-    stdin, stdout, stderr = ssh_clients[0].exec_command("( cd /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo y | bash ./bmhn.sh )")
+    stdin, stdout, stderr = ssh_clients[0].exec_command("( cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo y | bash ./bmhn.sh )")
     out = stdout.readlines()
     for index, _ in enumerate(out):
         logger.debug(out[index].replace("\n", ""))
@@ -193,24 +198,46 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
     logger.debug("".join(stderr.readlines()))
 
     logger.info(f"Getting crypto-config and channel-artifacts from {config['ips'][0]}...")
-    scp_clients[0].get("/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config", f"{config['exp_dir']}/setup", recursive=True)
-    scp_clients[0].get("/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts", f"{config['exp_dir']}/setup", recursive=True)
+    scp_clients[0].get("/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config", f"{config['exp_dir']}/setup", recursive=True)
+    scp_clients[0].get("/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts", f"{config['exp_dir']}/setup", recursive=True)
 
-    logger.info("Pushing crypto-config and channel-artifacts to all other nodes")
-    logger.debug(f"Indices: {config['orderer_indices'] + config['peer_indices']}")
-    for _, index in enumerate(config['orderer_indices'] + config['peer_indices']):
-        if index != 0:
-            stdin, stdout, stderr = ssh_clients[index].exec_command("sudo rm -rf /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts")
-            stdout.readlines()
-            scp_clients[index].put(f"{config['exp_dir']}/setup/crypto-config", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger", recursive=True)
-            scp_clients[index].put(f"{config['exp_dir']}/setup/channel-artifacts", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger", recursive=True)
+    logger.info("Pushing crypto-config, channel-artifacts, and chaincode to all remaining other nodes")
+    indices = config['orderer_indices'] + config['peer_indices']
 
-            logger.debug(f"Done on node {index}")
+    # pushing the ssh-key and the chaincode on the first vm
+    scp_clients[0].put(f"{config['priv_key_path']}", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem")
+    scp_clients[0].put(f"{dir_name}/chaincode/benchcontract", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode", recursive=True)
+    logger.debug("Successfully pushed to index 0.")
 
-    logger.info("Pushing chaincode to all nodes")
-    for index, _ in enumerate(config['priv_ips']):
-        scp_clients[index].put(f"{dir_name}/chaincode/benchcontract", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode", recursive=True)
+    finished_indices = [indices[0]]
+    remaining_indices = indices[1:len(indices)]
+    while remaining_indices != []:
+        n_targets = min(len(finished_indices), len(remaining_indices))
+        indices_sources = finished_indices[0:n_targets]
+        indices_targets = remaining_indices[0:n_targets]
 
+        push_stuff(config, ssh_clients, scp_clients, indices_sources, indices_targets, logger)
+
+        finished_indices = indices_sources + indices_targets
+        remaining_indices = remaining_indices[n_targets:]
+
+    # deleting the ssh-keys after having finished
+    for _, index in enumerate(indices):
+        stdin, stdout, stderr = ssh_clients[index].exec_command(f"rm /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem")
+        stdout.readlines()
+
+    # with concurrent.futures.ProcessPoolExecutor() as executor:
+        # for _ in executor.map(push_stuff, repeat(config), repeat(ssh_clients), repeat(scp_clients), repeat(dir_name), pushing_indices, repeat(logger)):
+            # print(_)
+
+    # processed_list = Parallel(n_jobs=num_cores)(delayed(push_stuff)(config, ssh_clients, scp_clients, dir_name, i, logger) for i in inputs)
+    # logger.debug(f"Process list: {processed_list}")
+
+    # pool = multiprocessing.Pool(multiprocessing.cpu_count())
+    # results = [pool.apply(push_stuff, args=(config, ssh_clients, scp_clients, dir_name, index, logger)) for index in inputs]
+
+    # pool.close()
+    # logger.debug(results)
 
     start_docker_containers(config, logger, ssh_clients, scp_clients)
 
@@ -220,7 +247,7 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
         scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
 
     try:
-        scp_clients[index].get("/home/ubuntu/*.log", f"{config['exp_dir']}/fabric_logs")
+        scp_clients[index].get("/data/*.log", f"{config['exp_dir']}/fabric_logs")
         logger.info("Logs fetched successfully")
     except:
         logger.info(f"No logs available on {ip}")
@@ -305,7 +332,60 @@ def write_configtx(config, logger):
     f.write(f"# SPDX-License-Identifier: Apache-2.0\n")
     f.write(f"#\n")
     f.write(f"\n")
-
+    f.write(f"################################################################################\n")
+    f.write(f"#\n")
+    f.write(f"#   SECTION: Capabilities\n")
+    f.write(f"#\n")
+    f.write(f"#   - This section defines the capabilities of fabric network. This is a new\n")
+    f.write(f"#   concept as of v1.1.0 and should not be utilized in mixed networks with\n")
+    f.write(f"#   v1.0.x peers and orderers.  Capabilities define features which must be\n")
+    f.write(f"#   present in a fabric binary for that binary to safely participate in the\n")
+    f.write(f"#   fabric network.  For instance, if a new MSP type is added, newer binaries\n")
+    f.write(f"#   might recognize and validate the signatures from this type, while older\n")
+    f.write(f"#   binaries without this support would be unable to validate those\n")
+    f.write(f"#   transactions.  This could lead to different versions of the fabric binaries\n")
+    f.write(f"#   having different world states.  Instead, defining a capability for a channel\n")
+    f.write(f"#   informs those binaries without this capability that they must cease\n")
+    f.write(f"#   processing transactions until they have been upgraded.  For v1.0.x if any\n")
+    f.write(f"#   capabilities are defined (including a map with all capabilities turned off)\n")
+    f.write(f"#   then the v1.0.x peer will deliberately crash.\n")
+    f.write(f"#\n")
+    f.write(f"################################################################################\n")
+    f.write(f"\n")
+    f.write(f"Capabilities:\n")
+    f.write(f"    # Channel capabilities apply to both the orderers and the peers and must be\n")
+    f.write(f"    # supported by both.  Set the value of the capability to true to require it.\n")
+    f.write(f"    Channel: &ChannelCapabilities\n")
+    f.write(f"        # V1.1 for Global is a catchall flag for behavior which has been\n")
+    f.write(f"        # determined to be desired for all orderers and peers running v1.0.x,\n")
+    f.write(f"        # but the modification of which would cause incompatibilities.  Users\n")
+    f.write(f"        # should leave this flag set to true.\n")
+    f.write(f"        # V1_4_3: true\n")
+    f.write(f"        # V1_3: false\n")
+    f.write(f"        V1_1: true\n")
+    f.write(f"\n")
+    f.write(f"    # Orderer capabilities apply only to the orderers, and may be safely\n")
+    f.write(f"    # manipulated without concern for upgrading peers.  Set the value of the\n")
+    f.write(f"    # capability to true to require it.\n")
+    f.write(f"    Orderer: &OrdererCapabilities\n")
+    f.write(f"        # V1.1 for Order is a catchall flag for behavior which has been\n")
+    f.write(f"        # determined to be desired for all orderers running v1.0.x, but the\n")
+    f.write(f"        # modification of which  would cause incompatibilities.  Users should\n")
+    f.write(f"        # leave this flag set to true.\n")
+    f.write(f"        # V1_4_2: true\n")
+    f.write(f"        V1_1: true\n")
+    f.write(f"\n")
+    f.write(f"    # Application capabilities apply only to the peer network, and may be safely\n")
+    f.write(f"    # manipulated without concern for upgrading orderers.  Set the value of the\n")
+    f.write(f"    # capability to 'true' to require it.\n")
+    f.write(f"    Application: &ApplicationCapabilities\n")
+    f.write(f"        # V1.2 for Application is a catchall flag for behavior which has been\n")
+    f.write(f"        # determined to be desired for all peers running v1.0.x, but the\n")
+    f.write(f"        # modification of which would cause incompatibilities.  Users should\n")
+    f.write(f"        # leave this flag set to 'true'.\n")
+    f.write(f"        V1_2: true\n")
+    f.write(f"\n")
+    f.write(f"\n")
     f.write(f"\n")
     f.write(f"################################################################################\n")
     f.write(f"#\n")
@@ -322,8 +402,23 @@ def write_configtx(config, logger):
     f.write(f"        Name: OrdererOrg\n")
     f.write(f"        ID: OrdererMSP\n")
     f.write(f"        MSPDir: crypto-config/ordererOrganizations/example.com/msp\n")
+    f.write(f"        Policies: &OrdererOrgPolicies\n")
+    f.write(f"            Readers:\n")
+    f.write(f"                Type: Signature\n")
+    f.write(f"                Rule: \"OR('OrdererMSP.member')\"\n")
+    f.write(f"            # If your MSP is configured with the new NodeOUs, you might\n")
+    f.write(f"            # want to use a more specific rule like the following:\n")
+    f.write(f"            # Rule: \"OR('OrdererOrg.admin', 'OrdererOrg.peer')\"\n")
+    f.write(f"            Writers:\n")
+    f.write(f"                Type: Signature\n")
+    f.write(f"                Rule: \"OR('OrdererMSP.member')\"\n")
+    f.write(f"            # If your MSP is configured with the new NodeOUs, you might\n")
+    f.write(f"            # want to use a more specific rule like the following:\n")
+    f.write(f"            # Rule: \"OR('OrdererOrg.admin', 'OrdererOrg.client'')\"\n")
+    f.write(f"            Admins:\n")
+    f.write(f"               Type: Signature\n")
+    f.write(f"               Rule: \"OR('OrdererMSP.admin')\"\n")
     f.write(f"\n")
-
     for org in range(1, config['fabric_settings']['org_count'] + 1):
         f.write(f"    - &Org{org}\n")
         f.write(f"        Name: Org{org}MSP\n")
@@ -332,9 +427,20 @@ def write_configtx(config, logger):
         f.write(f"        AnchorPeers:\n")
         f.write(f"            - Host: peer0.org{org}.example.com\n")
         f.write(f"              Port: 7051\n")
+        f.write(f"        Policies: &Org{org}Policies\n")
+        f.write(f"            Readers:\n")
+        f.write(f"                Type: Signature\n")
+        f.write(f"                Rule: \"OR('Org{org}MSP.admin','Org{org}MSP.peer','Org{org}MSP.client')\"\n")
+        f.write(f"            Writers:\n")
+        f.write(f"                Type: Signature\n")
+        f.write(f"                Rule: \"OR('Org{org}MSP.admin','Org{org}MSP.client')\"\n")
+        f.write(f"            Admins:\n")
+        f.write(f"                Type: Signature\n")
+        f.write(f"                Rule: \"OR('Org{org}MSP.admin')\"\n")
+        f.write(f"            Endorsement:\n")
+        f.write(f"                Type: Signature\n")
+        f.write(f"                Rule: \"OR('Org{org}MSP.peer')\"\n")
         f.write(f"\n")
-    f.write(f"\n")
-    
     f.write(f"\n")
     f.write(f"################################################################################\n")
     f.write(f"#\n")
@@ -433,64 +539,71 @@ def write_configtx(config, logger):
     f.write(f"        # max bytes will result in a batch larger than preferred max bytes.\n")
     f.write(f"        PreferredMaxBytes: {config['fabric_settings']['preferred_max_bytes']} KB\n")
     f.write(f"\n")
+    f.write(f"    # Max Channels is the maximum number of channels to allow on the ordering\n")
+    f.write(f"    # network. When set to 0, this implies no maximum number of channels.\n")
+    f.write(f"    MaxChannels: 0\n")
+    f.write(f"\n")
     f.write(f"    # Organizations is the list of orgs which are defined as participants on\n")
     f.write(f"    # the orderer side of the network\n")
     f.write(f"    Organizations:\n")
     f.write(f"\n")
-    
+    f.write(f"    Policies:\n")
+    f.write(f"        Readers:\n")
+    f.write(f"            Type: ImplicitMeta\n")
+    f.write(f"            Rule: \"ANY Readers\"\n")
+    f.write(f"        Writers:\n")
+    f.write(f"            Type: ImplicitMeta\n")
+    f.write(f"            Rule: \"ANY Writers\"\n")
+    f.write(f"        Admins:\n")
+    f.write(f"            Type: Signature\n")
+    f.write(f"            Rule: \"MAJORITY Admins\"\n")
+    f.write(f"        # BlockValidation specifies what signatures must be included in the block\n")
+    f.write(f"        # from the orderer for the peer to validate it.\n")
+    f.write(f"        BlockValidation:\n")
+    f.write(f"            Type: ImplicitMeta\n")
+    f.write(f"            Rule: \"ANY Writers\"\n")
+    f.write(f"\n")
+    f.write(f"    # Capabilities describes the orderer level capabilities, see the\n")
+    f.write(f"    # dedicated Capabilities section elsewhere in this file for a full\n")
+    f.write(f"    # description\n")
+    f.write(f"    Capabilities:\n")
+    f.write(f"        <<: *OrdererCapabilities\n")
+    f.write(f"\n")
     f.write(f"\n")
     f.write(f"################################################################################\n")
     f.write(f"#\n")
-    f.write(f"#   SECTION: Capabilities\n")
+    f.write(f"#   SECTION: Channel\n")
     f.write(f"#\n")
-    f.write(f"#   - This section defines the capabilities of fabric network. This is a new\n")
-    f.write(f"#   concept as of v1.1.0 and should not be utilized in mixed networks with\n")
-    f.write(f"#   v1.0.x peers and orderers.  Capabilities define features which must be\n")
-    f.write(f"#   present in a fabric binary for that binary to safely participate in the\n")
-    f.write(f"#   fabric network.  For instance, if a new MSP type is added, newer binaries\n")
-    f.write(f"#   might recognize and validate the signatures from this type, while older\n")
-    f.write(f"#   binaries without this support would be unable to validate those\n")
-    f.write(f"#   transactions.  This could lead to different versions of the fabric binaries\n")
-    f.write(f"#   having different world states.  Instead, defining a capability for a channel\n")
-    f.write(f"#   informs those binaries without this capability that they must cease\n")
-    f.write(f"#   processing transactions until they have been upgraded.  For v1.0.x if any\n")
-    f.write(f"#   capabilities are defined (including a map with all capabilities turned off)\n")
-    f.write(f"#   then the v1.0.x peer will deliberately crash.\n")
+    f.write(f"#   This section defines the values to encode into a config transaction or\n")
+    f.write(f"#   genesis block for channel related parameters.\n")
     f.write(f"#\n")
     f.write(f"################################################################################\n")
     f.write(f"\n")
-    f.write(f"Capabilities:\n")
-    f.write(f"    # Channel capabilities apply to both the orderers and the peers and must be\n")
-    f.write(f"    # supported by both.  Set the value of the capability to true to require it.\n")
-    f.write(f"    Global: &ChannelCapabilities\n")
-    f.write(f"        # V1.1 for Global is a catchall flag for behavior which has been\n")
-    f.write(f"        # determined to be desired for all orderers and peers running v1.0.x,\n")
-    f.write(f"        # but the modification of which would cause incompatibilities.  Users\n")
-    f.write(f"        # should leave this flag set to true.\n")
-    f.write(f"        V1_1: true\n")
+    f.write(f"Channel: &ChannelDefaults\n")
+    f.write(f"    # Policies defines the set of policies at this level of the config tree\n")
+    f.write(f"    # For Channel policies, their canonical path is\n")
+    f.write(f"    #   /Channel/<PolicyName>\n")
+    f.write(f"    Policies:\n")
+    f.write(f"        # Who may invoke the 'Deliver' API\n")
+    f.write(f"        Readers:\n")
+    f.write(f"            Type: ImplicitMeta\n")
+    f.write(f"            Rule: \"ANY Readers\"\n")
+    f.write(f"        # Who may invoke the 'Broadcast' API\n")
+    f.write(f"        Writers:\n")
+    f.write(f"            Type: ImplicitMeta\n")
+    f.write(f"            Rule: \"ANY Writers\"\n")
+    f.write(f"        # By default, who may modify elements at this config level\n")
+    f.write(f"        Admins:\n")
+    f.write(f"            Type: ImplicitMeta\n")
+    f.write(f"            Rule: \"MAJORITY Admins\"\n")
     f.write(f"\n")
-    f.write(f"    # Orderer capabilities apply only to the orderers, and may be safely\n")
-    f.write(f"    # manipulated without concern for upgrading peers.  Set the value of the\n")
-    f.write(f"    # capability to true to require it.\n")
-    f.write(f"    Orderer: &OrdererCapabilities\n")
-    f.write(f"        # V1.1 for Order is a catchall flag for behavior which has been\n")
-    f.write(f"        # determined to be desired for all orderers running v1.0.x, but the\n")
-    f.write(f"        # modification of which  would cause incompatibilities.  Users should\n")
-    f.write(f"        # leave this flag set to true.\n")
-    f.write(f"        V1_1: true\n")
     f.write(f"\n")
-    f.write(f"    # Application capabilities apply only to the peer network, and may be safely\n")
-    f.write(f"    # manipulated without concern for upgrading orderers.  Set the value of the\n")
-    f.write(f"    # capability to true to require it.\n")
-    f.write(f"    Application: &ApplicationCapabilities\n")
-    f.write(f"        # V1.2 for Application is a catchall flag for behavior which has been\n")
-    f.write(f"        # determined to be desired for all peers running v1.0.x, but the\n")
-    f.write(f"        # modification of which would cause incompatibilities.  Users should\n")
-    f.write(f"        # leave this flag set to true.\n")
-    f.write(f"        V1_2: true\n")
+    f.write(f"    # Capabilities describes the channel level capabilities, see the\n")
+    f.write(f"    # dedicated Capabilities section elsewhere in this file for a full\n")
+    f.write(f"    # description\n")
+    f.write(f"    Capabilities:\n")
+    f.write(f"        <<: *ChannelCapabilities\n")
     f.write(f"\n")
-
-    
     f.write(f"\n")
     f.write(f"################################################################################\n")
     f.write(f"#\n")
@@ -502,15 +615,118 @@ def write_configtx(config, logger):
     f.write(f"################################################################################\n")
     f.write(f"\n")
     f.write(f"Application: &ApplicationDefaults\n")
+    f.write(f"    ACLs: &ACLsDefault\n")
+    f.write(f"        # This section provides defaults for policies for various resources\n")
+    f.write(f"        # in the system. These \"resources\" could be functions on system chaincodes\n")
+    f.write(f"        # (e.g., \"GetBlockByNumber\" on the \"qscc\" system chaincode) or other resources\n")
+    f.write(f"        # (e.g.,who can receive Block events). This section does NOT specify the resource's\n")
+    f.write(f"        # definition or API, but just the ACL policy for it.\n")
+    f.write(f"        #\n")
+    f.write(f"        # User's can override these defaults with their own policy mapping by defining the\n")
+    f.write(f"        # mapping under ACLs in their channel definition\n")
     f.write(f"\n")
-    f.write(f"    # Organizations is the list of orgs which are defined as participants on\n")
-    f.write(f"    # the application side of the network\n")
+    f.write(f"        #---New Lifecycle System Chaincode (_lifecycle) function to policy mapping for access control--#\n")
+    f.write(f"\n")
+    f.write(f"        # ACL policy for _lifecycle's \"CommitChaincodeDefinition\" function\n")
+    f.write(f"        _lifecycle/CommitChaincodeDefinition: /Channel/Application/Writers\n")
+    f.write(f"        # ACL policy for _lifecycle's \"QueryChaincodeDefinition\" function\n")
+    f.write(f"        _lifecycle/QueryChaincodeDefinition: /Channel/Application/Readers\n")
+    f.write(f"\n")
+    f.write(f"        # ACL policy for _lifecycle's \"QueryNamespaceDefinitions\" function\n")
+    f.write(f"        _lifecycle/QueryNamespaceDefinitions: /Channel/Application/Readers\n")
+    f.write(f"\n")
+    f.write(f"        #---Lifecycle System Chaincode (lscc) function to policy mapping for access control---#\n")
+    f.write(f"\n")
+    f.write(f"        # ACL policy for lscc's \"getid\" function\n")
+    f.write(f"        lscc/ChaincodeExists: /Channel/Application/Readers\n")
+    f.write(f"\n")
+    f.write(f"        # ACL policy for lscc's \"getdepspec\" function\n")
+    f.write(f"        lscc/GetDeploymentSpec: /Channel/Application/Readers\n")
+    f.write(f"\n")
+    f.write(f"        # ACL policy for lscc's \"getccdata\" function\n")
+    f.write(f"        lscc/GetChaincodeData: /Channel/Application/Readers\n")
+    f.write(f"\n")
+    f.write(f"        # ACL Policy for lscc's \"getchaincodes\" function\n")
+    f.write(f"        lscc/GetInstantiatedChaincodes: /Channel/Application/Readers\n")
+    f.write(f"\n")
+    f.write(f"        #---Query System Chaincode (qscc) function to policy mapping for access control---#\n")
+    f.write(f"\n")
+    f.write(f"        # ACL policy for qscc's \"GetChainInfo\" function\n")
+    f.write(f"        qscc/GetChainInfo: /Channel/Application/Readers\n")
+    f.write(f"\n")
+    f.write(f"        # ACL policy for qscc's \"GetBlockByNumber\" function\n")
+    f.write(f"        qscc/GetBlockByNumber: /Channel/Application/Readers\n")
+    f.write(f"\n")
+    f.write(f"        # ACL policy for qscc's  \"GetBlockByHash\" function\n")
+    f.write(f"        qscc/GetBlockByHash: /Channel/Application/Readers\n")
+    f.write(f"\n")
+    f.write(f"        # ACL policy for qscc's \"GetTransactionByID\" function\n")
+    f.write(f"        qscc/GetTransactionByID: /Channel/Application/Readers\n")
+    f.write(f"\n")
+    f.write(f"        # ACL policy for qscc's \"GetBlockByTxID\" function\n")
+    f.write(f"        qscc/GetBlockByTxID: /Channel/Application/Readers\n")
+    f.write(f"\n")
+    f.write(f"        #---Configuration System Chaincode (cscc) function to policy mapping for access control---#\n")
+    f.write(f"\n")
+    f.write(f"        # ACL policy for cscc's \"GetConfigBlock\" function\n")
+    f.write(f"        cscc/GetConfigBlock: /Channel/Application/Readers\n")
+    f.write(f"\n")
+    f.write(f"        # ACL policy for cscc's \"GetConfigTree\" function\n")
+    f.write(f"        cscc/GetConfigTree: /Channel/Application/Readers\n")
+    f.write(f"\n")
+    f.write(f"        # ACL policy for cscc's \"SimulateConfigTreeUpdate\" function\n")
+    f.write(f"        cscc/SimulateConfigTreeUpdate: /Channel/Application/Readers\n")
+    f.write(f"\n")
+    f.write(f"        #---Miscellanesous peer function to policy mapping for access control---#\n")
+    f.write(f"\n")
+    f.write(f"        # ACL policy for invoking chaincodes on peer\n")
+    f.write(f"        peer/Propose: /Channel/Application/Writers\n")
+    f.write(f"\n")
+    f.write(f"        # ACL policy for chaincode to chaincode invocation\n")
+    f.write(f"        peer/ChaincodeToChaincode: /Channel/Application/Readers\n")
+    f.write(f"\n")
+    f.write(f"        #---Events resource to policy mapping for access control###---#\n")
+    f.write(f"\n")
+    f.write(f"        # ACL policy for sending block events\n")
+    f.write(f"        event/Block: /Channel/Application/Readers\n")
+    f.write(f"\n")
+    f.write(f"        # ACL policy for sending filtered block events\n")
+    f.write(f"        event/FilteredBlock: /Channel/Application/Readers\n")
+    f.write(f"\n")
+    f.write(f"    # Organizations lists the orgs participating on the application side of the\n")
+    f.write(f"    # network.\n")
     f.write(f"    Organizations:\n")
+    f.write(f"\n")
+    f.write(f"    # Policies defines the set of policies at this level of the config tree\n")
+    f.write(f"    # For Application policies, their canonical path is\n")
+    f.write(f"    #   /Channel/Application/<PolicyName>\n")
+    f.write(f"    Policies: &ApplicationDefaultPolicies\n")
+    f.write(f"         LifecycleEndorsement:\n")
+    f.write(f"             Type: ImplicitMeta\n")
+    f.write(f"             Rule: \"ANY Endorsement\"\n")
+    f.write(f"         Endorsement:\n")
+    f.write(f"             Type: ImplicitMeta\n")
+    f.write(f"             Rule: \"ANY Endorsement\"\n")
+    f.write(f"         Readers:\n")
+    f.write(f"            Type: ImplicitMeta\n")
+    f.write(f"            Rule: \"ANY Readers\"\n")
+    f.write(f"         Writers:\n")
+    f.write(f"            Type: ImplicitMeta\n")
+    f.write(f"            Rule: \"ANY Writers\"\n")
+    f.write(f"         Admins:\n")
+    f.write(f"            Type: ImplicitMeta\n")
+    f.write(f"            Rule: \"MAJORITY Admins\"\n")
+    f.write(f"\n")
+    f.write(f"    # Capabilities describes the application level capabilities, see the\n")
+    f.write(f"    # dedicated Capabilities section elsewhere in this file for a full\n")
+    f.write(f"    # description\n")
+    f.write(f"    Capabilities:\n")
+    f.write(f"        <<: *ApplicationCapabilities\n")
     f.write(f"\n")
     f.write(f"\n")
     f.write(f"################################################################################\n")
     f.write(f"#\n")
-    f.write(f"#   Profile\n")
+    f.write(f"#   Profiles\n")
     f.write(f"#\n")
     f.write(f"#   - Different configuration profiles may be encoded here to be specified\n")
     f.write(f"#   as parameters to the configtxgen tool\n")
@@ -518,36 +734,101 @@ def write_configtx(config, logger):
     f.write(f"################################################################################\n")
     f.write(f"Profiles:\n")
     f.write(f"\n")
-    f.write(f"    OrdererGenesis:\n")
+    f.write(f"    Global:\n")
+    f.write(f"        <<: *ChannelDefaults\n")
     f.write(f"        Capabilities:\n")
     f.write(f"            <<: *ChannelCapabilities\n")
     f.write(f"        Orderer:\n")
     f.write(f"            <<: *OrdererDefaults\n")
     f.write(f"            Organizations:\n")
-    f.write(f"                - *OrdererOrg\n")
-    f.write(f"            Capabilities:\n")
-    f.write(f"                - *OrdererCapabilities\n")
-    f.write(f"        Consortiums:\n")
-    f.write(f"            SampleConsortium:\n")
-    f.write(f"                Organizations:\n")
-
-    for org in range(1, config['fabric_settings']['org_count'] + 1):
-        f.write(f"                    - *Org{org}\n")
-
-    f.write(f"\n")
-    f.write(f"    ChannelConfig:\n")
-    f.write(f"        Consortium: SampleConsortium\n")
+    f.write(f"                - <<: *OrdererOrg\n")
+    # f.write(f"                  Policies:\n")
+    # f.write(f"                      <<: *OrdererOrgPolicies\n")
+    # f.write(f"                      Admins:\n")
+    # f.write(f"                          Type: Signature\n")
+    # f.write(f"                          Rule: \"OR('OrdererOrg.member','Org1MSP.member','Org2MSP.member')\"\n")
     f.write(f"        Application:\n")
     f.write(f"            <<: *ApplicationDefaults\n")
     f.write(f"            Organizations:\n")
-
-    for org in range(1, config['fabric_settings']['org_count'] + 1):
-        f.write(f"                - *Org{org}\n")
-
+    f.write(f"                - <<: *OrdererOrg\n")
+    # f.write(f"                  Policies:\n")
+    # f.write(f"                      <<: *OrdererOrgPolicies\n")
+    # f.write(f"                      Admins:\n")
+    # f.write(f"                          Type: Signature\n")
+    # f.write(f"                          Rule: \"OR('OrdererOrg.member','Org1MSP.member','Org2MSP.member')\"\n")
+    # f.write(f"                - <<: *Org1\n")
+    # f.write(f"                  Policies:\n")
+    # f.write(f"                      <<: *Org1Policies\n")
+    # f.write(f"                      Admins:\n")
+    # f.write(f"                          Type: Signature\n")
+    # f.write(f"                          Rule: \"OR('OrdererOrg.member','Org1MSP.member','Org2MSP.member')\"\n")
+    # f.write(f"                - <<: *Org2\n")
+    # f.write(f"                  Policies:\n")
+    # f.write(f"                      <<: *Org2Policies\n")
+    # f.write(f"                      Admins:\n")
+    # f.write(f"                          Type: Signature\n")
+    # f.write(f"                          Rule: \"OR('OrdererOrg.member','Org1MSP.member','Org2MSP.member')\"\n")
+    f.write(f"        Consortiums:\n")
+    f.write(f"            SampleConsortium:\n")
+    f.write(f"                Organizations:\n")
+    # f.write(f"                - <<: *OrdererOrg\n")
+    # f.write(f"                  Policies:\n")
+    # f.write(f"                      <<: *OrdererOrgPolicies\n")
+    # f.write(f"                      Admins:\n")
+    # f.write(f"                          Type: Signature\n")
+    # f.write(f"                          Rule: \"OR('OrdererOrg.member','Org1MSP.member','Org2MSP.member')\"\n")
+    f.write(f"                - <<: *Org1\n")
+    # f.write(f"                  Policies:\n")
+    # f.write(f"                      <<: *Org1Policies\n")
+    # f.write(f"                      Admins:\n")
+    # f.write(f"                          Type: Signature\n")
+    # f.write(f"                          Rule: \"OR('OrdererOrg.member','Org1MSP.member','Org2MSP.member')\"\n")
+    # f.write(f"                - <<: *Org2\n")
+    # f.write(f"                  Policies:\n")
+    # f.write(f"                      <<: *Org2Policies\n")
+    # f.write(f"                      Admins:\n")
+    # f.write(f"                          Type: Signature\n")
+    # f.write(f"                          Rule: \"OR('OrdererOrg.member','Org1MSP.member','Org2MSP.member')\"\n")
+    f.write(f"\n")
+    f.write(f"    Channel:\n")
+    # f.write(f"        <<: *ChannelDefaults\n")
+    #f.write(f"        Capabilities:\n")
+    # f.write(f"            <<: *ChannelCapabilities\n")
+    f.write(f"        Consortium: SampleConsortium\n")
+    f.write(f"        <<: *ChannelDefaults\n")
+    f.write(f"        Application:\n")
+    f.write(f"            <<: *ApplicationDefaults\n")
+    f.write(f"            Organizations:\n")
+    f.write(f"                - *Org1\n")
+    f.write(f"                - *Org2\n")
     f.write(f"            Capabilities:\n")
     f.write(f"                <<: *ApplicationCapabilities\n")
-
-
+    """
+    f.write(f"            Policies:\n")
+    f.write(f"                Readers:\n")
+    f.write(f"                    Type: ImplicitMeta\n")
+    f.write(f"                    Rule: ANY Readers\n")
+    f.write(f"                Writers:\n")
+    f.write(f"                    Type: ImplicitMeta\n")
+    f.write(f"                    Rule: ANY Writers\n")
+    f.write(f"                Admins:\n")
+    f.write(f"                    Type: ImplicitMeta\n")
+    f.write(f"                    Rule: ANY Writers\n")
+    f.write(f"                LifecycleEndorsement:\n")
+    f.write(f"                    Type: ImplicitMeta\n")
+    f.write(f"                    Rule: MAJORITY Endorsement\n")
+    f.write(f"                Endorsement:\n")
+    f.write(f"                    Type: ImplicitMeta\n")
+    f.write(f"                    Rule: MAJORITY Endorsement\n")
+    f.write(f"\n")
+    for org in range(1, config['fabric_settings']['org_count'] + 1):
+        f.write(f"                    - <<: *Org{org}\n")
+        f.write(f"                      Policies:\n")
+        f.write(f"                          <<: *Org{org}Policies\n")
+        f.write(f"                          Admins:\n")
+        f.write(f"                              Type: Signature\n")
+        f.write(f"                              Rule: \"OR('Org{org}.member')\"\n")
+    """
     f.close()
     
 
@@ -639,8 +920,8 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
 
             logger.debug(f" - Starting zookeeper{zookeeper} on {config['ips'][index]}")
             channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /home/ubuntu/zookeeper{zookeeper}.log)")
-            stdin, stdout, stderr = ssh_clients[index].exec_command(f"echo '(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /home/ubuntu/zookeeper{zookeeper}.log)' >> /home/ubuntu/starting_command.log")
+            channel.exec_command(f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /data/zookeeper{zookeeper}.log)")
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"echo '(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /data/zookeeper{zookeeper}.log)' >> /data/starting_command.log")
             stdout.readlines()
             # logger.debug(stdout.readlines())
             # logger.debug(stderr.readlines())
@@ -679,8 +960,8 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
 
             logger.debug(f" - Starting kafka{kafka} on {config['ips'][index]}")
             channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /home/ubuntu/kafka{kafka}.log)")
-            stdin, stdout, stderr = ssh_clients[index].exec_command(f"echo '(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /home/ubuntu/kafka{kafka}.log)' >> /home/ubuntu/starting_command.log")
+            channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /data/kafka{kafka}.log)")
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"echo '(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /data/kafka{kafka}.log)' >> /data/starting_command.log")
             stdout.readlines()
 
         time.sleep(10)
@@ -692,7 +973,7 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
     for org in range(1, config['fabric_settings']['org_count'] + 1):
         # get the names of the secret keys for each peer Organizations
         stdin, stdout, stderr = ssh_clients[org - 1].exec_command(
-            f"ls -a /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/peerOrganizations/org{org}.example.com/ca")
+            f"ls -a /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/peerOrganizations/org{org}.example.com/ca")
         out = stdout.readlines()
         # logger.debug(out)
         # logger.debug("".join(stderr.readlines()))
@@ -724,7 +1005,7 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
         # Starting the Certificate Authority
         # logger.debug(f" - Starting ca for org{org} on {config['ips'][org - 1]}")
         # channel = ssh_clients[org - 1].get_transport().open_session()
-        # channel.exec_command(f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + f" hyperledger/fabric-ca sh -c 'fabric-ca-server start -b admin:adminpw -d' &> /home/ubuntu/ca.org{org}.log)")
+        # channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + f" hyperledger/fabric-ca sh -c 'fabric-ca-server start -b admin:adminpw -d' &> /data/ca.org{org}.log)")
         # ssh_clients[org - 1].exec_command(f"echo \"docker run -it --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + " hyperledger/fabric-tools /bin/bash\" >> cli.sh")
     """
     for orderer, index in enumerate(config['orderer_indices']):
@@ -793,8 +1074,8 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
         # Starting the orderers
         logger.debug(f" - Starting orderer{orderer} on {config['ips'][index]}")
         channel = ssh_clients[index].get_transport().open_session()
-        channel.exec_command(f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /home/ubuntu/orderer{orderer}.log)")
-        ssh_clients[index].exec_command(f"(cd /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + " hyperledger/fabric-tools /bin/bash\" >> /home/ubuntu/cli.sh)")
+        channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /data/orderer{orderer}.log)")
+        ssh_clients[index].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + " hyperledger/fabric-tools /bin/bash\" >> /data/cli.sh)")
 
     # starting peers and databases
     logger.info(f"Starting databases and peers")
@@ -811,7 +1092,7 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
             # Starting the couchdbs
             logger.debug(f" - Starting database couchdb{peer}.org{org} on {ip}")
             channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_database_base + f" hyperledger/fabric-couchdb &> /home/ubuntu/couchdb{peer}.org{org}.log)")
+            channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_database_base + f" hyperledger/fabric-couchdb &> /data/couchdb{peer}.org{org}.log)")
 
             # Setting up configuration of peer like with docker compose
 
@@ -883,8 +1164,8 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
             # Starting the peers
             logger.debug(f" - Starting peer{peer}.org{org} on {ip}")
             channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + f" hyperledger/fabric-peer peer node start &> /home/ubuntu/peer{peer}.org{org}.log)")
-            ssh_clients[index].exec_command(f"(cd /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + " hyperledger/fabric-tools /bin/bash\" >> /home/ubuntu/cli.sh)")
+            channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + f" hyperledger/fabric-peer peer node start &> /data/peer{peer}.org{org}.log)")
+            ssh_clients[index].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + " hyperledger/fabric-tools /bin/bash\" >> /data/cli.sh)")
 
     # Waiting for a few seconds until all peers and orderers have started
 
@@ -894,11 +1175,11 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
     # Creating script and pushing it to the last node
     logger.debug(f"Executing script on {config['ips'][index_last_node]}  which creates channel, adds peers to channel, installs and instantiates all chaincode - can take some minutes")
     write_script(config, logger)
-    stdin, stdout, stderr = ssh_clients[index_last_node].exec_command("rm -f /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/script.sh")
+    stdin, stdout, stderr = ssh_clients[index_last_node].exec_command("rm -f /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/script.sh")
     stdout.readlines()
     # logger.debug(stdout.readlines())
     # logger.debug(stdout.readlines())
-    scp_clients[index_last_node].put(f"{config['exp_dir']}/setup/script.sh", "/home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/script.sh")
+    scp_clients[index_last_node].put(f"{config['exp_dir']}/setup/script.sh", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/script.sh")
 
     # Setting up configuration of cli like with docker compose
     string_cli_base = ""
@@ -935,18 +1216,18 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
 
     string_cli_v = ""
     string_cli_v = string_cli_v + f" -v /var/run/:/host/var/run/"
-    string_cli_v = string_cli_v + f" -v /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode/:/opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/"
-    string_cli_v = string_cli_v + f" -v /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/"
-    string_cli_v = string_cli_v + f" -v /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts/"
-    string_cli_v = string_cli_v + f" -v /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts"
+    string_cli_v = string_cli_v + f" -v /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode/:/opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/"
+    string_cli_v = string_cli_v + f" -v /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/"
+    string_cli_v = string_cli_v + f" -v /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts/"
+    string_cli_v = string_cli_v + f" -v /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts"
     string_cli_v = string_cli_v + f" -w /opt/gopath/src/github.com/hyperledger/fabric/peer"
 
     # execute script.sh on last node
-    stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 script.sh && ls -la && cd .. && ./scripts/script.sh)' |& tee /home/ubuntu/setup.log)")
+    stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 script.sh && ls -la && cd .. && ./scripts/script.sh)' |& tee /data/setup.log)")
     out = stdout.readlines()
 
     # save the cli command on the last node and save it in exp_dir
-    ssh_clients[index_last_node].exec_command(f"(cd /home/ubuntu/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash\" >> /home/ubuntu/cli2.sh)")
+    ssh_clients[index_last_node].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash\" >> /data/cli2.sh)")
 
     # logger.debug("".join(stderr.readlines()))
 
@@ -964,5 +1245,48 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
 
 
 def fabric_restart(config, logger, ssh_clients, scp_clients):
-    fabric_shutdown(config, logger, ssh_clients, scp_clients)
-    start_docker_containers(config, logger, ssh_clients, scp_clients)
+    try:
+        fabric_shutdown(config, logger, ssh_clients, scp_clients)
+        start_docker_containers(config, logger, ssh_clients, scp_clients)
+    except Exception as e:
+        logger.exception(e)
+        fabric_shutdown(config, logger, ssh_clients, scp_clients)
+        start_docker_containers(config, logger, ssh_clients, scp_clients)
+
+def push_stuff(config, ssh_clients, scp_clients, indices_sources, indices_targets, logger):
+
+    logger.debug(f"Sources: {indices_sources}, targets: {indices_targets}")
+
+    jobs = []
+    for index, index_source in enumerate(indices_sources):
+        logger.debug(f"Creating thread {index} for pushing from {index_source} to {indices_targets[index]}")
+        thread = threading.Thread(target=push_stuff_single(config, ssh_clients, scp_clients, index_source, indices_targets[index], logger))
+        logger.debug(f"Starting thread {index}")
+        thread.start()
+        jobs.append(thread)
+
+    for j in jobs:
+        logger.debug(f"Joining thread {j}")
+        j.join()
+
+
+def push_stuff_single(config, ssh_clients, scp_clients, index_source, index_target, logger):
+
+    logger.debug(f"Starting to push to index {index_target}")
+    # deleting data at the vm associated with source_index and copying it to the vm associated with the target index
+    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"ssh -o 'StrictHostKeyChecking no' -i /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem ubuntu@{config['priv_ips'][index_target]} 'sudo rm -rf /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts && echo Success'")
+    logger.debug(stdout.readlines())
+    logger.debug(stderr.readlines())
+    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"scp -v -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
+    logger.debug(stdout.readlines())
+    logger.debug(stderr.readlines())
+    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"scp -v -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
+    logger.debug(stdout.readlines())
+    logger.debug(stderr.readlines())
+    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"scp -v -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
+    logger.debug(stdout.readlines())
+    logger.debug(stderr.readlines())
+    logger.debug(f"Successfully pushed to index {index_target}")
+
+
+

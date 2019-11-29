@@ -52,7 +52,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info("Getting the addresses of each node's wallet (which have been generated during bootstrapping) and store it in the corresponding array <addresses>")
     for index, _ in enumerate(config['priv_ips']):
-        stdin, stdout, stderr = ssh_clients[index].exec_command("cat /home/ubuntu/nodes/address")
+        stdin, stdout, stderr = ssh_clients[index].exec_command("cat /data/nodes/address")
         out = stdout.readlines()
         addresses.append(out[0].replace("\n", ""))
         # logger.debug(out)
@@ -60,7 +60,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info("Replacing the genesis_raw.json on each node by genesis_raw where the first two nodes have some ether")
     for index, _ in enumerate(config['priv_ips']):
-        stdin, stdout, stderr = ssh_clients[index].exec_command("(sed -i -e 's/substitute_address/'" + f"'{addresses[0]}'" + "'/g' /home/ubuntu/genesis_raw.json && mv /home/ubuntu/genesis_raw.json /home/ubuntu/nodes/genesis.json)")
+        stdin, stdout, stderr = ssh_clients[index].exec_command("(sed -i -e 's/substitute_address/'" + f"'{addresses[0]}'" + "'/g' /data/genesis_raw.json && mv /data/genesis_raw.json /data/nodes/genesis.json)")
         stdout.readlines()
         # logger.debug("".join(stdout.readlines()))
         # logger.debug("".join(stderr.readlines()))
@@ -69,12 +69,12 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info("Generating the enode on each node and storing it in enodes")
     for index, _ in enumerate(config['priv_ips']):
-        stdin, stdout, stderr = ssh_clients[index].exec_command("(bootnode --genkey=nodekey && mv nodekey /home/ubuntu/nodes/new-node-1/nodekey)")
+        stdin, stdout, stderr = ssh_clients[index].exec_command("(bootnode --genkey=nodekey && mv nodekey /data/nodes/new-node-1/nodekey)")
         stdout.readlines()
         # logger.debug("".join(stdout.readlines()))
         # logger.debug("".join(stderr.readlines()))
 
-        stdin, stdout, stderr = ssh_clients[index].exec_command("bootnode --nodekey=/home/ubuntu/nodes/new-node-1/nodekey --writeaddress")
+        stdin, stdout, stderr = ssh_clients[index].exec_command("bootnode --nodekey=/data/nodes/new-node-1/nodekey --writeaddress")
         out = stdout.readlines()
         enodes.append(out[0].replace("\n", "").replace("]", "").replace("[", ""))
         # logger.debug(out)
@@ -85,26 +85,26 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
     logger.info("Generating static-nodes on each node and initialize the genesis block afterwards")
     for index1, _ in enumerate(config['priv_ips']):
 
-        stdin, stdout, stderr = ssh_clients[index1].exec_command("echo '[' > /home/ubuntu/nodes/new-node-1/static-nodes.json")
+        stdin, stdout, stderr = ssh_clients[index1].exec_command("echo '[' > /data/nodes/new-node-1/static-nodes.json")
         stdout.readlines()
         # logger.debug("".join(stdout.readlines()))
         # logger.debug("".join(stderr.readlines()))
 
         for index2, ip2 in enumerate(config['priv_ips'][0:index1 + 1]):
             if (index2 < index1):
-                string = "echo '  " + '\"' + "enode://" + f"{enodes[index2]}" + "@" + f"{ip2}" + ":21000?discport=0&raftport=50000'" + '\\",' + " >> /home/ubuntu/nodes/new-node-1/static-nodes.json"
+                string = "echo '  " + '\"' + "enode://" + f"{enodes[index2]}" + "@" + f"{ip2}" + ":21000?discport=0&raftport=50000'" + '\\",' + " >> /data/nodes/new-node-1/static-nodes.json"
                 stdin, stdout, stderr = ssh_clients[index1].exec_command(string)
                 stdout.readlines()
                 # logger.debug("".join(stdout.readlines()))
                 # logger.debug("".join(stderr.readlines()))
             else:
-                string = "echo '  " + '\"' + "enode://" + f"{enodes[index2]}" + "@" + f"{ip2}" + ":21000?discport=0&raftport=50000'" + '\\"' + " >> /home/ubuntu/nodes/new-node-1/static-nodes.json"
+                string = "echo '  " + '\"' + "enode://" + f"{enodes[index2]}" + "@" + f"{ip2}" + ":21000?discport=0&raftport=50000'" + '\\"' + " >> /data/nodes/new-node-1/static-nodes.json"
                 stdin, stdout, stderr = ssh_clients[index1].exec_command(string)
                 stdout.readlines()
                 # logger.debug("".join(stdout.readlines()))
                 # logger.debug("".join(stderr.readlines()))
 
-        stdin, stdout, stderr = ssh_clients[index1].exec_command("(echo ']' >> /home/ubuntu/nodes/new-node-1/static-nodes.json && geth --datadir /home/ubuntu/nodes/new-node-1 init /home/ubuntu/nodes/genesis.json)")
+        stdin, stdout, stderr = ssh_clients[index1].exec_command("(echo ']' >> /data/nodes/new-node-1/static-nodes.json && geth --datadir /data/nodes/new-node-1 init /data/nodes/genesis.json)")
         stdout.readlines()
         # logger.debug("".join(stdout.readlines()))
         # logger.debug("".join(stderr.readlines()))
@@ -123,8 +123,8 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
 
         try:
             scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
-            scp_clients[index].get("/home/ubuntu/tessera.log", f"{config['exp_dir']}/tessera_logs/tessera_node{index}.log")
-            scp_clients[index].get("/home/ubuntu/node.log", f"{config['exp_dir']}/quorum_logs/quorum_node{index}.log")
+            scp_clients[index].get("/data/tessera.log", f"{config['exp_dir']}/tessera_logs/tessera_node{index}.log")
+            scp_clients[index].get("/data/node.log", f"{config['exp_dir']}/quorum_logs/quorum_node{index}.log")
             logger.debug(f"Logs fetched successfully from {ip}")
         except:
             logger.info(f"Not all logs available on {ip}")
@@ -144,13 +144,13 @@ def start_tessera(config, ssh_clients, logger):
     for index1, ip1 in enumerate(config['priv_ips']):
 
         # getting tessera public and private keys (which have been generated during bootstrapping) and store them in the corresponding arrays <tessera_public_keys> resp. <tessera_private_keys>
-        stdin, stdout, stderr = ssh_clients[index1].exec_command("cat /home/ubuntu/qdata/tm/tm.pub")
+        stdin, stdout, stderr = ssh_clients[index1].exec_command("cat /data/qdata/tm/tm.pub")
         out = stdout.readlines()
         # logger.debug("".join(out))
         # logger.debug("".join(stderr.readlines()))
         tessera_public_keys.append(out[0].replace("\n", ""))
 
-        stdin, stdout, stderr = ssh_clients[index1].exec_command("cat /home/ubuntu/qdata/tm/tm.key")
+        stdin, stdout, stderr = ssh_clients[index1].exec_command("cat /data/qdata/tm/tm.key")
         out = stdout.readlines()
         # logger.debug("".join(out))
         # logger.debug("".join(stderr.readlines()))
@@ -170,32 +170,30 @@ def start_tessera(config, ssh_clients, logger):
         peer_string = peer_string + "],"
 
         # Specifying missing data in config_raw.json and store the result in config.json
-        stdin, stdout, stderr = ssh_clients[index1].exec_command(f"(sed -i -e s#substitute_ip#{ip1}#g /home/ubuntu/config_raw.json && sed -i -e s#substitute_public_key#{tessera_public_keys[index1]}#g /home/ubuntu/config_raw.json && sed -i -e s#substitute_private_key#{tessera_private_keys[index1]}#g /home/ubuntu/config_raw.json && sed -i -e s#substitute_peers#" + peer_string + "#g /home/ubuntu/config_raw.json && mv /home/ubuntu/config_raw.json /home/ubuntu/qdata/tm/config.json)")
+        stdin, stdout, stderr = ssh_clients[index1].exec_command(f"(sed -i -e s#substitute_ip#{ip1}#g /data/config_raw.json && sed -i -e s#substitute_public_key#{tessera_public_keys[index1]}#g /data/config_raw.json && sed -i -e s#substitute_private_key#{tessera_private_keys[index1]}#g /data/config_raw.json && sed -i -e s#substitute_peers#" + peer_string + "#g /data/config_raw.json && mv /data/config_raw.json /data/qdata/tm/config.json)")
         stdout.readlines()
 
         # logger.debug(f"Starting tessera on node {index1}")
         channel = ssh_clients[index1].get_transport().open_session()
-        channel.exec_command("java -jar tessera/tessera-app-0.10.0-app.jar -configfile qdata/tm/config.json >> tessera.log 2>&1")
+        channel.exec_command("java -jar /data/tessera/tessera-app-0.10.0-app.jar -configfile /data/qdata/tm/config.json >> /data/tessera.log 2>&1")
 
     logger.info("Waiting until all tessera nodes have started")
-    status_flags = wait_till_done(config, ssh_clients, config['ips'], 60, 10, '/home/ubuntu/qdata/tm/tm.ipc', False, 10, logger)
+    status_flags = wait_till_done(config, ssh_clients, config['ips'], 60, 10, '/data/qdata/tm/tm.ipc', False, 10, logger)
     if False in status_flags:
         raise Exception("At least one tessera node did not start properly")
 
     return tessera_public_keys, tessera_private_keys
 
 
-def start_network(config, ssh_clients, logger):
+def start_network_attempt(config, ssh_clients, logger):
 
     for index, ip in enumerate(config['priv_ips']):
 
         if index == 0:
-
             start_node(config, ssh_clients, index, logger)
             time.sleep(5)
 
         else:
-
             add_node(config, ssh_clients, index, logger)
             time.sleep(2)
             start_node(config, ssh_clients, index, logger)
@@ -204,26 +202,34 @@ def start_network(config, ssh_clients, logger):
     status_flags = check_network(config, ssh_clients, logger)
 
     if (False in status_flags):
-
+        logger.info("Restart was not successful")
         try:
-
             logger.info("Restarting failed VMs")
             for node in np.where(status_flags != True):
-
-                restart_node(node)
+                restart_node(config, ssh_clients, node, logger)
 
             status_flags = check_network(config, ssh_clients, logger)
 
-        except:
+        except Exception as e:
+            logger.exception(e)
             pass
 
+    return status_flags
+
+def start_network(config, ssh_clients, logger):
+
+    status_flags = start_network_attempt(config, ssh_clients, logger)
+
+    if (False in status_flags):
+        logger.info("Making a complete restart since it was not successful")
 
     retries = 0
     while (False in status_flags and retries < 3):
+        logger.info(f"Retry {retries+1} out of 3")
         retries = retries + 1
 
-        status_flags = check_network(config, ssh_clients, logger)
-        restart_network(config, ssh_clients, logger)
+        kill_network(config, ssh_clients, logger)
+        status_flags = start_network_attempt(config, ssh_clients, logger)
 
     if False in status_flags:
         logger.error("Quorum network did not start successfully")
@@ -252,16 +258,16 @@ def start_node(config, ssh_clients, node, logger):
     channel = ssh_clients[node].get_transport().open_session()
 
     if node == 0:
-        channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --maxpeers {config['vm_count']} --raftport 50000 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{config['priv_ips'][node]}{string_geth_settings} >> node.log 2>&1")
+        channel.exec_command(f"PRIVATE_CONFIG=/data/qdata/tm/tm.ipc geth --datadir /data/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --maxpeers {config['vm_count']} --raftport 50000 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{config['priv_ips'][node]}{string_geth_settings} >> node.log 2>&1")
 
     else:
-        channel.exec_command(f"PRIVATE_CONFIG=/home/ubuntu/qdata/tm/tm.ipc geth --datadir /home/ubuntu/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --maxpeers {config['vm_count']} --raftport 50000 --raftjoinexisting {node+1} --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{config['priv_ips'][node]}{string_geth_settings} >> node.log 2>&1")
+        channel.exec_command(f"PRIVATE_CONFIG=/data/qdata/tm/tm.ipc geth --datadir /data/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --maxpeers {config['vm_count']} --raftport 50000 --raftjoinexisting {node+1} --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{config['priv_ips'][node]}{string_geth_settings} >> node.log 2>&1")
 
 
 def add_node(config, ssh_clients, node, logger):
 
     logger.debug(f" --> Adding node {node} to raft on node {0} ...")
-    stdin, stdout, stderr = ssh_clients[0].exec_command("geth --exec " + '\"' + "raft.addPeer('enode://" + f"{config['enodes'][node]}" + "@" + f"{config['priv_ips'][node]}" + ":21000?discport=0&raftport=50000')" + '\"' + " attach /home/ubuntu/nodes/new-node-1/geth.ipc")
+    stdin, stdout, stderr = ssh_clients[0].exec_command("geth --exec " + '\"' + "raft.addPeer('enode://" + f"{config['enodes'][node]}" + "@" + f"{config['priv_ips'][node]}" + ":21000?discport=0&raftport=50000')" + '\"' + " attach /data/nodes/new-node-1/geth.ipc")
     out = stdout.readlines()
     # logger.debug(out)
     # logger.debug("".join(stderr.readlines()))
@@ -271,11 +277,11 @@ def add_node(config, ssh_clients, node, logger):
 
 def unlock_node(config, ssh_clients, node, logger):
 
-    logger.debug(f" --> Unlocking node {node}")
-    stdin, stdout, stderr = ssh_clients[node].exec_command("geth --exec eth.accounts attach /home/ubuntu/nodes/new-node-1/geth.ipc")
+    # logger.debug(f" --> Unlocking node {node}")
+    stdin, stdout, stderr = ssh_clients[node].exec_command("geth --exec eth.accounts attach /data/nodes/new-node-1/geth.ipc")
     out = stdout.readlines()
     sender = out[0].replace("\n", "").replace("[", "").replace("]", "")
-    stdin, stdout, stderr = ssh_clients[node].exec_command("geth --exec " + "\'" + f"personal.unlockAccount({sender}, " + '\"' + "user" + '\"' + ", 0)" + "\'" + " attach /home/ubuntu/nodes/new-node-1/geth.ipc")
+    stdin, stdout, stderr = ssh_clients[node].exec_command("geth --exec " + "\'" + f"personal.unlockAccount({sender}, " + '\"' + "user" + '\"' + ", 0)" + "\'" + " attach /data/nodes/new-node-1/geth.ipc")
     out = stdout.readlines()
     if out[0].replace("\n", "") != "true":
         logger.info(f"Something went wrong on unlocking on node {node} on IP {config['ips']}")
@@ -302,11 +308,11 @@ def check_network(config, ssh_clients, logger):
 
             if (status_flags[index] == False):
                 try:
-                    stdin, stdout, stderr = ssh_clients[index].exec_command("geth --exec " + '\"' + "admin.peers.length" + '\"' + " attach /home/ubuntu/nodes/new-node-1/geth.ipc")
+                    stdin, stdout, stderr = ssh_clients[index].exec_command("geth --exec " + '\"' + "admin.peers.length" + '\"' + " attach /data/nodes/new-node-1/geth.ipc")
                     out = stdout.readlines()
                 except Exception as e:
+                    logger.exception(e)
                     logger.debug("Geth exec failing...")
-                    logger.debug(str(e))
                 try:
                     nr = int(out[0].replace("\n", ""))
                     if nr == len(config['priv_ips']) - 1:
@@ -316,8 +322,8 @@ def check_network(config, ssh_clients, logger):
                     else:
                         logger.info(f"Node {index} on IP {ip} is not yet fully connected (expected: {len(config['priv_ips']) - 1}, actual: {nr} ")
                 except Exception as e:
+                    logger.exception(e)
                     logger.debug(f"Node {index} might not have started at all - retrying though")
-                    logger.debug(str(Exception))
 
     if (False in status_flags):
         try:
@@ -335,7 +341,6 @@ def kill_node(config, ssh_clients, node, logger):
     try:
         stdin, stdout, stderr = ssh_clients[node].exec_command("pidof geth")
         pid = stdout.readlines()[0].replace("\n", "")
-        # logger.debug(f"geth pid: {pid}")
         stdin, stdout, stderr = ssh_clients[node].exec_command(f"kill {pid}")
         stdout.readlines()
     except:
@@ -344,9 +349,18 @@ def kill_node(config, ssh_clients, node, logger):
         stdin, stdout, stderr = ssh_clients[node].exec_command("ps aux | grep geth")
         logger.info(f"stdout for ps aux | grep geth: {stdout.readlines()}")
         logger.info(f"stderr for ps aux | grep geth: {stderr.readlines()}")
+        # checking whether the other geth-files are deleted
+        stdin, stdout, stderr = ssh_clients[node].exec_command("ls /data/nodes/new-node-1")
+        logger.info(f"Files in /nodes/new-node-1: {stdout.readlines}")
+        logger.debug(stdout.readlines())
+        # deleting the remaining geth-related files
+        logger.info("Deleting relevant files")
+        stdin, stdout, stderr = ssh_clients[node].exec_command("rm geth.ipc; rm -r quorum-raft-state; rm -r raft-snap; rm -r raft-wal")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
 
-    # logger.debug(f" --> Clearing the tx-pool")
-    stdin, stdout, stderr = ssh_clients[node].exec_command("rm /home/ubuntu/nodes/new-node-1/geth/transactions.rlp")
+    # Clearing the tx-pool
+    stdin, stdout, stderr = ssh_clients[node].exec_command("rm /data/nodes/new-node-1/geth/transactions.rlp")
     stdout.readlines()
 
 
@@ -362,7 +376,6 @@ def kill_network(config, ssh_clients, logger):
 
     logger.info("Killing geth on all nodes")
     for node, _ in enumerate(config['priv_ips']):
-
         kill_node(config, ssh_clients, node, logger)
 
 

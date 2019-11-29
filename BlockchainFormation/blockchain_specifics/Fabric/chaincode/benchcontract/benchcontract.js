@@ -61,33 +61,51 @@ class BenchContract extends Contract {
         console.log('Instantiate the contract')
     }
 
-    /** Standard seters and geters
+    /** Standard setters and getters
+     * @param {Context} ctx the transaction context
      * @param {String} key  Primary key
-     * @param {String|Object} data value to store
+     * @param {String|Object} value: value to store
      */
 
-    async writeData(ctx, _key, _value) {
-        await ctx.stub.putState(_key.toString(), Buffer.from(_value))
+    async writeData(ctx, key, value) {
+        await ctx.stub.putState("key_" + key, Buffer.from("value_" + value))
         return Buffer.from('1')
     }
 
-    async readData(ctx, _key) {
-        var tmp = await ctx.stub.getState(_key.toString())
+    /** Standard setters and getters
+     * @param {Context} ctx the transaction context
+     * @param {String} key  Primary key
+     */
+
+    async readData(ctx, key) {
+        var tmp = await ctx.stub.getState("key_" + key)
         return Buffer.from(tmp.toString())
     }
 
-    async writeMuchData(ctx, number, delta) {
-        for (var i = 0; i < number; i++) {
-            await ctx.stub.putState(i.toString(), (delta + i).toString())
+    /** Standard setters and getters
+     * @param {Context} ctx the transaction context
+     * @param {String} len The number of writes
+     * @param {String} start The index of the first write
+     * @param {String} delta The offset of key and value
+     */
+
+    async writeMuchData(ctx, len, start, delta) {
+        for (var i = parseInt(start, 10); i < (parseInt(start, 10) + parseInt(len, 10)); i++) {
+            await ctx.stub.putState("key_" + i.toString(), Buffer.from((parseInt(delta, 10) + i).toString()))
         }
         return Buffer.from('1')
     }
 
-    async readMuchData(ctx, _start, _end) {
+     /** Standard setters and getters
+     * @param {Context} ctx the transaction context
+     * @param {String} len The number of writes
+     * @param {String} start The index of the first write
+     */
+    async readMuchData(ctx, len, start) {
         var sum = 0
-        for (var i = _start; i < _end; i++) {
-            var tmp = await ctx.stub.getState(i.toString())
-            console.log(sum)
+        for (var i = parseInt(start, 10); i < (parseInt(start, 10) + parseInt(len, 10)); i++) {
+            var tmp = await ctx.stub.getState("key_" + i.toString())
+            //console.log(sum)
             sum += Number(tmp)
         }
         return Buffer.from(sum.toString())
@@ -95,6 +113,7 @@ class BenchContract extends Contract {
 
 
     /** For overhead testing
+     * @param {Context} ctx the transaction context
     */
     async doNothing(ctx) {
         return Buffer.from('1')
@@ -104,7 +123,7 @@ class BenchContract extends Contract {
      * @param {Number} n number of rows/ columns
      */
     async matrixMultiplication(ctx, n) {
-        console.log(n)
+        // console.log(n)
         function multiplyMatrices(m1, m2) {
             var result = []
             for (var i = 0; i < m1.length; i++) {

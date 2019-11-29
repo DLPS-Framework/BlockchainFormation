@@ -132,7 +132,7 @@ function generateAnchorPeerUpdate() {
     echo "#################################################################"
     echo "#######    Generating anchor peer update for Org$1MSP   ##########"
     echo "#################################################################"
-    configtxgen -profile ChannelConfig -outputAnchorPeersUpdate ./channel-artifacts/Org$1MSPanchors.tx -channelID $CHANNEL_NAME -asOrg Org$1MSP
+    configtxgen -profile Channel -outputAnchorPeersUpdate ./channel-artifacts/Org$1MSPanchors.tx -channelID $CHANNEL_NAME -asOrg Org$1MSP
     if [ "$?" -ne 0 ]; then
       echo "Failed to generate anchor peer update for Org$1MSP..."
       exit 1
@@ -155,7 +155,7 @@ function generateChannelArtifacts() {
     # Note: For some unknown reason (at least for now) the block file can't be
     # named orderer.genesis.block or the orderer will fail to launch!
     # configtxgen -profile OneOrgOrdererGenesis -outputBlock ./channel-artifacts/genesis.block
-    configtxgen -profile OrdererGenesis -outputBlock ./channel-artifacts/genesis.block
+    configtxgen -profile Global -outputBlock ./channel-artifacts/genesis.block -channelID my-sys-channel
 
 
     if [ "$?" -ne 0 ]; then
@@ -166,7 +166,7 @@ function generateChannelArtifacts() {
     echo "#################################################################"
     echo "### Generating channel configuration transaction 'channel.tx' ###"
     echo "#################################################################"
-    configtxgen -profile ChannelConfig -outputCreateChannelTx ./channel-artifacts/channel.tx -channelID $CHANNEL_NAME
+    configtxgen -profile Channel -outputCreateChannelTx ./channel-artifacts/channel.tx -channelID $CHANNEL_NAME
     if [ "$?" -ne 0 ]; then
       echo "Failed to generate channel configuration transaction..."
       exit 1

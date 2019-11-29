@@ -1,5 +1,8 @@
 #!/bin/bash -xe
 
+  cd /data
+  sudo chown -R ubuntu /data
+
   # Getting updates (and upgrades)
   sudo apt-get update
   sudo apt-get -y upgrade || echo "Upgrading in quorum_bootstrap failed" >> /home/ubuntu/upgrade_fail2.log
@@ -11,10 +14,11 @@
 
 # Cloning repo and building Quorum binaries...
   git clone https://github.com/jpmorganchase/quorum.git
-  (cd /home/ubuntu/quorum && make all)
+  # (cd /data/quorum && git checkout e1e3e4a781ee009685ea254cedfffdd65e704f3e)
+  (cd /data/quorum && make all)
 
 # Copying binaries to /usr/local/bin, which is in path!
-  sudo cp /home/ubuntu/quorum/build/bin/geth /home/ubuntu/quorum/build/bin/bootnode /usr/local/bin
+  sudo cp /data/quorum/build/bin/geth /data/quorum/build/bin/bootnode /usr/local/bin
 
   # Creating skeleton genesis block
   printf '{
@@ -42,25 +46,25 @@
   "nonce": "0x0",
   "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
   "timestamp": "0x00"
-}\n' > /home/ubuntu/genesis_raw.json
+}\n' > /data/genesis_raw.json
 
   # Creating wallets and store the resulting address (needs some cosmetics)
-  mkdir /home/ubuntu/nodes
-  echo 'user' > /home/ubuntu/nodes/pwd
-  geth --password /home/ubuntu/nodes/pwd --datadir /home/ubuntu/nodes/new-node-1 account new > /home/ubuntu/nodes/address
-  sed -i -e 's/Address: //g' /home/ubuntu/nodes/address
-  sed -i -e 's/{//g' /home/ubuntu/nodes/address
-  sed -i -e 's/}//g' /home/ubuntu/nodes/address
+  mkdir /data/nodes
+  echo 'user' > /data/nodes/pwd
+  geth --password /data/nodes/pwd --datadir /data/nodes/new-node-1 account new > /data/nodes/address
+  sed -i -e 's/Address: //g' /data/nodes/address
+  sed -i -e 's/{//g' /data/nodes/address
+  sed -i -e 's/}//g' /data/nodes/address
 
   # Getting (already built, since building mit Libsodium & Maven did not work) tessera-app (jar) and generating tessera keys
-  mkdir /home/ubuntu/tessera
-  mkdir /home/ubuntu/qdata
-  mkdir /home/ubuntu/qdata/tm
+  mkdir /data/tessera
+  mkdir /data/qdata
+  mkdir /data/qdata/tm
 
-  # (cd /home/ubuntu/tessera && wget https://oss.sonatype.org/content/groups/public/com/jpmorgan/quorum/tessera-app/0.9.2/tessera-app-0.9.2-app.jar)
-  (cd /home/ubuntu/tessera && wget https://oss.sonatype.org/service/local/repositories/releases/content/com/jpmorgan/quorum/tessera-app/0.10.0/tessera-app-0.10.0-app.jar)
-  # java -jar /home/ubuntu/tessera/tessera-app-0.9.2-app.jar -keygen -filename /home/ubuntu/qdata/tm/tm < /dev/null
-  java -jar /home/ubuntu/tessera/tessera-app-0.10.0-app.jar -keygen -filename /home/ubuntu/qdata/tm/tm < /dev/null
+  # (cd /data/tessera && wget https://oss.sonatype.org/content/groups/public/com/jpmorgan/quorum/tessera-app/0.9.2/tessera-app-0.9.2-app.jar)
+  (cd /data/tessera && wget https://oss.sonatype.org/service/local/repositories/releases/content/com/jpmorgan/quorum/tessera-app/0.10.0/tessera-app-0.10.0-app.jar)
+  # java -jar /data/tessera/tessera-app-0.9.2-app.jar -keygen -filename /data/qdata/tm/tm < /dev/null
+  java -jar /data/tessera/tessera-app-0.10.0-app.jar -keygen -filename /data/qdata/tm/tm < /dev/null
 
   # Preparing sceleton tessera config
   printf '{
@@ -81,7 +85,7 @@
         {
             "app": "Q2T",
             "enabled": true,
-            "serverAddress": "unix:/home/ubuntu/qdata/tm/tm.ipc",
+            "serverAddress": "unix:/data/qdata/tm/tm.ipc",
             "communicationType": "REST"
         },
         {
@@ -123,7 +127,7 @@
         ]
     },
     "alwaysSendTo": []
-}' >> /home/ubuntu/config_raw.json
+}' >> /data/config_raw.json
 
   # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log

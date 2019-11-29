@@ -343,7 +343,18 @@ class VMHandler:
         else:
             self.logger.info(f"Boot up of all {self.config['blockchain_type']}-VMs was successful")
 
-            # Recreating the ssh_clients
+            # Recreating the ssh and scp clients
+            try:
+                map(lambda x: x.close(), ssh_clients)
+            except Exception as e:
+                self.logger.exception(e)
+                self.logger.info("Some ssh_client was already closed")
+            try:
+                map(lambda x: x.close(), scp_clients)
+            except Exception as e:
+                self.logger.exception(e)
+                self.logger.info("Some scp_client was already closed")
+
             ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
 
             self._run_specific_startup(ssh_clients, scp_clients)
@@ -403,6 +414,19 @@ class VMHandler:
         with open(f"{self.config['exp_dir']}/config.json", 'w') as outfile:
             json.dump(self.config, outfile, default=datetimeconverter, indent=4)
 
+        # close ssh and scp channels
+        try:
+            map(lambda x: x.close(), ssh_clients)
+        except Exception as e:
+            self.logger.exception(e)
+            self.logger.info("Some ssh_client was already closed")
+        try:
+            map(lambda x: x.close(), scp_clients)
+        except Exception as e:
+            self.logger.exception(e)
+            self.logger.info("Some scp_client was already closed")
+
+
     def run_general_shutdown(self):
         """
          Stops and terminates all VMs and calculates causes aws costs.
@@ -417,6 +441,7 @@ class VMHandler:
             self.logger.info(f"At least on of the instances was already stopped, hence no logs can be pulled from the machines, terminating them in the next step")
 
         else:
+            # ccreate ssh and scp channels
             ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
 
             for index, ip in enumerate(self.config['ips']):
@@ -444,6 +469,18 @@ class VMHandler:
 
         for instance in ec2_instances:
             instance.terminate()
+
+        # close ssh and scp channels
+        try:
+            map(lambda x: x.close(), ssh_clients)
+        except Exception as e:
+            self.logger.exception(e)
+            self.logger.info("Some ssh_client was already closed")
+        try:
+            map(lambda x: x.close(), scp_clients)
+        except Exception as e:
+            self.logger.exception(e)
+            self.logger.info("Some scp_client was already closed")
 
         self.logger.info("All instances terminated -  script is finished")
 
@@ -489,7 +526,8 @@ class VMHandler:
         ssh_key_priv = paramiko.RSAKey.from_private_key_file(config['priv_key_path'])
 
         if logger is not None:
-            logger.debug(f"Trying to connect the ssh clients")
+            # logger.debug(f"Trying to connect the ssh clients")
+            pass
 
         for index, ip in enumerate(config['ips']):
             if config['public_ip']:
@@ -500,7 +538,7 @@ class VMHandler:
 
             while True:
                 try:
-                    ssh_clients[index].connect(hostname=ip, username=config['user'], pkey=ssh_key_priv, timeout=86400, banner_timeout=3, auth_timeout=3)
+                    ssh_clients[index].connect(hostname=ip, username=config['user'], pkey=ssh_key_priv, timeout=86400, banner_timeout=100, auth_timeout=30)
 
                 except Exception as e:
                     if logger is not None:
@@ -526,6 +564,7 @@ class VMHandler:
             scp_clients.append(SCPClient(ssh_clients[index].get_transport(), socket_timeout=86400))
 
         if logger is not None:
-            logger.debug(f"All scp/ssh clients got created and connected")
+            # logger.debug(f"All scp/ssh clients got created and connected")
+            pass
 
         return ssh_clients, scp_clients
