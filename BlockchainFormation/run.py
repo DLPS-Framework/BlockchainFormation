@@ -70,6 +70,12 @@ class ArgParser:
         ArgParser._add_loadbalancer_args(parser_geth)
         ArgParser._add_geth_args(parser_geth)
 
+        # indy parser
+        parser_indy = subparsers.add_parser('indy', help='Indy Network')
+        parser_indy.set_defaults(blockchain_type='indy')
+        ArgParser._add_common_args(parser_indy)
+        ArgParser._add_indy_args(parser_indy)
+
         # parity parser
         parser_parity = subparsers.add_parser('parity', help='Parity Network')
         parser_parity.set_defaults(blockchain_type='parity')
@@ -261,6 +267,10 @@ class ArgParser:
         parser.add_argument('--signers',
                             help='Percentage of nodes who are signers (default: 1.0)',
                             type=float, default=1.0)
+
+    @staticmethod
+    def _add_indy_args(parser):
+        parser.add_argument('--msg', '-m', help='specify message', default='Hallo')
 
     @staticmethod
     def _add_parity_args(parser):
@@ -489,6 +499,14 @@ class ArgParser:
                     "signers": namespace_dict['signers']
 
                 }
+
+        elif blockchain_type == "indy":
+            return\
+                {
+                    "message": namespace_dict['message']
+
+                }
+
         elif blockchain_type == "parity":
             return\
                 {
