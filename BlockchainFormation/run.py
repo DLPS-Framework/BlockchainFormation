@@ -20,6 +20,7 @@ import datetime, time
 import logging.config
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from BlockchainFormation.vm_handler import VMHandler
+from BlockchainFormation.utils.utils import yes_or_no
 
 
 class ArgParser:
@@ -271,6 +272,7 @@ class ArgParser:
     @staticmethod
     def _add_indy_args(parser):
         parser.add_argument('--msg', '-m', help='specify message', default='Hallo')
+        parser.add_argument('--clients', help='some numer defining the maximum amount of clients', type=int, default=5)
 
     @staticmethod
     def _add_parity_args(parser):
@@ -503,7 +505,8 @@ class ArgParser:
         elif blockchain_type == "indy":
             return\
                 {
-                    "message": namespace_dict['message']
+                    "message": namespace_dict['message'],
+                    "clients": namespace_dict['clients']
 
                 }
 
@@ -602,7 +605,12 @@ if __name__ == '__main__':
             config = argparser.create_config(vars(namespace), namespace.blockchain_type)
 
         vm_handler = VMHandler(config)
-        vm_handler.run_general_startup()
+        try:
+            vm_handler.run_general_startup()
+        except (Exception, KeyboardInterrupt) as e:
+            logger.exception(e)
+            if (yes_or_no("Do you want to shut down the whole network?")):
+                vm_handler.run_general_shutdown()
 
     elif namespace.goal == 'termination':
         config = argparser.load_config(vars(namespace))
