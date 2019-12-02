@@ -4,7 +4,10 @@
   sudo apt-get update
   sudo apt-get -y upgrade || echo "Upgrading in indy_bootstrap failed" >> /home/ubuntu/upgrade_fail2.log
 
-  sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88
+  # sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88
+  sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88 || echo "Adding first keyserver failed" >> /home/ubuntu/upgrade_fail2.log
+  sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 || echo "Adding second keyserver failed" >> /home/ubuntu/upgrade_fail2.log
+  sudo aot-get update
   sudo add-apt-repository "deb https://repo.sovrin.org/deb xenial master"
   sudo add-apt-repository "deb https://repo.sovrin.org/sdk/deb xenial stable"
   sudo add-apt-repository "deb http://us.archive.ubuntu.com/ubuntu xenial main universe"
@@ -19,12 +22,11 @@
   sudo apt-get install -y libindy libindy-crypto=0.4.5
   sudo apt-get install -y indy-cli
 
-  git clone https://github.com/hyperledger/indy-plenum
+  # git clone https://github.com/hyperledger/indy-plenum
   git clone https://github.com/hyperledger/indy-node
-  git clone https://github.com/hyperledger/indy-sdk
   (cd indy-node && sudo pip3 install --upgrade pip && sudo pip3 install -e .[tests] && sudo pip3 install flake8 || echo "\n\n=========\nError in indy-node installation\n========\n\n")
   # (cd indy-plenum && sudo pip3 install boto3 && sudo pip3 install asyncio && sudo pip3 install ansible && sudo pip3 install -e .[tests] || echo "\n\n=========\nError in indy-plenum installation\n========\n\n")
-  # (cd indy-sdk && sudo pip3 install -e .[tests] || echo "\n\n=========\nError in indy-sdk installation\n========\n\n")
+  # (cd indy-sdk/samples/python/src && sudo pip3 install -e .[tests]) || echo "\n\n=========\nError in indy-sdk installation\n========\n\n")
 
   sudo mkdir /etc/indy /var/log/indy /var/lib/indy /var/lib/indy/backup /var/lib/indy/plugins
   sudo chown -R ubuntu:ubuntu /var/log/indy/ /var/lib/indy/ /etc/indy/

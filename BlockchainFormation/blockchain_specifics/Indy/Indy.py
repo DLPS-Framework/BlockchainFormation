@@ -28,12 +28,7 @@ def indy_shutdown(config, logger, ssh_clients, scp_clients):
     :return:
     """
 
-    for index, _ in enumerate(config['priv_ips']):
-
-        pass
-        # scp_clients[index].get("/home/ubuntu/node.log", f"{config['exp_dir']}/quorum_logs/quorum_log_node_{index}.log")
-        # scp_clients[index].get("/home/ubuntu/tessera.log", f"{config['exp_dir']}/tessera_logs/tessera_log_node_{index}.log")
-        # scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
+    pass
 
 
 def indy_startup(config, logger, ssh_clients, scp_clients):
@@ -55,7 +50,7 @@ def indy_startup(config, logger, ssh_clients, scp_clients):
         node_seeds.append(node_name)
         if ips_string != "":
             ips_string = ips_string + ","
-        ips_string = ips_string + config['priv_ips'][node]
+        ips_string = ips_string + config['pub_ips'][node]
 
         if node_nums != "":
             node_nums = node_nums + " "

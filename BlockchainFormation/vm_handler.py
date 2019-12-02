@@ -375,8 +375,8 @@ class VMHandler:
         except:
             self.logger.info("ssh/scp clients already closed")
 
-        if yes_or_no("Do you want to shut down the whole network?"):
-            self.run_general_shutdown()
+        # if yes_or_no("Do you want to shut down the whole network?"):
+            # self.run_general_shutdown()
 
 
     def _run_specific_startup(self, ssh_clients, scp_clients):
