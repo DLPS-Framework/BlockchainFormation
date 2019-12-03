@@ -7,7 +7,7 @@
   # sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88
   sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88 || echo "Adding first keyserver failed" >> /home/ubuntu/upgrade_fail2.log
   sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 || echo "Adding second keyserver failed" >> /home/ubuntu/upgrade_fail2.log
-  sudo aot-get update
+  sudo apt-get update
   sudo add-apt-repository "deb https://repo.sovrin.org/deb xenial master"
   sudo add-apt-repository "deb https://repo.sovrin.org/sdk/deb xenial stable"
   sudo add-apt-repository "deb http://us.archive.ubuntu.com/ubuntu xenial main universe"
