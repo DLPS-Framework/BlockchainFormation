@@ -4,6 +4,7 @@ include BlockchainFormation/blockchain_specifics/Fabric/chaincode/benchcontract/
 include BlockchainFormation/blockchain_specifics/Fabric/setup/*
 include BlockchainFormation/blockchain_specifics/Fabric/*
 include BlockchainFormation/blockchain_specifics/Indy/*
+include BlockchainFormation/blockchain_specifics/Sawtooth/processor/*
 include BlockchainFormation/blockchain_specifics/Sawtooth/*
 include BlockchainFormation/blockchain_specifics/Quorum/*
 include BlockchainFormation/blockchain_specifics/Geth/*
