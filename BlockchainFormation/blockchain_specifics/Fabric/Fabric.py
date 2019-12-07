@@ -872,11 +872,11 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
                 if string_zookeeper_servers != "":
                     string_zookeeper_servers = string_zookeeper_servers + " "
                 string_zookeeper_servers = string_zookeeper_servers + f"server.{zookeeper1 + 1}=zookeeper{zookeeper1}:2888:3888"
-            string_zookeeper_servers = f" -e ZOO_SERVERS='{string_zookeeper_servers}'"
+            string_zookeeper_servers = f" -e ZOO_SERVERS=\"{string_zookeeper_servers}\""
 
             logger.debug(f" - Starting zookeeper{zookeeper} on {config['ips'][index]}")
             channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"(cd ~/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /data/zookeeper{zookeeper}.log)")
+            channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /data/zookeeper{zookeeper}.log)")
             stdin, stdout, stderr = ssh_clients[index].exec_command(f"echo '(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /data/zookeeper{zookeeper}.log)' >> /data/starting_command.log")
             stdout.readlines()
             # logger.debug(stdout.readlines())

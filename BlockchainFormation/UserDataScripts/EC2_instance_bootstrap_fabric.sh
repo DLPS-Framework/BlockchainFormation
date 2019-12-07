@@ -42,6 +42,8 @@
   # curl -sSL http://bit.ly/2ysbOFE | sudo bash -s 2.0.0-alpha 2.0.0-alpha 0.4.18
   curl -sSL http://bit.ly/2ysbOFE | sudo bash -s 1.4.4 1.4.4. 0.4.18
 
+  docker pull hyperledger/fabric-zookeeper
+
 
   # Cloning github repository with helping material for Multi-Host-Network
   git clone https://github.com/wahabjawed/Build-Multi-Host-Network-Hyperledger.git
