@@ -74,7 +74,7 @@ def indy_startup(config, logger, ssh_clients, scp_clients):
         channels[node].exec_command(f"{start_string} && echo \"{start_string}\" >> commands.txt")
         port = port + 2
 
-    logger.info("Hallo")
+    logger.info("Indy network is running...")
     # indy-cli
     # pool create my-pool gen_txn_file=/var/lib/indy/my-net/pool_transactions_genesis
 
