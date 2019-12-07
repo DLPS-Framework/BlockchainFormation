@@ -14,7 +14,7 @@
 
 # Cloning repo and building Quorum binaries...
   git clone https://github.com/jpmorganchase/quorum.git
-  # (cd /data/quorum && git checkout e1e3e4a781ee009685ea254cedfffdd65e704f3e)
+  # (cd /data/quorum && git checkout 99f7fd6733a93ee7619d1c740e0d4cd7643b6700)
   (cd /data/quorum && make all)
 
 # Copying binaries to /usr/local/bin, which is in path!
