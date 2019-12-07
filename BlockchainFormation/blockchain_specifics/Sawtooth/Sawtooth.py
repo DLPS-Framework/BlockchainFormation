@@ -82,9 +82,9 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
 
         dir_name = os.path.dirname(os.path.realpath(__file__))
         logger.debug("Starting BenchContract...")
-        scp_clients[0].put(dir_name + "/processor", "/home/ubuntu", recursive=True)
+        scp_clients[0].put(dir_name + "/processor", "/data", recursive=True)
         channel = ssh_clients[0].get_transport().open_session()
-        channel.exec_command("python3 /home/ubuntu/processor/main.py > bench.log")
+        channel.exec_command("python3 /data/processor/main.py > bench.log")
 
     else:
 
@@ -186,13 +186,13 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
 
             # Creating string for binding specification and replace substitute_binding
             binding_string = f'\\"network:tcp://{ip1}:8800\\",'
-            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_bind#" + binding_string + "#g /home/ubuntu/validator.toml")
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_bind#" + binding_string + "#g /data/validator.toml")
             logger.debug(stdout.readlines())
             logger.debug(stderr.readlines())
 
             # Creating string for endpoint speficifation and replace substitute_endpoint
             endpoint_string = f'endpoint\ =\ \\"tcp://{ip1}:8800\\"'
-            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_endpoint#" + endpoint_string + "#g /home/ubuntu/validator.toml")
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_endpoint#" + endpoint_string + "#g /data/validator.toml")
             logger.debug(stdout.readlines())
             logger.debug(stderr.readlines())
 
@@ -211,31 +211,31 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
 
                 peer_string = peer_string + "]"
 
-            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_peers#" + peer_string + "#g /home/ubuntu/validator.toml")
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_peers#" + peer_string + "#g /data/validator.toml")
             logger.debug("".join(stdout.readlines()))
             logger.debug("".join(stderr.readlines()))
 
             logger.debug("Adjusting minimum and maximum peer connectivity")
             min_connectivity_string = f"{len(config['priv_ips']) - 1}"
             max_connectivity_string = f"{2 * (len(config['priv_ips']) - 1)}"
-            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_min_connectivity#" + min_connectivity_string + "#g /home/ubuntu/validator.toml")
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_min_connectivity#" + min_connectivity_string + "#g /data/validator.toml")
             stdout.readlines()
 
-            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_max_connectivity#" + max_connectivity_string + "#g /home/ubuntu/validator.toml")
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_max_connectivity#" + max_connectivity_string + "#g /data/validator.toml")
             stdout.readlines()
 
             logger.debug("adjusting REST-API config")
-            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_local_private_ip#" + ip1 + "#g /home/ubuntu/rest_api.toml")
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_local_private_ip#" + ip1 + "#g /data/rest_api.toml")
             stdout.readlines()
 
             logger.debug("Replacing the configs in /etc/sawtooth by the customized configs")
-            stdin, stdout, stderr = ssh_clients[index1].exec_command("sudo mv /home/ubuntu/validator.toml /etc/sawtooth/validator.toml")
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sudo mv /data/validator.toml /etc/sawtooth/validator.toml")
             stdout.readlines()
 
-            stdin, stdout, stderr = ssh_clients[index1].exec_command("sudo mv /home/ubuntu/rest_api.toml /etc/sawtooth/rest_api.toml")
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sudo mv /data/rest_api.toml /etc/sawtooth/rest_api.toml")
             stdout.readlines()
 
-            stdin, stdout, stderr = ssh_clients[index1].exec_command("sudo mv /home/ubuntu/cli.toml /etc/sawtooth/cli.toml")
+            stdin, stdout, stderr = ssh_clients[index1].exec_command("sudo mv /data/cli.toml /etc/sawtooth/cli.toml")
             stdout.readlines()
 
             logger.debug("Starting all services")
@@ -273,9 +273,9 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
 
 
         logger.debug("Starting BenchContract...")
-        scp_clients[index1].put(dir_name + "/processor", "/home/ubuntu", recursive=True)
+        scp_clients[index1].put(dir_name + "/processor", "/data", recursive=True)
         channel = ssh_clients[index1].get_transport().open_session()
-        channel.exec_command("python3 /home/ubuntu/processor/main.py > bench.log")
+        channel.exec_command("python3 /data/processor/main.py > bench.log")
 
     logger.info("Waiting for 10s until all nodes have started")
 

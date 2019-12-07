@@ -119,7 +119,7 @@ maximum_peer_connectivity = substitute_max_connectivity
 
 # [permissions]
 # transactor = "policy.example"
-# "transactor.transaction_signer" = "policy.example"\n' > /home/ubuntu/validator.toml
+# "transactor.transaction_signer" = "policy.example"\n' > /data/validator.toml
 
   # Generating skeleton config file for the REST API (nothing to change yet)
   printf '#
@@ -158,7 +158,7 @@ maximum_peer_connectivity = substitute_max_connectivity
 # opentsdb_db = ""
 
 # opentsdb_username = ""
-# opentsdb_password = ""\n' > /home/ubuntu/rest_api.toml
+# opentsdb_password = ""\n' > /data/rest_api.toml
 
   # Generating skeleton config file for the CLI (nothing to change yet)
   printf '#
@@ -181,7 +181,7 @@ maximum_peer_connectivity = substitute_max_connectivity
 # Sawtooth -- CLI Configuration
 #
 # The REST API URL
-  url = "http://localhost:8008"\n' > /home/ubuntu/cli.toml
+  url = "http://localhost:8008"\n' > /data/cli.toml
 
   wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash
 
