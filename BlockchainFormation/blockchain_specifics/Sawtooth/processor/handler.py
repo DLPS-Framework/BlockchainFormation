@@ -78,17 +78,17 @@ class BenchmarkHandler(TransactionHandler):
         :param context: sawtooth transaction processor context object
         :return:
         """
-        print("key: {}".format(key))
-        print("value: {}".format(value))
+        print("key_{}".format(key))
+        print("val_{}".format(value))
 
-        address = _make_benchcontract_address(key)
+        address = _make_benchcontract_address("key_{}".format(key))
         print("address: {}".format(address))
-        value_encoded = value.encode()
+        value_encoded = ("{}".format(value)).encode()
         print("encoded value: {}".format(value_encoded))
         context.set_state(
             {address: value_encoded},
             timeout=self.timeout)
-        print("Stored {} --> {} to state".format(key, value))
+        print("writeData stored {} --> {} to state".format(key, value))
         return 0
 
     def readData(self, key, context):
@@ -100,21 +100,22 @@ class BenchmarkHandler(TransactionHandler):
         """
 
         print("key: {}".format(key))
-        address = _make_benchcontract_address(key)
+        address = _make_benchcontract_address("key_{}".format(key))
         print("address: {}".format(address))
         data = context.get_state(
             [address],
             timeout=self.timeout)
-        print("Obtained {} --> {} from state".format(key, data))
-        return data
+        print("readData obtained {} --> {} from state".format(key, data))
+        return 0
 
-    def matrixMultiplication(self, n):
+    def matrixMultiplication(self, n, context):
         """
         Creates to matrices of size nxn and multiplies them
         :param n: size of the squared matrices
         :return:
         """
 
+        # print("id: {}".format(id))
         # Create one matrix
         f = 1
         m1 = []
@@ -139,6 +140,7 @@ class BenchmarkHandler(TransactionHandler):
                 row.append(sum)
             m3.append(row)
 
+        sum = 0
         # add the entries
         for i in range(n):
             for j in range(n):
@@ -148,32 +150,70 @@ class BenchmarkHandler(TransactionHandler):
         return sum
 
 
-    def doNothing(self):
+    def doNothing(self, context):
         """
         Does actually nothing just to test the connection without any contract overhead
         :return:
         """
         return 0
 
-    def writeMuchData(self, start, end, context):
+    def writeMuchData(self, len, start, delta, context):
         """
         Writes a lot of integer key value pairs
         :return:
         """
         print("start: {}".format(start))
-        print("end: {}".format(end))
+        print("len: {}".format(len))
+        print("delta: {}".format(delta))
 
-        for i in range(start, end):
+        for i in range(start, start + len):
 
-            key = "key" + i.toString()
+            key = "key_{}".format(i)
             address = _make_benchcontract_address(key)
             print("address: {}".format(address))
-            value = "val" + i.toString()
+            value = i + delta
+            print("value: {}".format(value))
+            value = "{}".format(value)
+            print("value: {}".format(value))
             value_encoded = value.encode()
             print("encoded value: {}".format(value_encoded))
             context.set_state({address: value_encoded}, timeout=self.timeout)
-            print("Stored {} --> {} to state".format(key, value))
+            print("writeMuchData stored {} --> {} to state".format(key, value))
         return 0
+
+    def readMuchData(self, len, start, context):
+        """
+        Reads a lot of integer key value pairs
+        :param len:
+        :param start:
+        :param context:
+        :return:
+        """
+
+        print("start: {}".format(start))
+        print("end: {}".format(start + len))
+
+        sum = 0
+
+        for i in range(start, start + len):
+            try:
+                key = "key_{}".format(i)
+                address = _make_benchcontract_address(key)
+                print("address: {}".format(address))
+            except:
+                print("Some error")
+
+            try:
+                data = context.get_state(
+                    [address],
+                    timeout=self.timeout)
+                # value = int(data)
+                print("Obtained {} --> {} from state".format(key, data))
+                # sum = sum + value
+            except:
+                print("No entry found for {}".format(key))
+
+        print("total sum: {}".format(sum))
 
 
     # The apply function performs the blockchain related tasks of our application
@@ -197,38 +237,37 @@ class BenchmarkHandler(TransactionHandler):
         # Logic of the application
         if payload["method"] == "writeData":
             print("Performing writeData with args {} and {}".format(payload["key"], payload["value"]))
-            result = self.writeData(payload["key"], payload["value"], context)
+            result = self.writeData(int(payload["key"]), int(payload["value"]), context)
             print("Success")
             print("result: {}".format(result))
 
         elif payload["method"] == "readData":
             print("Performing readData with {}".format(payload["key"]))
-            result = self.readData(payload["key"], context)
+            result = self.readData(int(payload["key"]), context)
             print("Success")
             print("result: {}".format(result))
 
         elif payload["method"] == "matrixMultiplication":
             print("Performing matrixMultiplication with {}".format(int(payload["arg"])))
-            result = self.matrixMultiplication(int(payload["arg"]))
+            result = self.matrixMultiplication(int(payload["arg"]), context)
             print("Success")
             print("result: {}".format(result))
 
         elif payload["method"] == "doNothing":
             print("Performing doNothing")
-            result = self.doNothing()
+            result = self.doNothing(context)
             print("Success")
             print("result: {}".format(result))
 
         elif payload["method"] == "writeMuchData":
             print("Performing writeMuchData")
-            result = self.writeMuchData(payload["start"], payload["end"])
+            result = self.writeMuchData(int(payload["len"]), int(payload["start"]), int(payload["delta"]), context)
             print("Success")
             print("result: {}".format(result))
 
         elif payload["method"] == "readMuchData":
-            print("not yet implemented...")
             print("Performing readMuchData")
-            result = self.readMuchData(payload["start"], payload["end"])
+            result = self.readMuchData(int(payload["len"]), int(payload["start"]), context)
             print("Success")
             print("result: {}".format(result))
 
