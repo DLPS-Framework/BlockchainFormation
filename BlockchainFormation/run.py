@@ -58,6 +58,12 @@ class ArgParser:
 
         subparsers = superparser.add_subparsers(help='Choose a blockchain type')
 
+        # corda parser
+        parser_corda = subparsers.add_parser('corda', help='Corda Network')
+        parser_corda.set_defaults(blockchain_type='corda')
+        ArgParser._add_common_args(parser_corda)
+        ArgParser._add_corda_args(parser_corda)
+
         # fabric parser
         parser_fabric = subparsers.add_parser('fabric', help='Fabric Network')
         parser_fabric.set_defaults(blockchain_type='fabric')
@@ -200,6 +206,10 @@ class ArgParser:
         parser.add_argument('--aws_spot_instances',
                             help='Boolean if spot instances should be used for aws', default=False, type=bool)
 
+
+    @staticmethod
+    def _add_corda_args(parser):
+        parser.add_argument('--message', help='test message', default='Hallo')
 
 
     @staticmethod
@@ -452,7 +462,13 @@ class ArgParser:
     @staticmethod
     def _add_blockchain_type_config(namespace_dict, blockchain_type):
 
-        if blockchain_type == "fabric":
+        if blockchain_type == "corda":
+            return\
+                {
+                    "message": namespace_dict["message"]
+                }
+
+        elif blockchain_type == "fabric":
             return\
                 {
                     "org_count": namespace_dict['org_count'],

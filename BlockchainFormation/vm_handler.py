@@ -24,6 +24,7 @@ from scp import SCPClient
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from BlockchainFormation.cost_calculator import AWSCostCalculator
+from BlockchainFormation.blockchain_specifics.Corda.Corda import *
 from BlockchainFormation.blockchain_specifics.Fabric.Fabric import *
 from BlockchainFormation.blockchain_specifics.Indy.Indy import *
 from BlockchainFormation.blockchain_specifics.Geth.Geth import *
@@ -382,7 +383,10 @@ class VMHandler:
     def _run_specific_startup(self, ssh_clients, scp_clients):
         """starts startup for given config (geth, parity, etc....)"""
 
-        if self.config['blockchain_type'] == 'fabric':
+        if self.config['blockchain_type'] == 'corda':
+            corda_startup(self.config, self.logger, ssh_clients, scp_clients)
+
+        elif self.config['blockchain_type'] == 'fabric':
             fabric_startup(self.config, self.logger, ssh_clients, scp_clients)
 
         elif self.config['blockchain_type'] == 'indy':
