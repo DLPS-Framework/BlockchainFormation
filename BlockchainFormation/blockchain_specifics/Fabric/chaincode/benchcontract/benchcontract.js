@@ -96,6 +96,17 @@ class BenchContract extends Contract {
         return Buffer.from('1')
     }
 
+    async writeMuchData2(ctx, len, start, delta) {
+        var aggregate_key = {}
+        for (var i = parseInt(start, 10); i < (parseInt(start, 10) + parseInt(len, 10)); i++) {
+            aggregate_key["key_" + i.toString()] = (i + delta).toString()
+        }
+        console.log(JSON.stringify(aggregate_key))
+        await ctx.stub.putState("key_" + start.toString(), Buffer.from(JSON.stringify(aggregate_key)))
+        return Buffer.from('1')
+    }
+
+
      /** Standard setters and getters
      * @param {Context} ctx the transaction context
      * @param {String} len The number of writes
