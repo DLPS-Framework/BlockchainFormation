@@ -407,7 +407,7 @@ class VMHandler:
 
                 else:
                     self.logger.info(f"VMs are not being shutdown")
-        if self.config['blockchain_type'] == 'client':
+        if self.config['blockchain_type'] == 'client' or self.config['blockchain_type'] == 'indy_client':
             client_startup(self.config, self.logger, ssh_clients, scp_clients)
 
         elif self.config['blockchain_type'] == 'quorum':
