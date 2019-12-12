@@ -20,7 +20,7 @@
   sudo apt-get install -y software-properties-common
   sudo apt-get install -y python3.5 python3-pip python3.5-dev
   sudo apt-get install -y libindy libindy-crypto=0.4.5
-  sudo apt-get install -y indy-cli
+  # sudo apt-get install -y indy-cli
 
   # git clone https://github.com/hyperledger/indy-plenum
   git clone https://github.com/hyperledger/indy-node
