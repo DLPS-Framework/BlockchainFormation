@@ -14,12 +14,8 @@
 
 
 
-import os
-import rlp
-import time
-import numpy as np
+import os, rlp
 from BlockchainFormation.utils.utils import *
-import json
 
 
 def quorum_shutdown(config, logger, ssh_clients, scp_clients):
@@ -28,11 +24,25 @@ def quorum_shutdown(config, logger, ssh_clients, scp_clients):
     :return:
     """
 
-    for index, _ in enumerate(config['priv_ips']):
 
-        scp_clients[index].get("/home/ubuntu//data/node.log", f"{config['exp_dir']}/quorum_logs/quorum_log_node_{index}.log")
-        scp_clients[index].get("/home/ubuntu/tessera.log", f"{config['exp_dir']}/tessera_logs/tessera_log_node_{index}.log")
-        scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
+    logger.info("Getting quorum logs from the network")
+    boo = True
+
+    for index, ip in enumerate(config['ips']):
+
+        os.mkdir((f"{config['exp_dir']}/quorum_logs"))
+        os.mkdir((f"{config['exp_dir']}/tessera_logs"))
+
+        try:
+            scp_clients[index].get("/home/ubuntu//data/node.log", f"{config['exp_dir']}/quorum_logs/quorum_log_node_{index}.log")
+            scp_clients[index].get("/home/ubuntu/data/tessera.log", f"{config['exp_dir']}/tessera_logs/tessera_log_node_{index}.log")
+        except Exception as e:
+            logger.debug(e)
+            logger.info(f"Not all logs available on {ip}")
+            boo = False
+
+    if boo == True:
+        logger.info("All logs successfully stored")
 
 
 def quorum_startup(config, logger, ssh_clients, scp_clients):
@@ -41,70 +51,64 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
     :return:
     """
 
+    for index, _ in enumerate(config['priv_ips']):
+
+        os.mkdir((f"{config['exp_dir']}/user_data_logs"))
+        scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
+
+
     # the indices of the blockchain nodes
     config['node_indices'] = list(range(0, config['vm_count']))
 
-    logger.info("Creating directories for saving data and logs locally")
-    os.mkdir((f"{config['exp_dir']}/quorum_logs"))
-    os.mkdir((f"{config['exp_dir']}/tessera_logs"))
-
     # for saving the enodes and addresses of the nodes resp. wallets (each node has one wallet at the moment)
-    addresses = []
     enodes = []
+    addresses = []
 
-    logger.info("Generating the enode on each node and storing it in enodes")
+
+    logger.info("Generating the enode on each node, storing it in enodes, and deriving an account (the coinbase account)")
     for index, _ in enumerate(config['priv_ips']):
+
         stdin, stdout, stderr = ssh_clients[index].exec_command("(bootnode --genkey=nodekey && mkdir /data/nodes/new-node-1 && mv nodekey /data/nodes/new-node-1/nodekey)")
-        stdout.readlines()
-        # logger.debug("".join(stdout.readlines()))
-        # logger.debug("".join(stderr.readlines()))
+        wait_and_log(stdout, stderr)
 
         stdin, stdout, stderr = ssh_clients[index].exec_command("bootnode --nodekey=/data/nodes/new-node-1/nodekey --writeaddress")
         out = stdout.readlines()
-        enodes.append(out[0].replace("\n", "").replace("]", "").replace("[", ""))
-        # logger.debug(out)
-        # logger.debug("".join(stderr.readlines()))
+        enode = out[0].replace("\n", "").replace("]", "").replace("[", "")
+        enodes.append(enode)
+        logger.debug(f"Enode on node {index}: {enode}")
 
         stdin, stdout, stderr = ssh_clients[index].exec_command("geth account import /data/nodes/new-node-1/nodekey --datadir /data/nodes/new-node-1 --password /data/nodes/pwd > /data/nodes/address && sed -i -e 's/Address: //g' /data/nodes/address && sed -i -e 's/{//g' /data/nodes/address && sed -i -e 's/}//g' /data/nodes/address")
-        stdout.readlines()
-        # logger.debug(stdout.readlines())
-        # logger.debug(stderr.readlines())
+        wait_and_log(stdout, stderr)
 
-    config['enodes'] = enodes
-
-
-    logger.info("Getting the addresses of each node's wallet (which have been generated during bootstrapping) and store it in the corresponding array <addresses>")
-    for index, _ in enumerate(config['priv_ips']):
         stdin, stdout, stderr = ssh_clients[index].exec_command("cat /data/nodes/address")
         out = stdout.readlines()
-        addresses.append(out[0].replace("\n", ""))
-        # logger.debug(out)
-        # logger.debug("".join(stderr.readlines()))
+        address = out[0].replace("\n", "")
+        addresses.append(address)
+        logger.debug(f"Address (coinbase) on node {index}: {address}")
 
-    logger.info("Replacing the genesis_raw.json on each node by genesis.json where the first two nodes have some ether")
+    config['enodes'] = enodes
+    config['addresses'] = addresses
+
+    logger.info("Replacing the genesis_raw.json on each node by genesis.json where the coinbase of the first node has some ether")
     for index, _ in enumerate(config['priv_ips']):
 
         logger.debug("Removing the genesis_raw.json which is not relevant for the consensus")
         if config['quorum_settings']['consensus'].upper() == "IBFT":
             stdin, stdout, stderr = ssh_clients[index].exec_command("rm /data/genesis_raw_raft.json && mv /data/genesis_raw_istanbul.json /data/genesis_raw.json")
-            stdout.readlines()
-            # logger.debug(stdout.readlines())
-            # logger.debug(stderr.readlines())
+            wait_and_log(stdout, stderr)
 
         else:
             stdin, stdout, stderr = ssh_clients[index].exec_command("rm /data/genesis_raw_istanbul.json && mv /data/genesis_raw_raft.json /data/genesis_raw.json")
-            stdout.readlines()
-            # logger.debug(stdout.readlines())
-            # logger.debug(stderr.readlines())
+            wait_and_log(stdout, stderr)
 
         stdin, stdout, stderr = ssh_clients[index].exec_command("(sed -i -e 's/substitute_address/'" + f"'{addresses[0]}'" + "'/g' /data/genesis_raw.json && mv /data/genesis_raw.json /data/nodes/genesis.json)")
         stdout.readlines()
-        # logger.debug("".join      (stdout.readlines()))
-        # logger.debug("".join(stderr.readlines()))
+        wait_and_log(stdout, stderr)
 
-        if config['quorum_settings']['consensus'].upper() == "IBFT":
+    if config['quorum_settings']['consensus'].upper() == "IBFT":
+        for index, _ in enumerate(config['priv_ips']):
+
             logger.info("Creating extra data for the istanbul genesis")
-
             old_string = "f841"
             new_string = "b841"
             for i in range(0, 65):
@@ -124,25 +128,12 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
 
             extra_data = Vanity + rlp.encode([Validators, Seal, CommittedSeal]).hex()
 
-
-
-            # print(f"'\"{extra_data}\"'")
             extra_data = extra_data.replace(old_string, new_string)
-            # print(f"'\"{extra_data}\"'")
-
-            # extra_data = f"0x0000000000000000000000000000000000000000000000000000000000000000{''.join(addresses)}"f"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 
             stdin, stdout, stderr = ssh_clients[index].exec_command("sed -i -e 's/substitute_extra_data/'" + f"'{extra_data}'" + "'/g' /data/nodes/genesis.json")
-            stdout.readlines()
-            # logger.debug(stdout.readlines())
-            # logger.debug(stderr.readlines())
+            wait_and_log(stdout, stderr)
 
-
-    config['addresses'] = addresses
-    # logger.debug(f"addresse: {addresses}")
-
-    logger.info("Generating static-nodes on each node and initialize the genesis block afterwards")
-
+    logger.info("Generating static-nodes on each node and initializing the genesis block afterwards")
     if config['quorum_settings']['consensus'].upper() == "IBFT":
         port_string = "30300"
         raftport_string = ""
@@ -154,9 +145,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
     for index1, _ in enumerate(config['priv_ips']):
 
         stdin, stdout, stderr = ssh_clients[index1].exec_command("echo '[' > /data/nodes/new-node-1/static-nodes.json")
-        stdout.readlines()
-        # logger.debug("".join(stdout.readlines()))
-        # logger.debug("".join(stderr.readlines()))
+        wait_and_log(stdout, stderr)
 
         if config['quorum_settings']['consensus'].upper() == "IBFT":
             limit = len(config['priv_ips'])
@@ -168,56 +157,28 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
             if (index2 < limit-1):
                 string = "echo '  " + '\"' + "enode://" + f"{enodes[index2]}" + "@" + f"{ip2}" + f":{port_string}?discport=0{raftport_string}'" + '\\",' + " >> /data/nodes/new-node-1/static-nodes.json"
                 stdin, stdout, stderr = ssh_clients[index1].exec_command(string)
-                stdout.readlines()
-                # logger.debug("".join(stdout.readlines()))
-                # logger.debug("".join(stderr.readlines()))
+                wait_and_log(stdout, stderr)
             else:
                 string = "echo '  " + '\"' + "enode://" + f"{enodes[index2]}" + "@" + f"{ip2}" + f":{port_string}?discport=0{raftport_string}'" + '\\"' + " >> /data/nodes/new-node-1/static-nodes.json"
                 stdin, stdout, stderr = ssh_clients[index1].exec_command(string)
-                stdout.readlines()
-                # logger.debug("".join(stdout.readlines()))
-                # logger.debug("".join(stderr.readlines()))
+                wait_and_log(stdout, stderr)
 
         stdin, stdout, stderr = ssh_clients[index1].exec_command("(echo ']' >> /data/nodes/new-node-1/static-nodes.json && geth --datadir /data/nodes/new-node-1 init /data/nodes/genesis.json)")
-        stdout.readlines()
-        # logger.debug("".join(stdout.readlines()))
-        # logger.debug("".join(stderr.readlines()))
+        wait_and_log(stdout, stderr)
 
-        # stdin, stdout, stderr = ssh_clients[index1].exec_command("cat /data/nodes/new-node-1/static-nodes.json")
-        # stdout.readlines()
-        # logger.debug(stdout.readlines())
-        # logger.debug(stderr.readlines())
 
     logger.info("Starting tessera_nodes")
-    tessera_public_keys, tessera_private_keys = start_tessera(config, ssh_clients, logger)
+    tessera_public_keys = start_tessera(config, ssh_clients, logger)
     config['tessera_public_keys'] = tessera_public_keys
-    config['tessera_private_keys'] = tessera_private_keys
 
     logger.info("Starting quorum nodes")
     start_network(config, ssh_clients, logger)
-
-    logger.info("Getting logs from vms")
-    boo = True
-    for index, ip in enumerate(config['ips']):
-
-        try:
-            scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
-            scp_clients[index].get("/data/tessera.log", f"{config['exp_dir']}/tessera_logs/tessera_node{index}.log")
-            scp_clients[index].get("/data/node.log", f"{config['exp_dir']}/quorum_logs/quorum_node{index}.log")
-            logger.debug(f"Logs fetched successfully from {ip}")
-        except:
-            logger.info(f"Not all logs available on {ip}")
-            boo = False
-
-    if boo == True:
-        logger.info("All logs successfully stored")
 
 
 def start_tessera(config, ssh_clients, logger):
 
     # for saving the public and private keys of the tessera nodes (enclaves)
     tessera_public_keys = []
-    tessera_private_keys = []
 
     logger.info("Getting tessera-data from each node and create config-file for tessera on each node")
     for index1, ip1 in enumerate(config['priv_ips']):
@@ -225,15 +186,9 @@ def start_tessera(config, ssh_clients, logger):
         # getting tessera public and private keys (which have been generated during bootstrapping) and store them in the corresponding arrays <tessera_public_keys> resp. <tessera_private_keys>
         stdin, stdout, stderr = ssh_clients[index1].exec_command("cat /data/qdata/tm/tm.pub")
         out = stdout.readlines()
-        # logger.debug("".join(out))
-        # logger.debug("".join(stderr.readlines()))
-        tessera_public_keys.append(out[0].replace("\n", ""))
-
-        stdin, stdout, stderr = ssh_clients[index1].exec_command("cat /data/qdata/tm/tm.key")
-        out = stdout.readlines()
-        # logger.debug("".join(out))
-        # logger.debug("".join(stderr.readlines()))
-        tessera_private_keys.append(out[3].replace('      "bytes" : ', "").replace('\n', ""))
+        tessera_public_key = out[0].replace("\n", "")
+        tessera_public_keys.append(tessera_public_key)
+        logger.debug(f"Tessera public key on node {index1}: {tessera_public_key}")
 
         # building peer string which is then inserted to config_raw.json, which contains all tessera-specific information,
         # in particular the tessera-nodes which will participate in the (private) quorum network
@@ -250,7 +205,7 @@ def start_tessera(config, ssh_clients, logger):
 
         # Specifying missing data in config_raw.json and store the result in config.json
         stdin, stdout, stderr = ssh_clients[index1].exec_command(f"(sed -i -e s#substitute_ip#{ip1}#g /data/config_raw.json && sed -i -e s#substitute_public_key#{tessera_public_keys[index1]}#g /data/config_raw.json && sed -i -e s#substitute_private_key#{tessera_private_keys[index1]}#g /data/config_raw.json && sed -i -e s#substitute_peers#" + peer_string + "#g /data/config_raw.json && mv /data/config_raw.json /data/qdata/tm/config.json)")
-        stdout.readlines()
+        wait_and_log(stdout, stderr)
 
         # logger.debug(f"Starting tessera on node {index1}")
         channel = ssh_clients[index1].get_transport().open_session()
@@ -261,7 +216,7 @@ def start_tessera(config, ssh_clients, logger):
     if False in status_flags:
         raise Exception("At least one tessera node did not start properly")
 
-    return tessera_public_keys, tessera_private_keys
+    return tessera_public_keys
 
 
 def start_network_attempt(config, ssh_clients, logger):
