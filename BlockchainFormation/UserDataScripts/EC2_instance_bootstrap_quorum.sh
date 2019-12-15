@@ -88,10 +88,6 @@
   # Creating wallets and store the resulting address (needs some cosmetics)
   mkdir /data/nodes
   echo 'user' > /data/nodes/pwd
-  # geth --password /data/nodes/pwd --datadir /data/nodes/new-node-1 account new > /data/nodes/address
-  # sed -i -e 's/Address: //g' /data/nodes/address
-  # sed -i -e 's/{//g' /data/nodes/address
-  # sed -i -e 's/}//g' /data/nodes/address
 
   # Getting (already built, since building mit Libsodium & Maven did not work) tessera-app (jar) and generating tessera keys
   mkdir /data/tessera
