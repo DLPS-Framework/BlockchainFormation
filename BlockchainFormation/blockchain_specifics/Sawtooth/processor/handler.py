@@ -105,17 +105,17 @@ class BenchmarkHandler(TransactionHandler):
         data = context.get_state(
             [address],
             timeout=self.timeout)
-        print("readData obtained {} --> {} from state".format(key, data))
+        print("readData obtained {} --> {} from state".format(key, data["data"]))
         return 0
 
-    def matrixMultiplication(self, n, context):
+    def matrixMultiplication(self, n, id, context):
         """
         Creates to matrices of size nxn and multiplies them
         :param n: size of the squared matrices
         :return:
         """
 
-        # print("id: {}".format(id))
+        print("id: {}".format(id))
         # Create one matrix
         f = 1
         m1 = []
@@ -150,11 +150,12 @@ class BenchmarkHandler(TransactionHandler):
         return sum
 
 
-    def doNothing(self, context):
+    def doNothing(self, id, context):
         """
         Does actually nothing just to test the connection without any contract overhead
         :return:
         """
+        print("id: {}".format(id))
         return 0
 
     def writeMuchData(self, len, start, delta, context):
@@ -207,8 +208,9 @@ class BenchmarkHandler(TransactionHandler):
                 data = context.get_state(
                     [address],
                     timeout=self.timeout)
-                # value = int(data)
-                print("Obtained {} --> {} from state".format(key, data))
+                print("Data: {}".format(data))
+                value = int(data["data"])
+                print("Obtained {} --> {} from state".format(key, value))
                 # sum = sum + value
             except:
                 print("No entry found for {}".format(key))
@@ -249,13 +251,13 @@ class BenchmarkHandler(TransactionHandler):
 
         elif payload["method"] == "matrixMultiplication":
             print("Performing matrixMultiplication with {}".format(int(payload["arg"])))
-            result = self.matrixMultiplication(int(payload["arg"]), context)
+            result = self.matrixMultiplication(int(payload["arg"]), int(payload["id"]), context)
             print("Success")
             print("result: {}".format(result))
 
         elif payload["method"] == "doNothing":
             print("Performing doNothing")
-            result = self.doNothing(context)
+            result = self.doNothing(int(payload["id"]), context)
             print("Success")
             print("result: {}".format(result))
 
