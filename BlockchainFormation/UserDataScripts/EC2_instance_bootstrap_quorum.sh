@@ -34,8 +34,8 @@
     "constantinopleBlock": 0,
     "chainId": 10,
     "eip150Block": 0,
-    "eip155Block": 0,
     "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "eip155Block": 0,
     "eip158Block": 0,
     "isQuorum": true
   },
@@ -57,15 +57,15 @@
   },
   "coinbase": "0x0000000000000000000000000000000000000000",
   "config": {
-    "byzantiumBlock":  1,
-    "constantinopleBlock":0,
+    "homesteadBlock": 0,
+    "byzantiumBlock": 0,
+    "constantinopleBlock": 0,
     "chainId": 10,
-    "eip150Block": 1,
+    "eip150Block": 0,
     "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-    "eip155Block": 1,
-    "eip158Block": 1,
+    "eip155Block": 0,
+    "eip158Block": 0,
     "isQuorum": true,
-    "maxCodeSize" : 35,
     "istanbul": {
       "epoch": 30000,
       "policy": 0

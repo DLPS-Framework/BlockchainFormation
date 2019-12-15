@@ -217,8 +217,10 @@ class VMHandler:
             elif self.config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "PBFT":
                 if self.config['vm_count'] < 4:
                     raise Exception("PBFT consensus only works with at least 4 nodes")
+            elif self.config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "RAFT":
+                pass
             else:
-                raise Exception("Currently, only Devmode, PoET, and PBFT consensus are supported")
+                raise Exception("Currently, only Devmode, PoET, RAFT, and PBFT consensus are supported")
 
         ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
         image = ec2.Image(self.config['image']['image_id'])
