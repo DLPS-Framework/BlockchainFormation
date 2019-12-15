@@ -305,13 +305,8 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
     web3_clients = []
     time.sleep(20)
 
-    for index, ip in enumerate(config['ips']):
-        if config['public_ip']:
-            # use public ip if exists, else it wont work
-            ip_pub = config['pub_ips'][index]
-            web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip_pub}:8545", request_kwargs={'timeout': 5})))
-        else:
-            web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 5})))
+    for index, ip in enumerate(config['priv_ips']):
+        web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 5})))
 
         enodes.append((ip, web3_clients[index].parity.enode()))
 
