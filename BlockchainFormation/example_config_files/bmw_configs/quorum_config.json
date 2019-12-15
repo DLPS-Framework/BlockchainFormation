@@ -1,5 +1,5 @@
 {
-  "vm_count": 2,
+  "vm_count": 4,
   "instance_type": "m5.large",
   "image": {
     "image_id": null,
@@ -38,7 +38,10 @@
   ],
   "blockchain_type": "quorum",
   "quorum_settings": {
-    "raftblocktime": 50,
+    "consensus": "ibft",
+    "istanbul_blockperiod": 1,
+    "istanbul_minerthreads": 1,
+    "raft_blocktime": 50,
     "cache": 4096,
     "cache.database": 50,
     "cache.gc": 50,

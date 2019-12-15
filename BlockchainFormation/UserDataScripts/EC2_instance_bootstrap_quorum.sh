@@ -20,7 +20,7 @@
 # Copying binaries to /usr/local/bin, which is in path!
   sudo cp /data/quorum/build/bin/geth /data/quorum/build/bin/bootnode /usr/local/bin
 
-  # Creating skeleton genesis block
+# Creating skeleton genesis block for RAFT consensus
   printf '{
   "alloc": {
     "0xsubstitute_address": {
@@ -31,7 +31,7 @@
   "config": {
     "homesteadBlock": 0,
     "byzantiumBlock": 0,
-    "constantinopleBlock":0,
+    "constantinopleBlock": 0,
     "chainId": 10,
     "eip150Block": 0,
     "eip155Block": 0,
@@ -46,15 +46,52 @@
   "nonce": "0x0",
   "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
   "timestamp": "0x00"
-}\n' > /data/genesis_raw.json
+}\n' > /data/genesis_raw_raft.json
+
+# Creating skeleton genesis block for IBFT consensus
+  printf '{
+  "alloc": {
+    "0xsubstitute_address": {
+      "balance": "10000000000000000000000000"
+    }
+  },
+  "coinbase": "0x0000000000000000000000000000000000000000",
+  "config": {
+    "byzantiumBlock":  1,
+    "constantinopleBlock":0,
+    "chainId": 10,
+    "eip150Block": 1,
+    "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "eip155Block": 1,
+    "eip158Block": 1,
+    "isQuorum": true,
+    "maxCodeSize" : 35,
+    "istanbul": {
+      "epoch": 30000,
+      "policy": 0
+    }
+  },
+  "extraData": "substitute_extra_data",
+  "gasLimit": "0xE0000000",
+  "difficulty": "0x1",
+  "mixHash": "0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365",
+  "nonce": "0x0",
+  "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "timestamp": "0x00"
+}\n' > /data/genesis_raw_istanbul.json
+
+
+#extra data according to quorum ibft documentation
+#"extraData": "0x0000000000000000000000000000000000000000000000000000000000000000f85ad5942aabbc1bb9bacef60a09764d1a1f4f04a47885c1b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0",
+
 
   # Creating wallets and store the resulting address (needs some cosmetics)
   mkdir /data/nodes
   echo 'user' > /data/nodes/pwd
-  geth --password /data/nodes/pwd --datadir /data/nodes/new-node-1 account new > /data/nodes/address
-  sed -i -e 's/Address: //g' /data/nodes/address
-  sed -i -e 's/{//g' /data/nodes/address
-  sed -i -e 's/}//g' /data/nodes/address
+  # geth --password /data/nodes/pwd --datadir /data/nodes/new-node-1 account new > /data/nodes/address
+  # sed -i -e 's/Address: //g' /data/nodes/address
+  # sed -i -e 's/{//g' /data/nodes/address
+  # sed -i -e 's/}//g' /data/nodes/address
 
   # Getting (already built, since building mit Libsodium & Maven did not work) tessera-app (jar) and generating tessera keys
   mkdir /data/tessera
