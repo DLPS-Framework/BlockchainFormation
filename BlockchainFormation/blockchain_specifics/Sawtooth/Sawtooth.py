@@ -14,7 +14,7 @@
 
 import os
 import time
-
+import random
 
 def sawtooth_shutdown(config, logger, ssh_clients, scp_clients):
     """
@@ -80,8 +80,8 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
 
             peer_string = peer_string + "]"
 
-        if config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() != "RAFT":
-            peer_string = {}
+        if config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "RAFT":
+            peer_string = ""
 
         stdin, stdout, stderr = ssh_clients[index1].exec_command("sed -i -e s#substitute_peers#" + peer_string + "#g /data/validator.toml")
         logger.debug("".join(stdout.readlines()))
@@ -171,10 +171,6 @@ def sawtooth_start(config, ssh_clients, scp_clients, logger):
             validator_pub_keys.append(key)
             if index == 0:
                 string_pbft_peers = string_pbft_peers + f'\"{key}\"'
-                string_raft_peers = string_raft_peers + f'\"{key}\"'
-
-            elif index == 1:
-                string_pbft_peers = string_pbft_peers + f',\"{key}\"'
                 string_raft_peers = string_raft_peers + f'\"{key}\"'
 
             else:
@@ -277,8 +273,21 @@ def sawtooth_start(config, ssh_clients, scp_clients, logger):
         logger.debug("".join(stderr.readlines()))
 
         logger.debug("Starting all services")
+
+
+        peer_string = ""
+
+        if config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "RAFT":
+            for index2 in range(0, index1):
+                if peer_string == "":
+                    peer_string = " --peering static --peers "
+                else:
+                    peer_string = peer_string + ","
+                peer_string = peer_string + f"tcp://{config['priv_ips'][index2]}:8800"
+
+        logger.debug(f"Starting validator with screen -dmS validator sudo -u sawtooth sawtooth-validator -vv{peer_string}")
         channel = ssh_clients[index1].get_transport().open_session()
-        channel.exec_command("screen -dmS validator sudo -u sawtooth sawtooth-validator -vv")
+        channel.exec_command(f"screen -dmS validator sudo -u sawtooth sawtooth-validator -vv{peer_string}")
         time.sleep(5)
 
         channel = ssh_clients[index1].get_transport().open_session()
@@ -303,18 +312,10 @@ def sawtooth_start(config, ssh_clients, scp_clients, logger):
 
         elif config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "RAFT":
 
-            peer_string = ""
-            for index2 in range(0, index1):
-                if peer_string == "":
-                    peer_string = " --peers "
-                else:
-                    peer_string = peer_string + ", "
-                peer_string = peer_string + f"tcp://{config['priv_ips'][index2]}:8800"
-
-            logger.debug(f"Starting RAFT enginge with screen -dmS engine sudo -u sawtooth raft-engine -vv{peer_string}")
+            logger.debug(f"Starting RAFT engine with screen -dmS engine sudo -u sawtooth raft-engine --connect tcp://localhost:5050 -vvv")
 
             channel = ssh_clients[index1].get_transport().open_session()
-            channel.exec_command(f"screen -dmS engine sudo -u sawtooth raft-engine --connect tcp://{config['priv_ips'][index1]}:5050 -vv{peer_string}")
+            channel.exec_command(f"screen -dmS engine sudo -u sawtooth raft-engine --connect tcp://localhost:5050 -vvv")
             time.sleep(1)
 
         channel = ssh_clients[index1].get_transport().open_session()
@@ -330,66 +331,6 @@ def sawtooth_start(config, ssh_clients, scp_clients, logger):
     # TODO wait until all peers are in list instead of hard-coded network
     time.sleep(10)
     logger.info("All nodes have started")
-
-    boo1 = True
-
-    if config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "DEVMODE":
-        pass
-    else:
-        logger.info("Checking whether setup has been successful by searching for every peer in sawtooth peer list")
-        for index, ip in enumerate(config['ips']):
-
-            stdin, stdout, stderr = ssh_clients[index].exec_command(f"sawtooth peer list --url http://{config['priv_ips'][index]}:8008")
-            out = stdout.readlines()
-            try:
-                peer_list = set(out[0].replace("\n", "").split(","))
-                if len(peer_list) != len(config['priv_ips'])-1:
-                    boo1 = False
-                    logger.info(f"Node {index} on IP {ip} has not started properly")
-
-            except:
-                logger.info(f"Something went wrong - sawtooth peer list not working")
-                boo1 = False
-
-    if boo1 is True and config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "DEVMODE":
-            logger.info(f"All nodes seem to have started properly")
-
-    logger.info("Adapting the sawtooth specific properties such as consensus algorithm, block time, ...")
-    for key in config["sawtooth_settings"]:
-        stdin, stdout, stderr = ssh_clients[0].exec_command(f"sudo sawset proposal create --url http://{config['priv_ips'][0]}:8008 --key /etc/sawtooth/keys/validator.priv {key}={config['sawtooth_settings'][key]}")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
-
-    logger.info("Checking whether these proposals have been adopted")
-    time.sleep(10)
-    stdin, stdout, stderr = ssh_clients[-1].exec_command(f"sawtooth settings list --url http://{config['priv_ips'][-1]}:8008")
-    logger.debug("".join(stdout.readlines()))
-    logger.debug("".join(stderr.readlines()))
-
-
-    logger.info("Checking whether intkey is working on every peer by making one set operation and reading on all nodes")
-    ssh_clients[len(config['priv_ips'])-1].exec_command(f"intkey set val1 100 --url http://{config['priv_ips'][0]}:8008")
-    time.sleep(5)
-    boo2 = True
-    for index, ip in enumerate(config['priv_ips']):
-        stdin, stdout, stderr = ssh_clients[index].exec_command(f"intkey show val1 --url http://{config['priv_ips'][index]}:8008")
-        out = stdout.readlines()
-        try:
-            if (out[0].replace("\n", "") != "val1: 100"):
-                boo2 = False
-                logger.info(f"Node {index} on IP {ip} not working properly")
-        except:
-            logger.info("Something went wrong - sawtooth intkey is not working")
-            boo2 = False
-
-    if boo2 == True:
-        logger.info("Intkey working properly on all nodes")
-
-    if boo1 == True and boo2 == True:
-        logger.info("Sawtooth network setup was successful")
-    else:
-        logger.info("Sawtooth network setup was NOT successful")
-        raise Exception("Blockchain did not start properly - Omitting or repeating")
 
     start_processors(config, ssh_clients, scp_clients, logger)
     check_network(config, ssh_clients, scp_clients, logger)
@@ -484,34 +425,81 @@ def start_processors(config, ssh_clients, scp_clients, logger):
         dir_name = os.path.dirname(os.path.realpath(__file__))
         logger.debug("Starting BenchContract...")
         scp_clients[node].put(dir_name + "/processor", "/data", recursive=True)
-        channel = ssh_clients[0].get_transport().open_session()
+        channel = ssh_clients[node].get_transport().open_session()
         channel.exec_command("screen -dmS benchcontract python3 /data/processor/main.py")
 
 
 def check_network(config, ssh_clients, scp_clients, logger):
-    logger.info("Testing the network")
-    stdin, stdout, stderr = ssh_clients[0].exec_command(f"intkey set val1 100 --url http://{config['priv_ips'][0]}:8008")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
 
-    time.sleep(5)
+    user = ""
+    key_path = "/home/ubuntu/.sawtooth/keys/ubuntu.priv"
+    tmp_path = "/home/ubuntu/temp"
 
-    stdin, stdout, stderr = ssh_clients[-1].exec_command(f"intkey show val1 --url http://{config['priv_ips'][-1]}:8008")
-    out = stdout.readlines()
-    logger.debug(out)
-    logger.debug(stderr.readlines())
+    boo1 = True
 
-    if out[0].replace("\n", "") != "val1: 100":
-        logger.info("Network probably did not start successfully")
-        logger.info("Trying again")
-        time.sleep(5)
-        stdin, stdout, stderr = ssh_clients[-1].exec_command(f"intkey show val1 --url http://{config['priv_ips'][-1]}:8008")
-        out = stdout.readlines()
-        logger.debug(out)
-        logger.debug(stderr.readlines())
-        if out[0].replace("\n", "") != "val1: 100":
-            logger.debug("Devmode node did not start successfully")
-
+    if config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "DEVMODE":
+        pass
     else:
-        logger.info("Network started successfully")
+        logger.info("Checking whether setup has been successful by searching for every peer in sawtooth peer list")
+        for index, ip in enumerate(config['ips']):
 
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"sawtooth peer list --url http://{config['priv_ips'][index]}:8008")
+            out = stdout.readlines()
+            try:
+                peer_list = set(out[0].replace("\n", "").split(","))
+                if len(peer_list) != len(config['priv_ips'])-1:
+                    boo1 = False
+                    logger.info(f"Node {index} on IP {ip} has not connected properly")
+
+            except:
+                logger.info(f"Something went wrong - sawtooth peer list not working")
+                boo1 = False
+
+    if boo1 is True or config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "DEVMODE":
+            logger.info(f"All nodes seem to have connected properly")
+
+    logger.info("Adapting the sawtooth specific properties such as consensus algorithm, block time, ...")
+    for key in config["sawtooth_settings"]:
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"sudo sawset proposal create --url http://{config['priv_ips'][0]}:8008 --key {key_path} {key}={config['sawtooth_settings'][key]}")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+
+    logger.info("Checking whether these proposals have been adopted")
+    time.sleep(10)
+    stdin, stdout, stderr = ssh_clients[-1].exec_command(f"sawtooth settings list --url http://{config['priv_ips'][-1]}:8008")
+    logger.debug("".join(stdout.readlines()))
+    logger.debug("".join(stderr.readlines()))
+
+
+    logger.info("Checking whether intkey is working on every peer by making one set operation and reading on all nodes")
+
+
+    value = random.randint(0, 10000)
+    key = f"val{value}"
+
+
+    ssh_clients[len(config['priv_ips'])-1].exec_command(f"intkey set {key} {value} --url http://{config['priv_ips'][0]}:8008")
+    time.sleep(5)
+    boo2 = True
+    for index, ip in enumerate(config['priv_ips']):
+        stdin, stdout, stderr = ssh_clients[index].exec_command(f"intkey show {key} --url http://{config['priv_ips'][index]}:8008")
+        out = stdout.readlines()
+        try:
+            if (out[0].replace("\n", "") != f"{key}: {value}"):
+                boo2 = False
+                logger.info(f"Node {index} on IP {ip} not working properly")
+            else:
+                logger.info(f"Node {index} in IP {ip} is working properly")
+
+        except:
+            logger.info("Something went wrong - sawtooth intkey is not working")
+            boo2 = False
+
+    if boo2 == True:
+        logger.info("Intkey working properly on all nodes")
+
+    if boo1 == True and boo2 == True:
+        logger.info("Sawtooth network setup was successful")
+    else:
+        logger.info("Sawtooth network setup was NOT successful")
+        raise Exception("Blockchain did not start properly - Omitting or repeating")
