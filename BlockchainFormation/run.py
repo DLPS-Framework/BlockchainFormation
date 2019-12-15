@@ -312,7 +312,9 @@ class ArgParser:
 
     @staticmethod
     def _add_quorum_args(parser):
-        parser.add_argument('--raftblocktime', help='amount of time between raft block creations in milliseconds', type=int, default=50)
+        parser.add_argument('--raft_blocktime', help='amount of time between raft block creations in milliseconds', type=int, default=50)
+        parser.add_argument('--istanbul_blockperiod', help='block period for istanbul consensus in seconds', type=int, default=1)
+        parser.add_argument('--istanbul_minerthreads', help='number of miner threads for istanbul consensus', type=int, default=1)
         parser.add_argument('--cache', help='megabytes of memory allocated to internal caching', type=int, default=1024)
         parser.add_argument('--cache.database', help='percentage of cache memory allowance to use for database io', type=int, default=75)
         parser.add_argument('--cache.gc', help='percentage of cache memory allowance to use for trie pruning', type=int, default=25)
@@ -546,7 +548,9 @@ class ArgParser:
         elif blockchain_type == "quorum":
             return\
                 {
-                    "raftblocktime": namespace_dict['raftblocktime'],
+                    "istanbul_blockperiod": namespace_dict['istanbul_blockperiod'],
+                    "istanbul_minerthreads": namespace_dict['istanbul_minerthreads'],
+                    "raft_blocktime": namespace_dict['raft_blocktime'],
                     "cache": namespace_dict['cache'],
                     "cache.database": namespace_dict['cache.database'],
                     "cache.gc": namespace_dict['cache.gc'],
