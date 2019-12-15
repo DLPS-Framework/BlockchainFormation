@@ -12,26 +12,24 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-
-
-import os, rlp
+import os
+import rlp
 from BlockchainFormation.utils.utils import *
 
 
-def quorum_shutdown(config, logger, ssh_clients, scp_clients):
+def quorum_shutdown(config, logger, scp_clients):
     """
     runs the quorum specific shutdown operations (e.g. pulling the associated logs from the VMs)
     :return:
     """
-
 
     logger.info("Getting quorum logs from the network")
     boo = True
 
     for index, ip in enumerate(config['ips']):
 
-        os.mkdir((f"{config['exp_dir']}/quorum_logs"))
-        os.mkdir((f"{config['exp_dir']}/tessera_logs"))
+        os.mkdir(f"{config['exp_dir']}/quorum_logs")
+        os.mkdir(f"{config['exp_dir']}/tessera_logs")
 
         try:
             scp_clients[index].get("/home/ubuntu//data/node.log", f"{config['exp_dir']}/quorum_logs/quorum_log_node_{index}.log")
@@ -41,7 +39,7 @@ def quorum_shutdown(config, logger, ssh_clients, scp_clients):
             logger.info(f"Not all logs available on {ip}")
             boo = False
 
-    if boo == True:
+    if boo is True:
         logger.info("All logs successfully stored")
 
 
@@ -52,10 +50,7 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
     """
 
     for index, _ in enumerate(config['priv_ips']):
-
-        os.mkdir((f"{config['exp_dir']}/user_data_logs"))
         scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
-
 
     # the indices of the blockchain nodes
     config['node_indices'] = list(range(0, config['vm_count']))
@@ -64,11 +59,12 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
     enodes = []
     addresses = []
 
-
     logger.info("Generating the enode on each node, storing it in enodes, and deriving an account (the coinbase account)")
     for index, _ in enumerate(config['priv_ips']):
 
-        stdin, stdout, stderr = ssh_clients[index].exec_command("(bootnode --genkey=nodekey && mkdir /data/nodes/new-node-1 && mv nodekey /data/nodes/new-node-1/nodekey)")
+        stdin, stdout, stderr = ssh_clients[index].exec_command("(bootnode --genkey=nodekey "
+                                                                "&& mkdir /data/nodes/new-node-1 "
+                                                                "&& mv nodekey /data/nodes/new-node-1/nodekey)")
         wait_and_log(stdout, stderr)
 
         stdin, stdout, stderr = ssh_clients[index].exec_command("bootnode --nodekey=/data/nodes/new-node-1/nodekey --writeaddress")
@@ -77,7 +73,13 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
         enodes.append(enode)
         logger.debug(f"Enode on node {index}: {enode}")
 
-        stdin, stdout, stderr = ssh_clients[index].exec_command("geth account import /data/nodes/new-node-1/nodekey --datadir /data/nodes/new-node-1 --password /data/nodes/pwd > /data/nodes/address && sed -i -e 's/Address: //g' /data/nodes/address && sed -i -e 's/{//g' /data/nodes/address && sed -i -e 's/}//g' /data/nodes/address")
+        stdin, stdout, stderr = ssh_clients[index].exec_command("geth account import /data/nodes/new-node-1/nodekey "
+                                                                "--datadir /data/nodes/new-node-1 "
+                                                                "--password /data/nodes/pwd "
+                                                                "> /data/nodes/address "
+                                                                ""
+                                                                "&& sed -i -e 's/Address: //g' /data/nodes/address && sed -i -e 's/{//g' /data/nodes/address "
+                                                                "&& sed -i -e 's/}//g' /data/nodes/address")
         wait_and_log(stdout, stderr)
 
         stdin, stdout, stderr = ssh_clients[index].exec_command("cat /data/nodes/address")
@@ -94,14 +96,17 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
 
         logger.debug("Removing the genesis_raw.json which is not relevant for the consensus")
         if config['quorum_settings']['consensus'].upper() == "IBFT":
-            stdin, stdout, stderr = ssh_clients[index].exec_command("rm /data/genesis_raw_raft.json && mv /data/genesis_raw_istanbul.json /data/genesis_raw.json")
+            stdin, stdout, stderr = ssh_clients[index].exec_command("rm /data/genesis_raw_raft.json "
+                                                                    "&& mv /data/genesis_raw_istanbul.json /data/genesis_raw.json")
             wait_and_log(stdout, stderr)
 
         else:
-            stdin, stdout, stderr = ssh_clients[index].exec_command("rm /data/genesis_raw_istanbul.json && mv /data/genesis_raw_raft.json /data/genesis_raw.json")
+            stdin, stdout, stderr = ssh_clients[index].exec_command("rm /data/genesis_raw_istanbul.json "
+                                                                    "&& mv /data/genesis_raw_raft.json /data/genesis_raw.json")
             wait_and_log(stdout, stderr)
 
-        stdin, stdout, stderr = ssh_clients[index].exec_command("(sed -i -e 's/substitute_address/'" + f"'{addresses[0]}'" + "'/g' /data/genesis_raw.json && mv /data/genesis_raw.json /data/nodes/genesis.json)")
+        stdin, stdout, stderr = ssh_clients[index].exec_command("(sed -i -e 's/substitute_address/'" + f"'{addresses[0]}'" + "'/g' /data/genesis_raw.json "
+                                                                "&& mv /data/genesis_raw.json /data/nodes/genesis.json)")
         stdout.readlines()
         wait_and_log(stdout, stderr)
 
@@ -115,18 +120,18 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
                 old_string = old_string + "80"
                 new_string = new_string + "00"
 
-            Vanity = "0x0000000000000000000000000000000000000000000000000000000000000000"
-            Seal = []
+            vanity = "0x0000000000000000000000000000000000000000000000000000000000000000"
+            seal = []
             for i in range(0, 65):
-                Seal.append(0x00)
+                seal.append(0x00)
 
-            CommittedSeal = []
+            committed_seal = []
 
-            Validators = []
+            validators = []
             for address in addresses:
-                Validators.append(int("0x" + address, 16))
+                validators.append(int("0x" + address, 16))
 
-            extra_data = Vanity + rlp.encode([Validators, Seal, CommittedSeal]).hex()
+            extra_data = vanity + rlp.encode([validators, seal, committed_seal]).hex()
 
             extra_data = extra_data.replace(old_string, new_string)
 
@@ -154,18 +159,20 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
             limit = index1 + 1
 
         for index2, ip2 in enumerate(config['priv_ips'][0:limit]):
-            if (index2 < limit-1):
-                string = "echo '  " + '\"' + "enode://" + f"{enodes[index2]}" + "@" + f"{ip2}" + f":{port_string}?discport=0{raftport_string}'" + '\\",' + " >> /data/nodes/new-node-1/static-nodes.json"
+            if index2 < limit-1:
+                string = "echo '  " + '\"' + "enode://" + f"{enodes[index2]}" + "@" + f"{ip2}" + f":{port_string}?discport=0{raftport_string}'" + '\\",' + \
+                         " >> /data/nodes/new-node-1/static-nodes.json"
                 stdin, stdout, stderr = ssh_clients[index1].exec_command(string)
                 wait_and_log(stdout, stderr)
             else:
-                string = "echo '  " + '\"' + "enode://" + f"{enodes[index2]}" + "@" + f"{ip2}" + f":{port_string}?discport=0{raftport_string}'" + '\\"' + " >> /data/nodes/new-node-1/static-nodes.json"
+                string = "echo '  " + '\"' + "enode://" + f"{enodes[index2]}" + "@" + f"{ip2}" + f":{port_string}?discport=0{raftport_string}'" + '\\"' + \
+                         " >> /data/nodes/new-node-1/static-nodes.json"
                 stdin, stdout, stderr = ssh_clients[index1].exec_command(string)
                 wait_and_log(stdout, stderr)
 
-        stdin, stdout, stderr = ssh_clients[index1].exec_command("(echo ']' >> /data/nodes/new-node-1/static-nodes.json && geth --datadir /data/nodes/new-node-1 init /data/nodes/genesis.json)")
+        stdin, stdout, stderr = ssh_clients[index1].exec_command("(echo ']' >> /data/nodes/new-node-1/static-nodes.json "
+                                                                 "&& geth --datadir /data/nodes/new-node-1 init /data/nodes/genesis.json)")
         wait_and_log(stdout, stderr)
-
 
     logger.info("Starting tessera_nodes")
     tessera_public_keys = start_tessera(config, ssh_clients, logger)
@@ -183,12 +190,18 @@ def start_tessera(config, ssh_clients, logger):
     logger.info("Getting tessera-data from each node and create config-file for tessera on each node")
     for index1, ip1 in enumerate(config['priv_ips']):
 
-        # getting tessera public and private keys (which have been generated during bootstrapping) and store them in the corresponding arrays <tessera_public_keys> resp. <tessera_private_keys>
+        # getting tessera public and private keys (which have been generated during bootstrapping)
+        # and store them in the corresponding arrays <tessera_public_keys> resp. <tessera_private_keys>
         stdin, stdout, stderr = ssh_clients[index1].exec_command("cat /data/qdata/tm/tm.pub")
         out = stdout.readlines()
         tessera_public_key = out[0].replace("\n", "")
         tessera_public_keys.append(tessera_public_key)
         logger.debug(f"Tessera public key on node {index1}: {tessera_public_key}")
+
+        stdin, stdout, stderr = ssh_clients[index1].exec_command("cat /data/qdata/tm/tm.key")
+        out = stdout.readlines()
+        tessera_private_key = out[3].replace('      "bytes" : ', "").replace('\n', "")
+        logger.debug(f"Tessera private key on node {index1}: {tessera_private_key}")
 
         # building peer string which is then inserted to config_raw.json, which contains all tessera-specific information,
         # in particular the tessera-nodes which will participate in the (private) quorum network
@@ -204,7 +217,11 @@ def start_tessera(config, ssh_clients, logger):
         peer_string = peer_string + "],"
 
         # Specifying missing data in config_raw.json and store the result in config.json
-        stdin, stdout, stderr = ssh_clients[index1].exec_command(f"(sed -i -e s#substitute_ip#{ip1}#g /data/config_raw.json && sed -i -e s#substitute_public_key#{tessera_public_keys[index1]}#g /data/config_raw.json && sed -i -e s#substitute_private_key#{tessera_private_keys[index1]}#g /data/config_raw.json && sed -i -e s#substitute_peers#" + peer_string + "#g /data/config_raw.json && mv /data/config_raw.json /data/qdata/tm/config.json)")
+        stdin, stdout, stderr = ssh_clients[index1].exec_command(f"(sed -i -e s#substitute_ip#{ip1}#g /data/config_raw.json "
+                                                                 f"&& sed -i -e s#substitute_public_key#{tessera_public_keys[index1]}#g /data/config_raw.json "
+                                                                 f"&& sed -i -e s#substitute_private_key#{tessera_private_key}#g /data/config_raw.json && "
+                                                                 f"sed -i -e s#substitute_peers#" + peer_string + "#g /data/config_raw.json "
+                                                                 f"&& mv /data/config_raw.json /data/qdata/tm/config.json)")
         wait_and_log(stdout, stderr)
 
         # logger.debug(f"Starting tessera on node {index1}")
@@ -231,7 +248,6 @@ def start_network_attempt(config, ssh_clients, logger):
 
             if config['quorum_settings']['consensus'].upper() == "IBFT":
                 pass
-
             else:
                 add_node(config, ssh_clients, index, logger)
                 time.sleep(2)
@@ -241,11 +257,11 @@ def start_network_attempt(config, ssh_clients, logger):
 
     status_flags = check_network(config, ssh_clients, logger)
 
-    if (False in status_flags):
+    if False in status_flags:
         logger.info("Restart was not successful")
         try:
             logger.info("Restarting failed VMs")
-            for node in np.where(status_flags != True):
+            for node in np.where(status_flags == False):
                 restart_node(config, ssh_clients, node, logger)
 
             status_flags = check_network(config, ssh_clients, logger)
@@ -261,11 +277,11 @@ def start_network(config, ssh_clients, logger):
 
     status_flags = start_network_attempt(config, ssh_clients, logger)
 
-    if (False in status_flags):
+    if False in status_flags:
         logger.info("Making a complete restart since it was not successful")
 
     retries = 0
-    while (False in status_flags and retries < 3):
+    while False in status_flags and retries < 3:
         logger.info(f"Retry {retries+1} out of 3")
         retries = retries + 1
 
@@ -276,12 +292,11 @@ def start_network(config, ssh_clients, logger):
         logger.error("Quorum network did not start successfully")
         raise Exception("Quorum network setup failed")
 
-
-    logger.info("")
+    logger.info("                                ")
     logger.info("================================")
     logger.info("Quorum network is running now...")
     logger.info("================================")
-    logger.info("")
+    logger.info("                                ")
 
     unlock_network(config, ssh_clients, logger)
 
@@ -299,39 +314,89 @@ def start_node(config, ssh_clients, node, logger):
     channel = ssh_clients[node].get_transport().open_session()
 
     if config['quorum_settings']['consensus'].upper() == "IBFT":
-        channel.exec_command(f"PRIVATE_CONFIG=/data/qdata/tm/tm.ipc geth --datadir /data/nodes/new-node-1 --nodiscover --istanbul.blockperiod {config['quorum_settings']['istanbul_blockperiod']} --syncmode full --mine --minerthreads {config['quorum_settings']['istanbul_minerthreads']} --verbosity 5 --networkid 10 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,istanbul --emitcheckpoints --port 30300 --nat=extip:{config['priv_ips'][node]}{string_geth_settings} >> /data/node.log 2>&1")
+        channel.exec_command(f"PRIVATE_CONFIG=/data/qdata/tm/tm.ipc geth "
+                             f"--datadir /data/nodes/new-node-1 "
+                             f"--nodiscover "
+                             f"--istanbul.blockperiod {config['quorum_settings']['istanbul_blockperiod']} "
+                             f"--maxpeers {config['vm_count']} "
+                             f"--syncmode full "
+                             f"--mine "
+                             f"--minerthreads {config['quorum_settings']['istanbul_minerthreads']} "
+                             f"--verbosity 5 "
+                             f"--networkid 10 "
+                             f"--rpc "
+                             f"--rpcaddr 0.0.0.0 "
+                             f"--rpcport 22000 "
+                             f"--rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,istanbul "
+                             f"--emitcheckpoints "
+                             f"--port 30300 "
+                             f"--nat=extip:{config['priv_ips'][node]}{string_geth_settings} "
+                             f">> /data/node.log 2>&1")
 
     else:
-
         if node == 0:
-            channel.exec_command(f"PRIVATE_CONFIG=/data/qdata/tm/tm.ipc geth --datadir /data/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --raftblocktime {config['quorum_settings']['raft_blocktime']} --maxpeers {config['vm_count']} --raftport 50000 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{config['priv_ips'][node]}{string_geth_settings} >> /data/node.log 2>&1")
-
+            channel.exec_command(f"PRIVATE_CONFIG=/data/qdata/tm/tm.ipc geth "
+                                 f"--datadir /data/nodes/new-node-1 "
+                                 f"--nodiscover "
+                                 f"--verbosity 5 "
+                                 f"--networkid 31337 "
+                                 f"--raft "
+                                 f"--raftblocktime {config['quorum_settings']['raft_blocktime']} "
+                                 f"--maxpeers {config['vm_count']} "
+                                 f"--raftport 50000 "
+                                 f"--rpc --rpcaddr 0.0.0.0 "
+                                 f"--rpcport 22000 "
+                                 f"--rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft "
+                                 f"--emitcheckpoints "
+                                 f"--port 21000 "
+                                 f"--nat=extip:{config['priv_ips'][node]}{string_geth_settings} "
+                                 f">> /data/node.log 2>&1")
         else:
-            channel.exec_command(f"PRIVATE_CONFIG=/data/qdata/tm/tm.ipc geth --datadir /data/nodes/new-node-1 --nodiscover --verbosity 5 --networkid 31337 --raft --raftblocktime {config['quorum_settings']['raft_blocktime']} --maxpeers {config['vm_count']} --raftport 50000 --raftjoinexisting {node+1} --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft --emitcheckpoints --port 21000 --nat=extip:{config['priv_ips'][node]}{string_geth_settings} >> /data/node.log 2>&1")
+            channel.exec_command(f"PRIVATE_CONFIG=/data/qdata/tm/tm.ipc geth "
+                                 f"--datadir /data/nodes/new-node-1 "
+                                 f"--nodiscover "
+                                 f"--verbosity 5 "
+                                 f"--networkid 31337 "
+                                 f"--raft "
+                                 f"--raftblocktime {config['quorum_settings']['raft_blocktime']} "
+                                 f"--maxpeers {config['vm_count']} "
+                                 f"--raftport 50000 "
+                                 f"--raftjoinexisting {node+1} "
+                                 f"--rpc "
+                                 f"--rpcaddr 0.0.0.0 "
+                                 f"--rpcport 22000 "
+                                 f"--rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft "
+                                 f"--emitcheckpoints "
+                                 f"--port 21000 "
+                                 f"--nat=extip:{config['priv_ips'][node]}{string_geth_settings} "
+                                 f">> /data/node.log 2>&1")
 
 
 def add_node(config, ssh_clients, node, logger):
 
     logger.debug(f" --> Adding node {node} to raft on node {0} ...")
-    stdin, stdout, stderr = ssh_clients[0].exec_command("geth --exec " + '\"' + "raft.addPeer('enode://" + f"{config['enodes'][node]}" + "@" + f"{config['priv_ips'][node]}" + ":21000?discport=0&raftport=50000')" + '\"' + " attach /data/nodes/new-node-1/geth.ipc")
+    stdin, stdout, stderr = ssh_clients[0].exec_command("geth --exec " +
+                                                        '\"' + "raft.addPeer('enode://" + f"{config['enodes'][node]}" + "@" + f"{config['priv_ips'][node]}" + ":21000?discport=0&raftport=50000')" + '\"' +
+                                                        " attach /data/nodes/new-node-1/geth.ipc")
     out = stdout.readlines()
-    # logger.debug(out)
-    # logger.debug("".join(stderr.readlines()))
-    # raftID = out[0].replace("\x1b[0m\r\n", "").replace("\x1b[31m", "").replace("\n", "")
-    # logger.info(f"raftID: {raftID}")
+    raft_id = out[0].replace("\x1b[0m\r\n", "").replace("\x1b[31m", "").replace("\n", "")
+    logger.debug(f"raftID of node {node}: {raft_id}")
 
 
 def unlock_node(config, ssh_clients, node, logger):
 
-    # logger.debug(f" --> Unlocking node {node}")
+    logger.debug(f" --> Unlocking node {node}")
     stdin, stdout, stderr = ssh_clients[node].exec_command("geth --exec eth.accounts attach /data/nodes/new-node-1/geth.ipc")
     out = stdout.readlines()
     sender = out[0].replace("\n", "").replace("[", "").replace("]", "")
-    stdin, stdout, stderr = ssh_clients[node].exec_command("geth --exec " + "\'" + f"personal.unlockAccount({sender}, " + '\"' + "user" + '\"' + ", 0)" + "\'" + " attach /data/nodes/new-node-1/geth.ipc")
+    stdin, stdout, stderr = ssh_clients[node].exec_command("geth --exec " +
+                                                           "\'" + f"personal.unlockAccount({sender}, " + '\"' + "user" + '\"' + ", 0)" + "\'" +
+                                                           " attach /data/nodes/new-node-1/geth.ipc")
     out = stdout.readlines()
     if out[0].replace("\n", "") != "true":
         logger.info(f"Something went wrong on unlocking on node {node} on IP {config['ips']}")
-        logger.debug(out[0])
+        logger.debug(out)
+        logger.debug(f"stderr: {stderr.readlines()}")
 
 
 def unlock_network(config, ssh_clients, logger):
@@ -341,39 +406,36 @@ def unlock_network(config, ssh_clients, logger):
         unlock_node(config, ssh_clients, node, logger)
 
 
-
 def check_network(config, ssh_clients, logger):
 
     status_flags = np.zeros(config['vm_count'], dtype=bool)
     timer = 0
-    while (False in status_flags and timer < 3):
+    while False in status_flags and timer < 3:
         time.sleep(10)
         timer += 1
         logger.info(f" --> Waited {timer * 10} seconds so far, {30 - timer * 10} seconds left before abort (it usually takes around 10 seconds)")
         for index, ip in enumerate(config['ips']):
 
-            if (status_flags[index] == False):
+            if status_flags[index] == False:
                 try:
-                    stdin, stdout, stderr = ssh_clients[index].exec_command("geth --exec " + '\"' + "admin.peers.length" + '\"' + " attach /data/nodes/new-node-1/geth.ipc")
+                    stdin, stdout, stderr = ssh_clients[index].exec_command("geth --exec " +
+                                                                            '\"' + "admin.peers.length" + '\"' +
+                                                                            " attach /data/nodes/new-node-1/geth.ipc")
                     out = stdout.readlines()
-                except Exception as e:
-                    logger.exception(e)
-                    logger.debug("Geth exec failing...")
-                try:
+
                     nr = int(out[0].replace("\n", ""))
                     if nr == len(config['priv_ips']) - 1:
-                        boo = False
                         logger.info(f"Node {index} on IP {ip} is fully connected")
                         status_flags[index] = True
                     else:
                         logger.info(f"Node {index} on IP {ip} is not yet fully connected (expected: {len(config['priv_ips']) - 1}, actual: {nr} ")
                 except Exception as e:
                     logger.exception(e)
-                    logger.debug(f"Node {index} might not have started at all - retrying though")
+                    logger.info(f"Node {index} might not have started at all - retrying though")
 
-    if (False in status_flags):
+    if False in status_flags:
         try:
-            logger.error(f"Failed Quorum nodes: {[config['priv_ips'][x] for x in np.where(status_flags != True)]}")
+            logger.error(f"Failed Quorum nodes: {[config['priv_ips'][x] for x in np.where(status_flags is not True)]}")
         except:
             pass
         logger.error('Quorum network start was not successful')
@@ -381,7 +443,7 @@ def check_network(config, ssh_clients, logger):
     return status_flags
 
 
-def kill_node(config, ssh_clients, node, logger):
+def kill_node(ssh_clients, node, logger):
 
     logger.debug(f" --> Shutting down and resetting node {node}")
     try:
@@ -395,10 +457,12 @@ def kill_node(config, ssh_clients, node, logger):
         stdin, stdout, stderr = ssh_clients[node].exec_command("ps aux | grep geth")
         logger.info(f"stdout for ps aux | grep geth: {stdout.readlines()}")
         logger.info(f"stderr for ps aux | grep geth: {stderr.readlines()}")
+
         # checking whether the other geth-files are deleted
         stdin, stdout, stderr = ssh_clients[node].exec_command("ls /data/nodes/new-node-1")
         logger.info(f"Files in /nodes/new-node-1: {stdout.readlines}")
         logger.debug(stdout.readlines())
+
         # deleting the remaining geth-related files
         logger.info("Deleting relevant files")
         stdin, stdout, stderr = ssh_clients[node].exec_command("rm geth.ipc; rm -r quorum-raft-state; rm -r raft-snap; rm -r raft-wal")
@@ -410,37 +474,22 @@ def kill_node(config, ssh_clients, node, logger):
     stdout.readlines()
 
 
-def restart_node(config, ssh_clients, node, logger):
-
-    kill_node(config, ssh_clients, node, logger)
-    start_node(config, ssh_clients, node, logger)
-    time.sleep(10)
-    unlock_node(config, ssh_clients, node, logger)
-
-
 def kill_network(config, ssh_clients, logger):
 
     logger.info("Killing geth on all nodes")
     for node, _ in enumerate(config['priv_ips']):
-        kill_node(config, ssh_clients, node, logger)
+        kill_node(ssh_clients, node, logger)
+
+
+def restart_node(config, ssh_clients, node, logger):
+
+    kill_node(ssh_clients, node, logger)
+    start_node(config, ssh_clients, node, logger)
+    time.sleep(10)
+    unlock_node(config, ssh_clients, node, logger)
 
 
 def quorum_restart(config, ssh_clients, logger):
 
     kill_network(config, ssh_clients, logger)
     start_network(config, ssh_clients, logger)
-
-
-"""
-
-
-def log_outs(stdout, stderr, logger):
-    out0 = stdout.readlines()
-    out1 = stderr.readlines()
-    try:
-        logger.debug(f"{out1[1]}")
-    except:
-        pass
-
-
-"""
