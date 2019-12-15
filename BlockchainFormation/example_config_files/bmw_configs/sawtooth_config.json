@@ -1,10 +1,10 @@
 {
-  "vm_count": 1,
-  "instance_type": "t2.small",
+  "vm_count": 3,
+  "instance_type": "m5.large",
   "image": {
     "image_id": null,
     "os": "ubuntu",
-    "version": 16,
+    "version": 18,
     "permissions": "default"
   },
   "subnet_id": "subnet-0fa70db2bd49231db",
@@ -29,7 +29,7 @@
       "VirtualName": "string",
       "Ebs": {
         "DeleteOnTermination": true,
-        "VolumeSize": 32,
+        "VolumeSize": 16,
         "VolumeType": "gp2",
         "Encrypted": true,
         "KmsKeyId": "arn:aws:kms:eu-central-1:731899578576:key/a808826d-e460-4271-a23b-29e1e0807c1d"
@@ -39,9 +39,13 @@
   "blockchain_type": "sawtooth",
   "sawtooth_settings":
   {
-      "sawtooth.consensus.algorithm.name": "Devmode",
-      "sawtooth.poet.initial_wait_time": 25,
-      "sawtooth.poet.target_wait_time":  5,
-      "sawtooth.publisher.max_batches_per_block": 100
+      "sawtooth.consensus.algorithm.name": "RAFT",
+      "sawtooth.poet.initial_wait_time": 5,
+      "sawtooth.poet.target_wait_time":  1,
+      "sawtooth.publisher.max_batches_per_block": 100,
+      "sawtooth.consensus.pbft.block_publishing_delay": 1000,
+      "sawtooth.consensus.raft.heartbeat_tick": 1,
+      "sawtooth.consensus.raft.election_tick": 20,
+      "sawtooth.consensus.raft.period": 3000
   }
 }
