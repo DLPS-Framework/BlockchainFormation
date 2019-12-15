@@ -17,6 +17,7 @@ import datetime
 import time
 import numpy as np
 import paramiko
+import logging
 
 # File containing helper functions
 
@@ -123,6 +124,7 @@ def datetimeconverter(o):
 
 
 def yes_or_no(question):
+
     reply = str(input(question + ' (y/n): ')).lower().strip()
     if reply[0] == 'y':
         return 1
@@ -130,3 +132,15 @@ def yes_or_no(question):
         return 0
     else:
         return yes_or_no("Please Enter (y/n) ")
+
+def wait_and_log(stdout, stderr):
+
+    logger = logging.getLogger(__name__)
+    try:
+        stdout = stdout.readlines()
+        stderr = stderr.readlines()
+        if stderr != ["\n"]:
+            logger.debug("".join(stdout))
+            logger.debug("".join(stdout))
+    except Exception as e:
+        logger.exception(e)
