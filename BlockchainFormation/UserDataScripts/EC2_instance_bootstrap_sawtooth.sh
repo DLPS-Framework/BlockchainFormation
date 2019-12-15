@@ -1,29 +1,24 @@
 #!/bin/bash -xe
 
-  # Important: sawtooth seems to run only on Ubuntu 16.04.
-
   # Installing sawtooth stable build
   sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
-  sudo add-apt-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/bumper/stable xenial universe'
+  sudo add-apt-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/chime/stable bionic universe'
 
   # For installing the nightly build
   # sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA
-  # sudo apt-add-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/nightly xenial universe'
+  # sudo apt-add-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/nightly bionic universe'
 
   # Installing all sawtooth repositories
   sudo apt-get update
   sudo apt-get install -y sawtooth
-  sudo apt-get install -y sawtooth-devmode-engine-rust
-  sudo apt-get install -y python3-sawtooth-poet-engine
-  sudo apt-get install -y python3-sawtooth-identity
-
+  sudo apt-get install sawtooth-devmode-engine-rust
+  sudo apt-get install -y python3-sawtooth-poet-cli python3-sawtooth-poet-engine python3-sawtooth-poet-families
+  sudo apt-get install -y sawtooth-pbft-engine
+  sudo apt-get install -y sawtooth-raft-engine
 
   # Generating keys
   sawtooth keygen
-  sudo sawtooth keygen
   sudo sawadm keygen
-
-  sudo -u sawtooth mkdir /home/sawtooth/temp
 
   # Generating skeleton config for the validator (toml-file!)
   printf '# Copyright 2017 Intel Corporation
@@ -183,7 +178,7 @@ maximum_peer_connectivity = substitute_max_connectivity
 # The REST API URL
   url = "http://localhost:8008"\n' > /data/cli.toml
 
-  wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash
+  # wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash
 
   # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log
