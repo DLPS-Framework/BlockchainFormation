@@ -37,6 +37,12 @@ def indy_startup(config, logger, ssh_clients, scp_clients):
     :return:
     """
 
+    for index, _ in enumerate(config['priv_ips']):
+        scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
+
+    # the indices of the blockchain nodes
+    config['node_indices'] = list(range(0, config['vm_count']))
+
     logger.info(f"Started Indy with message {config['indy_settings']['message']}")
 
     node_names = []
@@ -50,7 +56,7 @@ def indy_startup(config, logger, ssh_clients, scp_clients):
         node_seeds.append(node_name)
         if ips_string != "":
             ips_string = ips_string + ","
-        ips_string = ips_string + config['pub_ips'][node]
+        ips_string = ips_string + config['priv_ips'][node]
 
         if node_nums != "":
             node_nums = node_nums + " "
