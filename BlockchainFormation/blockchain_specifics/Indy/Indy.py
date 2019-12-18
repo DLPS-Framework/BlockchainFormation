@@ -42,7 +42,7 @@ def indy_shutdown(config, logger, ssh_clients, scp_clients):
         stdin, stdout, stderr = ssh_clients[index].exec_command("sudo rm -r /home/ubuntu/.indy_client /var/lib/indy /var/log/indy")
         wait_and_log(stdout, stderr)
 
-        stdin, stdout, stderr = ssh_clients[index].exec_command("sudo mkdir /etc/indy /var/log/indy /var/lib/indy /var/lib/indy/backup /var/lib/indy/plugins && sudo chown -R ubuntu:ubuntu /var/log/indy/ /var/lib/indy/ /etc/indy/")
+        stdin, stdout, stderr = ssh_clients[index].exec_command("sudo mkdir /etc/indy /var/log/indy /var/lib/indy /var/lib/indy/backup /var/lib/indy/plugins; sudo chown -R ubuntu:ubuntu /var/log/indy/ /var/lib/indy/ /etc/indy/")
         wait_and_log(stdout, stderr)
 
 
@@ -83,12 +83,10 @@ def indy_startup(config, logger, ssh_clients, scp_clients):
     for node, _ in enumerate(config['priv_ips']):
         init_string = f"init_indy_keys --name {node_names[node]} --seed {node_seeds[node]}"
         stdin, stdout, stderr = ssh_clients[node].exec_command(f"{init_string} && echo \"{init_string}\" >> commands.txt")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
+        wait_and_log(stdout, stderr)
         tx_string = f"generate_indy_pool_transactions --nodes {len(ssh_clients)} --clients {config['indy_settings']['clients']} --nodeNum {node+1} --ips \'{ips_string}\' --network my-net"
         stdin, stdout, stderr = ssh_clients[node].exec_command(f"{tx_string} && echo \"{tx_string}\" >> commands.txt")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
+        wait_and_log(stdout, stderr)
         channel = ssh_clients[node].get_transport().open_session()
         channels.append(channel)
         start_string = f"screen -dmS indy-node start_indy_node {node_names[node]} 0.0.0.0 {port+1} 0.0.0.0 {port+2} -vv"
