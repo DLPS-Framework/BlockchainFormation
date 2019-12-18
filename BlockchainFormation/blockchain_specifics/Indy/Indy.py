@@ -108,4 +108,3 @@ def indy_restart(config, logger, ssh_clients, scp_clients):
 
     indy_shutdown(config, logger, ssh_clients, scp_clients)
     indy_startup(config, logger, ssh_clients, scp_clients)
-
