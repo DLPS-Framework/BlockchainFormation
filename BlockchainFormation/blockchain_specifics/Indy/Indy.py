@@ -50,7 +50,7 @@ def indy_startup(config, logger, ssh_clients, scp_clients):
         node_seeds.append(node_name)
         if ips_string != "":
             ips_string = ips_string + ","
-        ips_string = ips_string + config['pub_ips'][node]
+        ips_string = ips_string + config['priv_ips'][node]
 
         if node_nums != "":
             node_nums = node_nums + " "
