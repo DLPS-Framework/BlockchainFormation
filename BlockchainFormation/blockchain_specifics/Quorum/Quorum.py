@@ -111,9 +111,9 @@ def quorum_startup(config, logger, ssh_clients, scp_clients):
         wait_and_log(stdout, stderr)
 
     if config['quorum_settings']['consensus'].upper() == "IBFT":
+        logger.info("Creating extra data for the istanbul genesis")
         for index, _ in enumerate(config['priv_ips']):
 
-            logger.info("Creating extra data for the istanbul genesis")
             old_string = "f841"
             new_string = "b841"
             for i in range(0, 65):
