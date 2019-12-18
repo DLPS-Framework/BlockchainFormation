@@ -28,7 +28,22 @@ def indy_shutdown(config, logger, ssh_clients, scp_clients):
     :return:
     """
 
-    pass
+    for index, _ in enumerate(config['priv_ips']):
+
+        logger.info("Killing all indy processes")
+
+        stdin, stdout, stderr = ssh_clients[index].exec_command("screen -list | grep Detached | cut -d. -f1 | awk '{print $1}' | xargs kill")
+        wait_and_log(stdout, stderr)
+
+        time.sleep(5)
+
+        logger.debug("Deleting ledger and wallet data")
+
+        stdin, stdout, stderr = ssh_clients[index].exec_command("sudo rm -r /home/ubuntu/.indy_client /var/lib/indy /var/log/indy")
+        wait_and_log(stdout, stderr)
+
+        stdin, stdout, stderr = ssh_clients[index].exec_command("sudo mkdir /etc/indy /var/log/indy /var/lib/indy /var/lib/indy/backup /var/lib/indy/plugins && sudo chown -R ubuntu:ubuntu /var/log/indy/ /var/lib/indy/ /etc/indy/")
+        wait_and_log(stdout, stderr)
 
 
 def indy_startup(config, logger, ssh_clients, scp_clients):
@@ -89,4 +104,8 @@ def indy_startup(config, logger, ssh_clients, scp_clients):
     # in indy-sdk/samples/python/utils.py change pool_ip return value to 0.0.0.0 and pool_genesis_transactions_file to /var/lib/indy/my-net/pool_transactions_genesis
 
 
+def indy_restart(config, logger, ssh_clients, scp_clients):
+
+    indy_shutdown(config, logger, ssh_clients, scp_clients)
+    indy_startup(config, logger, ssh_clients, scp_clients)
 
