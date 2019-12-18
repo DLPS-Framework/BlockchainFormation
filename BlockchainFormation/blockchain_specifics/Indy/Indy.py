@@ -42,7 +42,7 @@ def indy_shutdown(config, logger, ssh_clients, scp_clients):
         stdin, stdout, stderr = ssh_clients[index].exec_command("sudo rm -r /home/ubuntu/.indy_client /var/lib/indy /var/log/indy")
         wait_and_log(stdout, stderr)
 
-        stdin, stdout, stderr = ssh_clients[index].exec_command("sudo mkdir /etc/indy /var/log/indy /var/lib/indy /var/lib/indy/backup /var/lib/indy/plugins; sudo chown -R ubuntu:ubuntu /var/log/indy/ /var/lib/indy/ /etc/indy/")
+        stdin, stdout, stderr = ssh_clients[index].exec_command("sudo mkdir /var/log/indy /var/lib/indy /var/lib/indy/backup /var/lib/indy/plugins; sudo chown -R ubuntu:ubuntu /var/log/indy/ /var/lib/indy/ /etc/indy/")
         wait_and_log(stdout, stderr)
 
 
