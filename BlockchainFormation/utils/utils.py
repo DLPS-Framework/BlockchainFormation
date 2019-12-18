@@ -141,6 +141,6 @@ def wait_and_log(stdout, stderr):
         stderr = stderr.readlines()
         if stderr != ["\n"]:
             logger.debug("".join(stdout))
-            logger.debug("".join(stdout))
+            logger.debug("".join(stderr))
     except Exception as e:
         logger.exception(e)
