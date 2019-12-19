@@ -38,7 +38,7 @@
   ],
   "blockchain_type": "quorum",
   "quorum_settings": {
-    "consensus": "ibft",
+    "consensus": "raft",
     "istanbul_blockperiod": 1,
     "istanbul_minerthreads": 1,
     "raft_blocktime": 50,
