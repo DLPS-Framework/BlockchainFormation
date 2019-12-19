@@ -35,10 +35,10 @@ def indy_shutdown(config, logger, ssh_clients, scp_clients):
 
         logger.debug("Deleting ledger and wallet data")
 
-        stdin, stdout, stderr = ssh_clients[index].exec_command("sudo rm -r /home/ubuntu/.indy_client /var/lib/indy /var/log/indy")
+        stdin, stdout, stderr = ssh_clients[index].exec_command("sudo rm -r /home/ubuntu/.indy_client /data/indy /var/log/indy")
         wait_and_log(stdout, stderr)
 
-        stdin, stdout, stderr = ssh_clients[index].exec_command("sudo mkdir /var/log/indy /var/lib/indy /var/lib/indy/backup /var/lib/indy/plugins; sudo chown -R ubuntu:ubuntu /var/log/indy/ /var/lib/indy/ /etc/indy/")
+        stdin, stdout, stderr = ssh_clients[index].exec_command("sudo mkdir /var/log/indy /data/indy /data/indy/backup /data/indy/plugins; sudo chown -R ubuntu:ubuntu /var/log/indy/ /data/indy/ /etc/indy/")
         wait_and_log(stdout, stderr)
 
 
@@ -89,11 +89,11 @@ def indy_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info("Indy network is running...")
     # indy-cli
-    # pool create my-pool gen_txn_file=/var/lib/indy/my-net/pool_transactions_genesis
+    # pool create my-pool gen_txn_file=/data/indy/my-net/pool_transactions_genesis
 
     # VERY HELPFUL:
     # in indy-sdk/samples/python/getting_started.py change src.utils to utils
-    # in indy-sdk/samples/python/utils.py change pool_ip return value to 0.0.0.0 and pool_genesis_transactions_file to /var/lib/indy/my-net/pool_transactions_genesis
+    # in indy-sdk/samples/python/utils.py change pool_ip return value to 0.0.0.0 and pool_genesis_transactions_file to /data/indy/my-net/pool_transactions_genesis
 
 
 def indy_restart(config, logger, ssh_clients, scp_clients):

@@ -27,8 +27,8 @@
   # (cd indy-plenum && sudo pip3 install boto3 && sudo pip3 install asyncio && sudo pip3 install ansible && sudo pip3 install -e .[tests] || echo "\n\n=========\nError in indy-plenum installation\n========\n\n")
   # (cd indy-sdk/samples/python/src && sudo pip3 install -e .[tests]) || echo "\n\n=========\nError in indy-sdk installation\n========\n\n")
 
-  sudo mkdir /etc/indy /var/log/indy /var/lib/indy /var/lib/indy/backup /var/lib/indy/plugins
-  sudo chown -R ubuntu:ubuntu /var/log/indy/ /var/lib/indy/ /etc/indy/
+  sudo mkdir /etc/indy /var/log/indy /data/indy /data/indy/backup /data/indy/plugins
+  sudo chown -R ubuntu:ubuntu /var/log/indy/ /data/indy/ /etc/indy/
 
   printf "# Current network
 NETWORK_NAME = 'mynet'
@@ -37,25 +37,25 @@ NETWORK_NAME = 'mynet'
 enableStdOutLogging = True
 
 # Directory to store ledger.
-LEDGER_DIR = '/var/lib/indy'
+LEDGER_DIR = '/data/indy'
 
 # Directory to store logs.
 LOG_DIR = '/var/log/indy'
 
 # Directory to store keys.
-KEYS_DIR = '/var/lib/indy'
+KEYS_DIR = '/data/indy'
 
 # Directory to store genesis transactions files.
-GENESIS_DIR = '/var/lib/indy'
+GENESIS_DIR = '/data/indy'
 
 # Directory to store backups.
-BACKUP_DIR = '/var/lib/indy/backup'
+BACKUP_DIR = '/data/indy/backup'
 
 # Directory to store plugins.
-PLUGINS_DIR = '/var/lib/indy/plugins'
+PLUGINS_DIR = '/data/indy/plugins'
 
 # Directory to store node info.
-NODE_INFO_DIR = '/var/lib/indy'
+NODE_INFO_DIR = '/data/indy'
 
 # Current network
 NETWORK_NAME = 'my-net'
@@ -64,25 +64,25 @@ NETWORK_NAME = 'my-net'
 enableStdOutLogging = True
 
 # Directory to store ledger.
-LEDGER_DIR = '/var/lib/indy'
+LEDGER_DIR = '/data/indy'
 
 # Directory to store logs.
 LOG_DIR = '/var/log/indy'
 
 # Directory to store keys.
-KEYS_DIR = '/var/lib/indy'
+KEYS_DIR = '/data/indy'
 
 # Directory to store genesis transactions files.
-GENESIS_DIR = '/var/lib/indy'
+GENESIS_DIR = '/data/indy'
 
 # Directory to store backups.
-BACKUP_DIR = '/var/lib/indy/backup'
+BACKUP_DIR = '/data/indy/backup'
 
 # Directory to store plugins.
-PLUGINS_DIR = '/var/lib/indy/plugins'
+PLUGINS_DIR = '/data/indy/plugins'
 
 # Directory to store node info.
-NODE_INFO_DIR = '/var/lib/indy'
+NODE_INFO_DIR = '/data/indy'
 " >> /etc/indy/indy_config.py
 
   # preventing the indy-node process from reaching of open file descriptors limit caused by clients connections
