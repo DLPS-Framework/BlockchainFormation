@@ -281,8 +281,7 @@ class ArgParser:
 
     @staticmethod
     def _add_indy_args(parser):
-        parser.add_argument('--msg', '-m', help='specify message', default='Hallo')
-        parser.add_argument('--clients', help='some numer defining the maximum amount of clients', type=int, default=5)
+        parser.add_argument('--clients', help='some number defining the maximum amount of clients', type=int, default=5)
 
     @staticmethod
     def _add_parity_args(parser):
@@ -523,7 +522,6 @@ class ArgParser:
         elif blockchain_type == "indy":
             return\
                 {
-                    "message": namespace_dict['message'],
                     "clients": namespace_dict['clients']
 
                 }

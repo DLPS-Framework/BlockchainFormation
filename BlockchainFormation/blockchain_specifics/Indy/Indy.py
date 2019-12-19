@@ -13,10 +13,6 @@
 #  limitations under the License.
 
 
-
-import os
-import time
-import numpy as np
 from BlockchainFormation.utils.utils import *
 
 import hashlib
@@ -57,8 +53,6 @@ def indy_startup(config, logger, ssh_clients, scp_clients):
 
     # the indices of the blockchain nodes
     config['node_indices'] = list(range(0, config['vm_count']))
-
-    logger.info(f"Started Indy with message {config['indy_settings']['message']}")
 
     node_names = []
     node_seeds = []
