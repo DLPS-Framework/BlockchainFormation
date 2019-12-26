@@ -32,8 +32,8 @@ def quorum_shutdown(config, logger, scp_clients):
         os.mkdir(f"{config['exp_dir']}/tessera_logs")
 
         try:
-            scp_clients[index].get("/home/ubuntu//data/node.log", f"{config['exp_dir']}/quorum_logs/quorum_log_node_{index}.log")
-            scp_clients[index].get("/home/ubuntu/data/tessera.log", f"{config['exp_dir']}/tessera_logs/tessera_log_node_{index}.log")
+            scp_clients[index].get("/home/ubuntu/node.log", f"{config['exp_dir']}/quorum_logs/quorum_log_node_{index}.log")
+            scp_clients[index].get("/home/ubuntu/tessera.log", f"{config['exp_dir']}/tessera_logs/tessera_log_node_{index}.log")
         except Exception as e:
             logger.debug(e)
             logger.info(f"Not all logs available on {ip}")
@@ -226,7 +226,7 @@ def start_tessera(config, ssh_clients, logger):
 
         # logger.debug(f"Starting tessera on node {index1}")
         channel = ssh_clients[index1].get_transport().open_session()
-        channel.exec_command("java -jar /data/tessera/tessera-app-0.10.0-app.jar -configfile /data/qdata/tm/config.json >> /data/tessera.log 2>&1")
+        channel.exec_command("java -jar /data/tessera/tessera-app-0.10.0-app.jar -configfile /data/qdata/tm/config.json >> /home/ubuntu/tessera.log 2>&1")
 
     logger.info("Waiting until all tessera nodes have started")
     status_flags = wait_till_done(config, ssh_clients, config['ips'], 60, 10, '/data/qdata/tm/tm.ipc', False, 10, logger)
@@ -331,7 +331,7 @@ def start_node(config, ssh_clients, node, logger):
                              f"--emitcheckpoints "
                              f"--port 30300 "
                              f"--nat=extip:{config['priv_ips'][node]}{string_geth_settings} "
-                             f">> /data/node.log 2>&1")
+                             f">> /home/ubuntu/node.log 2>&1")
 
     else:
         if node == 0:
@@ -350,7 +350,7 @@ def start_node(config, ssh_clients, node, logger):
                                  f"--emitcheckpoints "
                                  f"--port 21000 "
                                  f"--nat=extip:{config['priv_ips'][node]}{string_geth_settings} "
-                                 f">> /data/node.log 2>&1")
+                                 f">> /home/ubuntu/node.log 2>&1")
         else:
             channel.exec_command(f"PRIVATE_CONFIG=/data/qdata/tm/tm.ipc geth "
                                  f"--datadir /data/nodes/new-node-1 "
@@ -369,7 +369,7 @@ def start_node(config, ssh_clients, node, logger):
                                  f"--emitcheckpoints "
                                  f"--port 21000 "
                                  f"--nat=extip:{config['priv_ips'][node]}{string_geth_settings} "
-                                 f">> /data/node.log 2>&1")
+                                 f">> /home/ubuntu/node.log 2>&1")
 
 
 def add_node(config, ssh_clients, node, logger):
