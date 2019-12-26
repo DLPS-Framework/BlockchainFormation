@@ -98,7 +98,7 @@ class BenchContract extends Contract {
 
     async writeMuchData2(ctx, len, start, delta) {
         var aggregate_key = {}
-        for (var i = parseInt(start, 10); i < (parseInt(start, 10) + parseInt(len, 10)); i++) {
+        for (var i = 0; i < parseInt(len, 10); i++) {
             aggregate_key["key_" + i.toString()] = (i + delta).toString()
         }
         console.log(JSON.stringify(aggregate_key))
@@ -122,6 +122,26 @@ class BenchContract extends Contract {
         return Buffer.from(sum.toString())
     }
 
+    async readMuchData2(ctx, len, start) {
+        var sum = 0
+        try {
+            var tmp = await ctx.stub.getState("key_" + start.toString())
+            console.log(tmp)
+            var tmp2 = JSON.parse(tmp)
+            console.log(tmp2)
+        } catch (err) {
+            console.log(err)
+        }
+        try {
+            console.log(JSON.stringify(tmp2))
+            for (var i = 0; i < parseInt(len, 10); i++) {
+                sum += Number(tmp2["key_" + i.toString()])
+            }
+        } catch (err) {
+            console.log(err)
+        }
+        return Buffer.from(sum.toString())
+    }
 
     /** For overhead testing
      * @param {Context} ctx the transaction context
