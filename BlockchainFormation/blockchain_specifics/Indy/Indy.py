@@ -86,6 +86,7 @@ def indy_startup(config, logger, ssh_clients, scp_clients):
         start_string = f"screen -dmS indy-node start_indy_node {node_names[node]} 0.0.0.0 {port+1} 0.0.0.0 {port+2} -vv"
         channels[node].exec_command(f"{start_string} && echo \"{start_string}\" >> commands.txt")
         port = port + 2
+        time.sleep(5)
 
     logger.info("Indy network is running...")
     # indy-cli
