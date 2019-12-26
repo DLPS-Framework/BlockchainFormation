@@ -247,7 +247,7 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
         scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
 
     try:
-        scp_clients[index].get("/data/*.log", f"{config['exp_dir']}/fabric_logs")
+        scp_clients[index].get("/home/ubuntu/*.log", f"{config['exp_dir']}/fabric_logs")
         logger.info("Logs fetched successfully")
     except:
         logger.info(f"No logs available on {ip}")
@@ -876,8 +876,8 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
 
             logger.debug(f" - Starting zookeeper{zookeeper} on {config['ips'][index]}")
             channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /data/zookeeper{zookeeper}.log)")
-            stdin, stdout, stderr = ssh_clients[index].exec_command(f"echo '(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /data/zookeeper{zookeeper}.log)' >> /data/starting_command.log")
+            channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /home/ubuntu/zookeeper{zookeeper}.log)")
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"echo '(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /home/ubuntu/zookeeper{zookeeper}.log)' >> /home/ubuntu/starting_command.log")
             stdout.readlines()
             # logger.debug(stdout.readlines())
             # logger.debug(stderr.readlines())
@@ -916,8 +916,8 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
 
             logger.debug(f" - Starting kafka{kafka} on {config['ips'][index]}")
             channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /data/kafka{kafka}.log)")
-            stdin, stdout, stderr = ssh_clients[index].exec_command(f"echo '(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /data/kafka{kafka}.log)' >> /data/starting_command.log")
+            channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /home/ubuntu/kafka{kafka}.log)")
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"echo '(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /home/ubuntu/kafka{kafka}.log)' >> /home/ubuntu/starting_command.log")
             stdout.readlines()
 
         time.sleep(10)
@@ -961,7 +961,7 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
         # Starting the Certificate Authority
         # logger.debug(f" - Starting ca for org{org} on {config['ips'][org - 1]}")
         # channel = ssh_clients[org - 1].get_transport().open_session()
-        # channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + f" hyperledger/fabric-ca sh -c 'fabric-ca-server start -b admin:adminpw -d' &> /data/ca.org{org}.log)")
+        # channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + f" hyperledger/fabric-ca sh -c 'fabric-ca-server start -b admin:adminpw -d' &> /home/ubuntu/ca.org{org}.log)")
         # ssh_clients[org - 1].exec_command(f"echo \"docker run -it --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + " hyperledger/fabric-tools /bin/bash\" >> cli.sh")
     """
     for orderer, index in enumerate(config['orderer_indices']):
@@ -1030,7 +1030,7 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
         # Starting the orderers
         logger.debug(f" - Starting orderer{orderer} on {config['ips'][index]}")
         channel = ssh_clients[index].get_transport().open_session()
-        channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /data/orderer{orderer}.log)")
+        channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /home/ubuntu/orderer{orderer}.log)")
         ssh_clients[index].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + " hyperledger/fabric-tools /bin/bash\" >> /data/cli.sh)")
 
     # starting peers and databases
@@ -1048,7 +1048,7 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
             # Starting the couchdbs
             logger.debug(f" - Starting database couchdb{peer}.org{org} on {ip}")
             channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_database_base + f" hyperledger/fabric-couchdb &> /data/couchdb{peer}.org{org}.log)")
+            channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_database_base + f" hyperledger/fabric-couchdb &> /home/ubuntu/couchdb{peer}.org{org}.log)")
 
             # Setting up configuration of peer like with docker compose
 
@@ -1120,7 +1120,7 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
             # Starting the peers
             logger.debug(f" - Starting peer{peer}.org{org} on {ip}")
             channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + f" hyperledger/fabric-peer peer node start &> /data/peer{peer}.org{org}.log)")
+            channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + f" hyperledger/fabric-peer peer node start &> /home/ubuntu/peer{peer}.org{org}.log)")
             ssh_clients[index].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + " hyperledger/fabric-tools /bin/bash\" >> /data/cli.sh)")
 
     # Waiting for a few seconds until all peers and orderers have started
@@ -1179,7 +1179,7 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
     string_cli_v = string_cli_v + f" -w /opt/gopath/src/github.com/hyperledger/fabric/peer"
 
     # execute script.sh on last node
-    stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 script.sh && ls -la && cd .. && ./scripts/script.sh)' |& tee /data/setup.log)")
+    stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 script.sh && ls -la && cd .. && ./scripts/script.sh)' |& tee /home/ubuntu/setup.log)")
     out = stdout.readlines()
 
     # save the cli command on the last node and save it in exp_dir
