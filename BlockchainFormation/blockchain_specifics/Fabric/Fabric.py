@@ -819,7 +819,7 @@ def write_script(config, logger):
 
     os.system(f"cp {dir_name}/setup/script_raw_3.sh {config['exp_dir']}/setup/script3.sh")
     if config['fabric_settings']['tls_enabled'] == 1:
-        logger.debug("    --> TLS environment variables set")
+        # logger.debug("    --> TLS environment variables set")
         string_tls = f"--tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem"
     else:
         string_tls = f""
@@ -948,7 +948,7 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
 
         string_ca_tls = ""
         if config['fabric_settings']['tls_enabled'] == 1:
-            logger.debug("    --> TLS environment variables set")
+            # logger.debug("    --> TLS environment variables set")
             string_ca_tls = string_ca_tls + f" -e FABRIC_CA_SERVER_TLS_ENABLED=true"
             string_ca_tls = string_ca_tls + f" -e FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.org{org}.example.com-cert.pem"
             string_ca_tls = string_ca_tls + f" -e FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/{peer_orgs_secret_keys[org - 1]}"
@@ -987,7 +987,7 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
 
         string_orderer_tls = ""
         if config['fabric_settings']['tls_enabled'] == 1:
-            logger.debug("    --> TLS environment variables set")
+            # logger.debug("    --> TLS environment variables set")
             string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_TLS_ENABLED=true"
             string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key"
             string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt"
@@ -1101,7 +1101,7 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
 
             string_peer_tls = ""
             if config['fabric_settings']['tls_enabled'] == 1:
-                logger.debug("    --> TLS environment variables set")
+                # logger.debug("    --> TLS environment variables set")
                 string_peer_tls = string_peer_tls + f" -e CORE_PEER_TLS_ENABLED=true"
                 string_peer_tls = string_peer_tls + f" -e CORE_PEER_TLS_CLIENTAUTHREQUIRED=false"
                 string_peer_tls = string_peer_tls + f" -e CORE_PEER_TLS_CERT_FILE=/var/hyperledger/fabric/tls/server.crt"
@@ -1163,7 +1163,7 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
 
     string_cli_tls = ""
     if config['fabric_settings']['tls_enabled'] == 1:
-        logger.debug("    --> TLS environment variables set")
+        # logger.debug("    --> TLS environment variables set")
         string_cli_tls = string_cli_tls + f" -e CORE_PEER_TLS_ENABLED=true"
         string_cli_tls = string_cli_tls + f" -e CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org{org}.example.com/peers/peer{peer}.org{org}.example.com/tls/server.crt"
         string_cli_tls = string_cli_tls + f" -e CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org{org}.example.com/peers/peer{peer}.org{org}.example.com/tls/server.key"
@@ -1216,20 +1216,20 @@ def push_stuff(config, ssh_clients, scp_clients, indices_sources, indices_target
 
     jobs = []
     for index, index_source in enumerate(indices_sources):
-        logger.debug(f"Creating thread {index} for pushing from {index_source} to {indices_targets[index]}")
+        # logger.debug(f"Creating thread {index} for pushing from {index_source} to {indices_targets[index]}")
         thread = threading.Thread(target=push_stuff_single(config, ssh_clients, scp_clients, index_source, indices_targets[index], logger))
-        logger.debug(f"Starting thread {index}")
+        # logger.debug(f"Starting thread {index}")
         thread.start()
         jobs.append(thread)
 
     for j in jobs:
-        logger.debug(f"Joining thread {j}")
+        # logger.debug(f"Joining thread {j}")
         j.join()
 
 
 def push_stuff_single(config, ssh_clients, scp_clients, index_source, index_target, logger):
 
-    logger.debug(f"Starting to push to index {index_target}")
+    # logger.debug(f"Starting to push to index {index_target}")
     # deleting data at the vm associated with source_index and copying it to the vm associated with the target index
     # use scp -v for verbose mode
     stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"ssh -o 'StrictHostKeyChecking no' -i /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem ubuntu@{config['priv_ips'][index_target]} 'sudo rm -rf /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts && echo Success'")
@@ -1240,7 +1240,7 @@ def push_stuff_single(config, ssh_clients, scp_clients, index_source, index_targ
     wait_and_log(stdout, stderr)
     stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
     wait_and_log(stdout, stderr)
-    logger.debug(f"Successfully pushed to index {index_target}")
+    # logger.debug(f"Successfully pushed to index {index_target}")
 
 
 
