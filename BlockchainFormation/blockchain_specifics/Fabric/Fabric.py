@@ -905,7 +905,7 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
             string_kafka_zookeeper = string_kafka_zookeeper + f" -e KAFKA_ZOOKEEPER_SESSION_TIMEOUT_MS=360000"
 
             string_kafka_zookeeper_connect = ""
-            for zookeeper, _ in enumerate(config['kafka_indices']):
+            for zookeeper, _ in enumerate(config['zookeeper_indices']):
                 if string_kafka_zookeeper_connect != "":
                     string_kafka_zookeeper_connect = string_kafka_zookeeper_connect + ","
                 string_kafka_zookeeper_connect = string_kafka_zookeeper_connect + f"zookeeper{zookeeper}:2181"
@@ -1015,7 +1015,6 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
                     string_orderer_kafka = string_orderer_kafka + ","
                 string_orderer_kafka = string_orderer_kafka + f"kafka{kafka}:9092"
             string_orderer_kafka = string_orderer_kafka + "]"
-            string_orderer_kafka = string_orderer_kafka + f" -e ORDERER_KAFKA_BROKERS=[kafka0:9092,kafka1:9092,kafka2:9092,kafka3:9092]"
             string_orderer_kafka = string_orderer_kafka + f" -e ORDERER_KAFKA_RETRY_SHORTINTERVAL=1s"
             string_orderer_kafka = string_orderer_kafka + f" -e ORDERER_KAFKA_RETRY_SHORTTOTAL=30s"
             string_orderer_kafka = string_orderer_kafka + f" -e ORDERER_KAFKA_VERBOSE=true"
@@ -1039,19 +1038,20 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
         for peer in range(0, config['fabric_settings']['peer_count']):
             index = config['peer_indices'][(org-1) * config['fabric_settings']['peer_count'] + peer]
             ip = config['ips'][index]
-            # set up configuration of database like with docker compose
-            string_database_base = ""
-            string_database_base = string_database_base + f" --network='{my_net}' --name couchdb{peer}.org{org} -p 5984:5984"
-            string_database_base = string_database_base + f" -e COUCHDB_USER= -e COUCHDB_PASSWORD="
-            string_database_base = string_database_base + f" -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE={my_net}"
 
-            # Starting the couchdbs
-            logger.debug(f" - Starting database couchdb{peer}.org{org} on {ip}")
-            channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_database_base + f" hyperledger/fabric-couchdb &> /home/ubuntu/couchdb{peer}.org{org}.log)")
+            if config['fabric_settings']['database'] == "CouchDB":
+                # set up CouchDB configuration
+                string_database_base = ""
+                string_database_base = string_database_base + f" --network='{my_net}' --name couchdb{peer}.org{org} -p 5984:5984"
+                string_database_base = string_database_base + f" -e COUCHDB_USER= -e COUCHDB_PASSWORD="
+                string_database_base = string_database_base + f" -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE={my_net}"
+
+                # Starting the CouchDBs
+                logger.debug(f" - Starting database couchdb{peer}.org{org} on {ip}")
+                channel = ssh_clients[index].get_transport().open_session()
+                channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_database_base + f" hyperledger/fabric-couchdb &> /home/ubuntu/couchdb{peer}.org{org}.log)")
 
             # Setting up configuration of peer like with docker compose
-
             string_peer_base = ""
             string_peer_base = string_peer_base + f" --network='{my_net}' --name peer{peer}.org{org}.example.com -p 7051:7051 -p 7053:7053"
 
@@ -1069,10 +1069,11 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
                     string_peer_link = string_peer_link + f" --link peer{peer2}.org{org2}.example.com:peer{peer2}.org{org2}.example.com"
 
             string_peer_database = ""
-            string_peer_database = string_peer_database + f" -e CORE_LEDGER_STATE_STATEDATABASE=CouchDB"
-            string_peer_database = string_peer_database + f" -e CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb{peer}.org{org}:5984"
-            # string_peer_database = string_peer_database + f" -e CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME="
-            # string_peer_database = string_peer_database + f" -e CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD="
+            if config['fabric_settings']['database'] == "CouchDB":
+                string_peer_database = string_peer_database + f" -e CORE_LEDGER_STATE_STATEDATABASE=CouchDB"
+                string_peer_database = string_peer_database + f" -e CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb{peer}.org{org}:5984"
+                string_peer_database = string_peer_database + f" -e CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME="
+                string_peer_database = string_peer_database + f" -e CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD="
 
             string_peer_core = ""
             string_peer_core = string_peer_core + f" -e FABRIC_LOGGING_SPEC={config['fabric_settings']['log_level']}"
@@ -1230,18 +1231,15 @@ def push_stuff_single(config, ssh_clients, scp_clients, index_source, index_targ
 
     logger.debug(f"Starting to push to index {index_target}")
     # deleting data at the vm associated with source_index and copying it to the vm associated with the target index
+    # use scp -v for verbose mode
     stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"ssh -o 'StrictHostKeyChecking no' -i /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem ubuntu@{config['priv_ips'][index_target]} 'sudo rm -rf /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts && echo Success'")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
-    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"scp -v -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
-    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"scp -v -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
-    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"scp -v -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
+    wait_and_log(stdout, stderr)
+    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
+    wait_and_log(stdout, stderr)
+    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
+    wait_and_log(stdout, stderr)
+    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
+    wait_and_log(stdout, stderr)
     logger.debug(f"Successfully pushed to index {index_target}")
 
 

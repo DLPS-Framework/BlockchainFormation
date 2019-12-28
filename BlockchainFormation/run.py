@@ -214,6 +214,7 @@ class ArgParser:
 
     @staticmethod
     def _add_fabric_args(parser):
+        parser.add_argument('--database', help='choose between LevelDB and CouchDB as database', default='CouchDB')
         parser.add_argument('--org_count', help='specify number of organizations', type=int, default=2)
         parser.add_argument('--peer_count', help='specify number of peers per organization', type=int, default=3)
         parser.add_argument('--orderer_type', help='specify the orderer type chosen from "solo" and "raft", default="solo"')
@@ -463,7 +464,13 @@ class ArgParser:
     @staticmethod
     def _add_blockchain_type_config(namespace_dict, blockchain_type):
 
-        if blockchain_type == "corda":
+        if blockchain_type =="client":
+            return\
+                {
+                    "target_network_conf": namespace_dict["target_network_conf"]
+
+                }
+        elif blockchain_type == "corda":
             return\
                 {
                     "message": namespace_dict["message"]
@@ -472,6 +479,7 @@ class ArgParser:
         elif blockchain_type == "fabric":
             return\
                 {
+                    "database": namespace_dict['database'],
                     "org_count": namespace_dict['org_count'],
                     "peer_count": namespace_dict['peer_count'],
                     "orderer_type": namespace_dict['orderer_type'],
@@ -560,12 +568,6 @@ class ArgParser:
                     "txpool.globalqueue": namespace_dict['txpool.globalqueue'],
                     "txpool.lifetime": namespace_dict['txpool.lifetime'],
                     "private_fors": namespace_dict['private_fors']
-
-                }
-        elif blockchain_type =="client":
-            return\
-                {
-                    "target_network_conf": namespace_dict["target_network_conf"]
 
                 }
         elif blockchain_type == "sawtooth":
