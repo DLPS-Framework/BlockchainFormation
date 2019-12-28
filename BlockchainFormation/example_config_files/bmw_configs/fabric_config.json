@@ -1,0 +1,60 @@
+{
+  "vm_count": 2,
+  "instance_type": "m5.large",
+  "image": {
+    "image_id": null,
+    "os": "ubuntu",
+    "version": 18,
+    "permissions": "default"
+  },
+  "subnet_id": "subnet-0fa70db2bd49231db",
+  "security_group_id": ["sg-0a1a62af94278cd07"],
+  "proxy": null,
+  "user": "ubuntu",
+  "profile": "default",
+  "key_name": "Johannes_test_pub",
+  "aws_credentials": "/home/user/.aws/credentials",
+  "aws_config": "/home/user/.aws/config",
+  "aws_region": "eu-central-1",
+  "aws_proxy_settings": null,
+  "priv_key_path": "/home/user/.aws/Johannes_test_pub.pem",
+  "tag_name": "blclab_fabric",
+  "exp_dir": "/home/user/PycharmProjects/BlockchainFormation/BlockchainFormation",
+  "public_ip": true,
+  "storage_settings": [
+    {
+      "DeviceName": "/dev/sdb",
+      "VirtualName": "string",
+      "Ebs": {
+        "DeleteOnTermination": true,
+        "VolumeSize": 16,
+        "VolumeType": "gp2",
+        "Encrypted": true,
+        "KmsKeyId": "arn:aws:kms:eu-central-1:731899578576:key/a808826d-e460-4271-a23b-29e1e0807c1d"
+      }
+    }
+  ],
+  "blockchain_type": "fabric",
+  "fabric_settings":
+  {
+    "database": "CouchDB",
+    "org_count": 1,
+    "peer_count": 2,
+    "orderer_type": "solo",
+    "orderer_count": 3,
+    "kafka_count": 4,
+    "zookeeper_count": 3,
+    "tick_interval": 500,
+    "election_tick": 10,
+    "heartbeat_tick": 1,
+    "max_inflight_locks": 5,
+    "snapshot_interval_size": 20,
+    "batch_timeout": 0.5,
+    "max_message_count": 10,
+    "absolute_max_bytes": 99,
+    "preferred_max_bytes": 4096,
+    "tls_enabled": 0,
+    "endorsement_policy": "OR",
+    "log_level": "WARNING"
+  }
+}

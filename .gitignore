@@ -162,6 +162,3 @@ dmypy.json
 
 experiments/*
 BlockchainFormation/experiments/*
-BlockchainFormation/example_config_files/*
-BlockchainFormation/export.shBlockchainFormation/example_config_files/fabric_config.json
-export.sh
