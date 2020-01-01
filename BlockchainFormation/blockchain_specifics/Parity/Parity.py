@@ -305,7 +305,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
     web3_clients = []
     time.sleep(20)
 
-    for index, ip in enumerate(config['priv_ips']):
+    for index, ip in enumerate(config['pub_ips']):
         web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 5})))
 
         enodes.append((ip, web3_clients[index].parity.enode()))
@@ -354,7 +354,7 @@ def parity_startup(config, logger, ssh_clients, scp_clients):
     scp_clients[0].get("/data/parity_version.txt", f"{config['exp_dir']}/setup/parity_version.txt")
 
 
-    for index, ip in enumerate(config['ips']):
+    for index, _ in enumerate(config['ips']):
         # web3 = Web3(Web3.HTTPProvider(f"http://{i.private_ip_address}:8545"))
         logger.info("IsMining:" + str(web3_clients[index].eth.mining))
         for acc in all_accounts:
