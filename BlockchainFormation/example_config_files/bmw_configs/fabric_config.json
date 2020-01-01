@@ -37,10 +37,10 @@
   "blockchain_type": "fabric",
   "fabric_settings":
   {
-    "database": "CouchDB",
-    "org_count": 1,
-    "peer_count": 2,
-    "orderer_type": "solo",
+    "database": "LevelDB",
+    "org_count": 5,
+    "peer_count": 1,
+    "orderer_type": "kafka",
     "orderer_count": 3,
     "kafka_count": 4,
     "zookeeper_count": 3,
@@ -52,9 +52,9 @@
     "batch_timeout": 0.5,
     "max_message_count": 10,
     "absolute_max_bytes": 99,
-    "preferred_max_bytes": 4096,
-    "tls_enabled": 0,
+    "preferred_max_bytes": 2048,
+    "tls_enabled": 1,
     "endorsement_policy": "OR",
-    "log_level": "WARNING"
+    "log_level": "INFO"
   }
 }
