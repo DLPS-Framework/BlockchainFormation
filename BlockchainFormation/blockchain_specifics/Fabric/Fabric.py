@@ -855,7 +855,7 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
     my_net = "my-net"
 
     # starting orderer
-    logger.info(f"Starting orderers")
+    # logger.info(f"Starting orderers")
     if config['fabric_settings']['orderer_type'].upper() == "KAFKA":
 
         # Starting zookeeper nodes
@@ -964,8 +964,9 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
         # channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + f" hyperledger/fabric-ca sh -c 'fabric-ca-server start -b admin:adminpw -d' &> /home/ubuntu/ca.org{org}.log)")
         # ssh_clients[org - 1].exec_command(f"echo \"docker run -it --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + " hyperledger/fabric-tools /bin/bash\" >> cli.sh")
     """
-    for orderer, index in enumerate(config['orderer_indices']):
 
+    logger.info("Starting orderer nodes")
+    for orderer, index in enumerate(config['orderer_indices']):
         orderer = orderer + 1
         # set up configurations of orderers like with docker compose
         string_orderer_base = ""
@@ -1182,6 +1183,8 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
     # execute script.sh on last node
     stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 script.sh && ls -la && cd .. && ./scripts/script.sh)' |& tee /home/ubuntu/setup.log)")
     out = stdout.readlines()
+    logger.debug(out)
+    logger.debug(stderr.readlines())
 
     # save the cli command on the last node and save it in exp_dir
     ssh_clients[index_last_node].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash\" >> /data/cli2.sh)")

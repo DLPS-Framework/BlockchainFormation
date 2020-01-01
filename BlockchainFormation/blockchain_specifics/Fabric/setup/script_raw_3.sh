@@ -85,13 +85,13 @@ benchcontractChaincodeQuery () {
     # we either get a successful response, or reach TIMEOUT
     while test "$(($(date +%s)-starttime))" -lt "$TIMEOUT" -a $rc -ne 0
     do
-        sleep 2
+        sleep 10
         echo "Attempting to query benchcontract chaincode on PEER$PEER.ORG$ORG ...$(($(date +%s)-starttime)) secs"
-        # peer chaincode query -C $CHANNEL_NAME -n benchcontract -c '{Args":["doNothing"]}' >& log.txt && \
-        # peer chaincode query -C $CHANNEL_NAME -n benchcontract -c '{Args:["writeData", "testkey", "testvalue"]}' substitute_tls >& log.txt && \
-        peer chaincode query -C $CHANNEL_NAME -n benchcontract -c '{"Args":["matrixMultiplication","3"]}' substitute_tls >& log.txt && \
-        # peer chaincode query -C $CHANNEL_NAME -n benchcontract -c '{Args:["readData", "testkey"]}' substitute_tls >& log.txt && \
-        # peer chaincode query -C $CHANNEL_NAME -n benchcontract -c '{Args:["writeMuchData", "100", "10", "90"]}' substitute_tls >& log.txt && \
+        # peer chaincode query -C $CHANNEL_NAME -n benchcontract -c '{Args":["doNothing"]}' >& log.txt \
+        # peer chaincode query -C $CHANNEL_NAME -n benchcontract -c '{Args:["writeData", "testkey", "testvalue"]}' substitute_tls >& log.txt \
+        peer chaincode query -C $CHANNEL_NAME -n benchcontract -c '{"Args":["matrixMultiplication","3"]}' substitute_tls >& log.txt \
+        # peer chaincode query -C $CHANNEL_NAME -n benchcontract -c '{Args:["readData", "testkey"]}' substitute_tls >& log.txt \
+        # peer chaincode query -C $CHANNEL_NAME -n benchcontract -c '{Args:["writeMuchData", "100", "10", "90"]}' substitute_tls >& log.txt \
         # peer chaincode query -C $CHANNEL_NAME -n benchcontract -c '{Args:["readMuchData", "20", "30"]}' substitute_tls >& log.txt
         # res=$?
         # cat log.txt
@@ -126,7 +126,7 @@ benchcontractChaincodeInvoke () {
     # lets supply it directly as we know it using the "-o" option
     # peer chaincode invoke -o orderer1.example.com:7050 -C $CHANNEL_NAME -n benchcontract -c '{Args":["doNothing"]}' >& log.txt && \
     # peer chaincode invoke -o orderer1.example.com:7050 -C $CHANNEL_NAME -n benchcontract -c '{Args:["writeData", "testkey", "testvalue"]}' substitute_tls >& log.txt && \
-    peer chaincode invoke -o orderer1.example.com:7050 -C $CHANNEL_NAME -n benchcontract -c '{"Args":["matrixMultiplication","3"]}' substitute_tls >& log.txt && \
+    peer chaincode invoke -o orderer1.example.com:7050 -C $CHANNEL_NAME -n benchcontract -c '{"Args":["matrixMultiplication","3"]}' substitute_tls >& log.txt \
     # peer chaincode invoke -o orderer1.example.com:7050 -C $CHANNEL_NAME -n benchcontract -c '{Args:["readData", "testkey"]}' substitute_tls >& log.txt && \
     # peer chaincode invoke -o orderer1.example.com:7050 -C $CHANNEL_NAME -n benchcontract -c '{Args:["writeMuchData", "100", "10", "90"]}' substitute_tls >& log.txt && \
     # peer chaincode invoke -o orderer1.example.com:7050 -C $CHANNEL_NAME -n benchcontract -c '{Args:["readMuchData", "20", "30"]}' substitute_tls >& log.txt
@@ -146,46 +146,39 @@ createChannel
 echo "$(date +'%Y-%m-%d %H:%M:%S:%3N') Having all peers join the channel..."
 for PEER in substitute_enum_peers; do
     for ORG in substitute_enum_orgs; do
-        joinChannel $PEER $ORG &
+        joinChannel $PEER $ORG
     done
 done
-
-wait
 
 # Updating the anchor peers for each org in the channel
 echo "$(date +'%Y-%m-%d %H:%M:%S:%3N') Updating anchor peers for each org..."
 for PEER in 0; do
     for ORG in substitute_enum_orgs; do
-        updateAnchorPeers $PEER $ORG &
+        updateAnchorPeers $PEER $ORG
     done
 done
-
-wait
 
 # Installing benchcontract chaincode on all peers
 echo "$(date +'%Y-%m-%d %H:%M:%S:%3N') Installing chaincode on peers..."
 for PEER in substitute_enum_peers; do
     for ORG in substitute_enum_orgs; do
-        installBenchcontractChaincode $PEER $ORG &
+        installBenchcontractChaincode $PEER $ORG
     done
 done
-
-wait
 
 #Instantiating benchcontract chaincode on peer0.org1
 echo "$(date +'%Y-%m-%d %H:%M:%S:%3N') Instantiating benchcontract chaincode on peer0.org1..."
 for PEER in 0; do
     for ORG in 1; do
-        instantiateBenchcontractChaincode $PEER $ORG &
+        instantiateBenchcontractChaincode $PEER $ORG
     done
 done
-
-wait
 
 #Querying example and benchcontract chaincode on all peers
 echo "$(date +'%Y-%m-%d %H:%M:%S:%3N') Querying benchcontract chaincode on all peers"
 for PEER in substitute_enum_peers; do
     for ORG in substitute_enum_orgs; do
+        sleep 2
         benchcontractChaincodeQuery $PEER $ORG &
     done
 done
