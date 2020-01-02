@@ -6,7 +6,7 @@ echo
 CHANNEL_NAME="$1"
 TIMEOUT="$2"
 : ${CHANNEL_NAME:="mychannel"}
-: ${TIMEOUT:="60"}
+: ${TIMEOUT:="30"}
 COUNTER=1
 MAX_RETRY=10
 
