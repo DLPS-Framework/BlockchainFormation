@@ -135,7 +135,8 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
 
     # Name of the swarm network
     my_net = "my-net"
-    stdin, stdout, stderr = ssh_clients[0].exec_command(f"sudo docker network create --attachable --driver overlay {my_net}")
+    # stdin, stdout, stderr = ssh_clients[0].exec_command(f"sudo docker network create --attachable --driver overlay {my_net}")
+    stdin, stdout, stderr = ssh_clients[0].exec_command(f"sudo docker network create --subnet 10.10.0.0/16 --attachable --driver overlay {my_net}")
     out = stdout.readlines()
     # logger.debug(out)
     # logger.debug("".join(stderr.readlines()))
