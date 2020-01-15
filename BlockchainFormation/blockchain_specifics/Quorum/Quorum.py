@@ -407,6 +407,13 @@ def unlock_network(config, ssh_clients, logger):
 
 
 def check_network(config, ssh_clients, logger):
+    """
+    Check network Status
+    :param config:
+    :param ssh_clients:
+    :param logger:
+    :return:
+    """
 
     status_flags = np.zeros(config['vm_count'], dtype=bool)
     timer = 0
@@ -444,6 +451,14 @@ def check_network(config, ssh_clients, logger):
 
 
 def kill_node(ssh_clients, node, logger):
+    """
+    Shut down single geth node
+    :param ssh_clients:
+    :param node:
+    :param logger:
+    :return:
+    """
+
 
     logger.debug(f" --> Shutting down and resetting node {node}")
     try:
@@ -475,6 +490,13 @@ def kill_node(ssh_clients, node, logger):
 
 
 def kill_network(config, ssh_clients, logger):
+    """
+    Shut network down
+    :param config:
+    :param ssh_clients:
+    :param logger:
+    :return:
+    """
 
     logger.info("Killing geth on all nodes")
     for node, _ in enumerate(config['priv_ips']):
@@ -482,6 +504,14 @@ def kill_network(config, ssh_clients, logger):
 
 
 def restart_node(config, ssh_clients, node, logger):
+    """
+    Start up geth on all nodes
+    :param config:
+    :param ssh_clients:
+    :param node:
+    :param logger:
+    :return:
+    """
 
     kill_node(ssh_clients, node, logger)
     start_node(config, ssh_clients, node, logger)
@@ -490,6 +520,13 @@ def restart_node(config, ssh_clients, node, logger):
 
 
 def quorum_restart(config, ssh_clients, logger):
+    """
+    Kills the network and Restarts its
+    :param config:
+    :param ssh_clients:
+    :param logger:
+    :return:
+    """
 
     kill_network(config, ssh_clients, logger)
     start_network(config, ssh_clients, logger)

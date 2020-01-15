@@ -33,7 +33,6 @@ def client_startup(config, logger, ssh_clients, scp_clients):
         attach_to_blockchain_conf(config, logger)
 
 
-
 def attach_to_blockchain_conf(config, logger):
     """
     Attach client settings to another config
