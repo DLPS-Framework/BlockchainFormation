@@ -262,8 +262,16 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
     logger.info("")
 
 
-
 def reboot_all(ec2_instances, config, logger, ssh_clients, scp_clients):
+    """
+    Restart Fabric Network
+    :param ec2_instances:
+    :param config:
+    :param logger:
+    :param ssh_clients:
+    :param scp_clients:
+    :return:
+    """
     status_flags = np.zeros((config['vm_count']), dtype=bool)
     timer = 4
     logger.info("   ###              ***               ###")

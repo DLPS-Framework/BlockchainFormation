@@ -111,6 +111,14 @@ def indy_startup(config, logger, ssh_clients, scp_clients):
 
 
 def indy_restart(config, logger, ssh_clients, scp_clients):
+    """
+    Restart Indy Network
+    :param config:
+    :param logger:
+    :param ssh_clients:
+    :param scp_clients:
+    :return:
+    """
 
     indy_shutdown(config, logger, ssh_clients, scp_clients)
     indy_startup(config, logger, ssh_clients, scp_clients)

@@ -17,6 +17,7 @@ import random
 
 from BlockchainFormation.utils.utils import *
 
+
 def sawtooth_shutdown(config, logger, ssh_clients, scp_clients):
 
     """
