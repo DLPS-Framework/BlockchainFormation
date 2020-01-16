@@ -39,8 +39,7 @@
   rm go1.12.7.linux-amd64.tar.gz
 
   # Cloning hyperledger fabric + docker images
-  # curl -sSL http://bit.ly/2ysbOFE | sudo bash -s 2.0.0-alpha 2.0.0-alpha 0.4.18
-  curl -sSL http://bit.ly/2ysbOFE | sudo bash -s 1.4.4 1.4.4. 0.4.18
+  curl -sSL http://bit.ly/2ysbOFE | sudo bash -s -- 2.0.0-alpha 1.4.4 0.4.18
 
   docker pull hyperledger/fabric-zookeeper
 
