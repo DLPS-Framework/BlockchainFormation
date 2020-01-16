@@ -162,3 +162,5 @@ dmypy.json
 
 experiments/*
 BlockchainFormation/experiments/*
+BlockchainFormation/example_config_files/bmw_configs
+.gitignore
