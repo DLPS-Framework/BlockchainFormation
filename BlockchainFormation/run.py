@@ -13,7 +13,6 @@
 #  limitations under the License.
 
 
-
 import sys, os, argparse
 import json
 import datetime, time
@@ -206,11 +205,9 @@ class ArgParser:
         parser.add_argument('--aws_spot_instances',
                             help='Boolean if spot instances should be used for aws', default=False, type=bool)
 
-
     @staticmethod
     def _add_corda_args(parser):
         parser.add_argument('--message', help='test message', default='Hallo')
-
 
     @staticmethod
     def _add_fabric_args(parser):
@@ -441,10 +438,8 @@ class ArgParser:
         else:
             return None
 
-
     @staticmethod
     def _add_load_balancer_config(namespace_dict):
-
 
         if 'add_loadbalancer' in namespace_dict and namespace_dict['add_loadbalancer']:
             return \
@@ -596,7 +591,6 @@ class ArgParser:
             raise Exception("Config file needs to be of type JSON")
 
 
-
 if __name__ == '__main__':
     argparser = ArgParser()
     namespace = argparser.parser.parse_args()
@@ -629,7 +623,7 @@ if __name__ == '__main__':
             vm_handler.run_general_startup()
         except (Exception, KeyboardInterrupt) as e:
             logger.exception(e)
-            if (yes_or_no("Do you want to shut down the whole network?")):
+            if yes_or_no("Do you want to shut down the whole network?"):
                 vm_handler.run_general_shutdown()
 
     elif namespace.goal == 'termination':
