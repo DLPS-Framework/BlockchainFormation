@@ -283,6 +283,7 @@ class ArgParser:
     @staticmethod
     def _add_indy_args(parser):
         parser.add_argument('--clients', help='some number defining the maximum amount of clients', type=int, default=5)
+        parser.add_argument('--public_network', help='Choose 1 if you need a network available over pulbic ips', type=int, default=0)
 
     @staticmethod
     def _add_parity_args(parser):
@@ -530,8 +531,8 @@ class ArgParser:
         elif blockchain_type == "indy":
             return\
                 {
-                    "clients": namespace_dict['clients']
-
+                    "clients": namespace_dict['clients'],
+                    "public_network": namespace_dict['public_network']
                 }
 
         elif blockchain_type == "parity":

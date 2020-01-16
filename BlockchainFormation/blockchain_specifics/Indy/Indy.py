@@ -60,30 +60,43 @@ def indy_startup(config, logger, ssh_clients, scp_clients):
     node_nums = ""
 
     for node, _ in enumerate(config['priv_ips']):
+        if config['indy_settings']['public_network'] == 1:
+            ip = config['pub_ips'][node]
+        else:
+            ip = config['priv_ips'][node]
+
         node_names.append(f"Node{node+1}")
         node_name = hashlib.md5(node_names[node].encode()).hexdigest()
         node_seeds.append(node_name)
         if ips_string != "":
             ips_string = ips_string + ","
-        ips_string = ips_string + config['priv_ips'][node]
+        ips_string = ips_string + ip
 
         if node_nums != "":
             node_nums = node_nums + " "
         node_nums = node_nums + f"{node+1}"
 
+    logger.info(f"Node_names: {node_names}")
+    logger.info(f"Node_nums: {node_nums}")
+    logger.info(f"Ips_string: {ips_string}")
+
     port = 9700
     channels = []
 
     for node, _ in enumerate(config['priv_ips']):
+
         init_string = f"init_indy_keys --name {node_names[node]} --seed {node_seeds[node]}"
+        logger.debug(f"{init_string}")
         stdin, stdout, stderr = ssh_clients[node].exec_command(f"{init_string} && echo \"{init_string}\" >> commands.txt")
         wait_and_log(stdout, stderr)
         tx_string = f"generate_indy_pool_transactions --nodes {len(ssh_clients)} --clients {config['indy_settings']['clients']} --nodeNum {node+1} --ips \'{ips_string}\' --network my-net"
+        logger.debug(f"{tx_string}")
         stdin, stdout, stderr = ssh_clients[node].exec_command(f"{tx_string} && echo \"{tx_string}\" >> commands.txt")
         wait_and_log(stdout, stderr)
         channel = ssh_clients[node].get_transport().open_session()
         channels.append(channel)
         start_string = f"screen -dmS indy-node start_indy_node {node_names[node]} 0.0.0.0 {port+1} 0.0.0.0 {port+2} -vv"
+        logger.debug(f"{start_string}")
         channels[node].exec_command(f"{start_string} && echo \"{start_string}\" >> commands.txt")
         port = port + 2
         time.sleep(5)
