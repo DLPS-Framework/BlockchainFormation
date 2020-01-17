@@ -262,7 +262,7 @@ class VMHandler:
                 }
 
             } if 'aws_spot_instances' in self.config and self.config['aws_spot_instances'] else {},
-             NetworkInterfaces=[
+            NetworkInterfaces=[
                 {
                     'DeviceIndex': 0,
                     'SubnetId': self.config['subnet_id'],
@@ -396,7 +396,6 @@ class VMHandler:
         # if yes_or_no("Do you want to shut down the whole network?"):
             # self.run_general_shutdown()
 
-
     def _run_specific_startup(self, ssh_clients, scp_clients):
         """starts startup for given config (geth, parity, etc....)"""
 
@@ -450,7 +449,6 @@ class VMHandler:
         except Exception as e:
             self.logger.exception(e)
             self.logger.info("Some scp_client was already closed")
-
 
     def run_general_shutdown(self):
         """

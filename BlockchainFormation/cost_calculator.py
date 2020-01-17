@@ -43,7 +43,6 @@ class AWSCostCalculator:
 
         self.session = session
 
-
     def calculate_uptime_costs(self, config):
         """
         Calculate uptime costs from launch to stopping of the VMs
