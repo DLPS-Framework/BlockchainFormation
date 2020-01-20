@@ -25,12 +25,15 @@ from scp import SCPClient
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from BlockchainFormation.cost_calculator import AWSCostCalculator
 from BlockchainFormation.blockchain_specifics.Corda.Corda import *
+from BlockchainFormation.blockchain_specifics.CouchDB.CouchDB import *
 from BlockchainFormation.blockchain_specifics.Fabric.Fabric import *
+from BlockchainFormation.blockchain_specifics.Empty.Empty import *
 from BlockchainFormation.blockchain_specifics.Indy.Indy import *
 from BlockchainFormation.blockchain_specifics.Geth.Geth import *
 from BlockchainFormation.blockchain_specifics.Parity.Parity import *
 from BlockchainFormation.blockchain_specifics.Quorum.Quorum import *
 from BlockchainFormation.blockchain_specifics.Sawtooth.Sawtooth import *
+from BlockchainFormation.blockchain_specifics.Tezos.Tezos import *
 from BlockchainFormation.blockchain_specifics.Client.Client import *
 from BlockchainFormation.lb_handler import *
 from BlockchainFormation.utils.utils import *
@@ -403,8 +406,15 @@ class VMHandler:
         if self.config['blockchain_type'] == 'corda':
             corda_startup(self.config, self.logger, ssh_clients, scp_clients)
 
+        elif self.config['blockchain_type'] == 'couchdb':
+            couchdb_startup(self.config, self.logger, ssh_clients, scp_clients)
+
+
         elif self.config['blockchain_type'] == 'fabric':
             fabric_startup(self.config, self.logger, ssh_clients, scp_clients)
+
+        elif self.config['blockchain_type'] == 'empty':
+            empty_startup(self.config, self.logger, ssh_clients, scp_clients)
 
         elif self.config['blockchain_type'] == 'indy':
             indy_startup(self.config, self.logger, ssh_clients, scp_clients)
@@ -432,6 +442,9 @@ class VMHandler:
 
         elif self.config['blockchain_type'] == 'sawtooth':
             sawtooth_startup(self.config, self.logger, ssh_clients, scp_clients)
+
+        elif self.config['blockchain_type'] == 'tezos':
+            tezos_startup(self.config, self.logger, ssh_clients, scp_clients)
 
         else:
             pass
