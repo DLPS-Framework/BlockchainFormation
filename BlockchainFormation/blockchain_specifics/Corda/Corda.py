@@ -24,7 +24,7 @@ import hashlib
 
 def corda_shutdown(config, logger, ssh_clients, scp_clients):
     """
-    runs the quorum specific shutdown operations (e.g. pulling the associated logs from the VMs)
+    runs the corda specific shutdown operations (e.g. pulling the associated logs from the VMs)
     :return:
     """
 
@@ -33,7 +33,7 @@ def corda_shutdown(config, logger, ssh_clients, scp_clients):
 
 def corda_startup(config, logger, ssh_clients, scp_clients):
     """
-    Runs the geth specific startup script
+    Runs the corda specific startup script
     :return:
     """
 
