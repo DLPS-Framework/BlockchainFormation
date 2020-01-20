@@ -22,7 +22,8 @@ import logging
 # File containing helper functions
 
 
-def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, typical_time, logger, func_part_one = "tail -n 1", func_part_two=" "):
+def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, typical_time, logger,
+                   func_part_one = "tail -n 1", func_part_two=" "):
 
     """
     Waits until a job is done on all of the target VMs
@@ -48,14 +49,15 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
     while (False in status_flags and timer < total_time):
         time.sleep(delta)
         timer += delta
-        logger.debug(f" --> Waited {timer} seconds so far, {total_time - timer} seconds left before abort (it usually takes less than {np.ceil(typical_time/60)} minutes)")
+        logger.debug(f" --> Waited {timer} seconds so far, {total_time - timer} seconds left before abort"
+                     f"(it usually takes less than {np.ceil(typical_time/60)} minutes)")
 
         for index, ip in enumerate(ips):
-            if (status_flags[index] == False):
+            if status_flags[index] is False:
                 try:
                     client_sftp = ssh_clients[index].open_sftp()
                     client_sftp.stat(path)
-                    if (message != False):
+                    if message is not False:
                         stdin, stdout, stderr = ssh_clients[index].exec_command(f"{func_part_one} {path} {func_part_two}")
 
                         # read line from stdout
@@ -84,15 +86,15 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
                         try:
                             client_sftp = ssh_clients[index].open_sftp()
                             client_sftp.stat(path)
-                            if (message != False):
+                            if message is not False:
                                 stdin, stdout, stderr = ssh_clients[index].exec_command(f"tail -n 1 {path}")
                                 if stdout.readlines()[0] == f"{message}\n":
-                                   status_flags[index] = True
-                                   # logger.debug(f"   --> ready on {ip}")
-                                   continue
+                                    status_flags[index] = True
+                                    # logger.debug(f"   --> ready on {ip}")
+                                    continue
                                 else:
-                                   # logger.debug(f"   --> not yet ready on {ip}")
-                                   continue
+                                    # logger.debug(f"   --> not yet ready on {ip}")
+                                    continue
 
                             status_flags[index] = True
                             # logger.debug(f"   --> ready on {ip}")
@@ -132,6 +134,7 @@ def yes_or_no(question):
         return 0
     else:
         return yes_or_no("Please Enter (y/n) ")
+
 
 def wait_and_log(stdout, stderr):
 
