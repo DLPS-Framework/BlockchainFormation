@@ -62,12 +62,24 @@ class ArgParser:
         parser_corda.set_defaults(blockchain_type='corda')
         ArgParser._add_common_args(parser_corda)
         ArgParser._add_corda_args(parser_corda)
+        
+        # couchdb parser
+        parser_couchdb = subparsers.add_parser('couchdb', help='Single couchdb node')
+        parser_couchdb.set_defaults(blockchain_type='couchdb')
+        ArgParser._add_common_args(parser_couchdb)
+        ArgParser._add_couchdb_args(parser_couchdb)
 
         # fabric parser
         parser_fabric = subparsers.add_parser('fabric', help='Fabric Network')
         parser_fabric.set_defaults(blockchain_type='fabric')
         ArgParser._add_common_args(parser_fabric)
         ArgParser._add_fabric_args(parser_fabric)
+        
+        # empty parser
+        parser_empty = subparsers.add_parser('empty', help='empty node setup')
+        parser_empty.set_defaults(blockchain_type='empty')
+        ArgParser._add_common_args(parser_empty)
+        ArgParser._add_empty_args(parser_empty)
 
         # geth parser
         parser_geth = subparsers.add_parser('geth', help='Geth Network')
@@ -100,6 +112,12 @@ class ArgParser:
         parser_sawtooth.set_defaults(blockchain_type='sawtooth')
         ArgParser._add_common_args(parser_sawtooth)
         ArgParser._add_sawtooth_args(parser_sawtooth)
+        
+        # tezos parser
+        parser_tezos = subparsers.add_parser('tezos', help='tezos Network')
+        parser_tezos.set_defaults(blockchain_type='tezos')
+        ArgParser._add_common_args(parser_tezos)
+        ArgParser._add_tezos_args(parser_tezos)
 
         # client parser
         parser_client = subparsers.add_parser('client', help='Set up Clients')
@@ -210,6 +228,10 @@ class ArgParser:
         parser.add_argument('--message', help='test message', default='Hallo')
 
     @staticmethod
+    def _add_couchdb_args(parser):
+        pass
+
+    @staticmethod
     def _add_fabric_args(parser):
         parser.add_argument('--database', help='choose between LevelDB and CouchDB as database', default='CouchDB')
         parser.add_argument('--org_count', help='specify number of organizations', type=int, default=2)
@@ -236,6 +258,10 @@ class ArgParser:
         parser.add_argument('--log_level',
                             help='the logging severity levels are specified using case-insensitive strings chosen from << FATAL | PANIC | ERROR | WARNING | INFO | DEBUG >>',
                             default="debug")
+
+    @staticmethod
+    def _add_empty_args(parser):
+        pass
 
     @staticmethod
     def _add_geth_args(parser):
@@ -327,6 +353,10 @@ class ArgParser:
 
     @staticmethod
     def _add_sawtooth_args(parser):
+        pass
+
+    @staticmethod
+    def _add_tezos_args(parser):
         pass
 
     @staticmethod
@@ -472,6 +502,11 @@ class ArgParser:
                     "message": namespace_dict["message"]
                 }
 
+        elif blockchain_type == "couchdb":
+            return\
+                {
+                }
+
         elif blockchain_type == "fabric":
             return\
                 {
@@ -495,6 +530,11 @@ class ArgParser:
                     "endorsement_policy": namespace_dict['endorsement_policy'],
                     "log_level": namespace_dict['log_level']
 
+                }
+
+        elif blockchain_type == "empty":
+            return\
+                {
                 }
 
         elif blockchain_type == "geth":
@@ -574,6 +614,12 @@ class ArgParser:
                     "sawtooth.poet.target_wait_time": namespace_dict["sawtooth.poet.target_wait_time"],
                     "sawtooth.publisher.max_batches_per_block": namespace_dict["sawtooth.publisher.max_batches_per_block"]
                 }
+
+        elif blockchain_type == "tezos":
+            return\
+                {
+                }
+
 
     def load_config(self, namespace_dict):
         """
