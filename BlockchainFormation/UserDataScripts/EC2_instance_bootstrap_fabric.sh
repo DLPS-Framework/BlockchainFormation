@@ -56,7 +56,7 @@
   # Changing permissions for fabric-samples repository
   sudo chown -R ubuntu:ubuntu /data/fabric-samples/
 
-# =======  Create success indicator at end of this script ==========
+  # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log
   sudo reboot
 
