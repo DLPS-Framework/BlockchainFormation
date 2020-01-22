@@ -1,6 +1,9 @@
 include BlockchainFormation/UserDataScripts/*
 include BlockchainFormation/blockchain_specifics/*
 include BlockchainFormation/blockchain_specifics/Corda/*
+include BlockchainFormation/blockchain_specifics/CouchDB/*
+include BlockchainFormation/blockchain_specifics/CouchDB/setup/*
+include BlockchainFormation/blockchain_specifics/Empty/*
 include BlockchainFormation/blockchain_specifics/Fabric/chaincode/benchcontract/*
 include BlockchainFormation/blockchain_specifics/Fabric/setup/*
 include BlockchainFormation/blockchain_specifics/Fabric/*
@@ -11,4 +14,5 @@ include BlockchainFormation/blockchain_specifics/Quorum/*
 include BlockchainFormation/blockchain_specifics/Geth/*
 include BlockchainFormation/blockchain_specifics/Parity/*
 include BlockchainFormation/blockchain_specifics/Client/*
+include BlockchainFormation/blockchain_specifics/Tezos/*
 include BlockchainFormation/utils/*
