@@ -30,16 +30,8 @@
   # Testing whether docker runs without user permissions
   docker run hello-world
 
-  # Setting up go (TODO: check whether go is necessary)
-  # echo 'Y' | sudo apt-get install golang-go
-  wget -c https://dl.google.com/go/go1.12.7.linux-amd64.tar.gz
-  sudo tar -xvzf go1.12.7.linux-amd64.tar.gz -C /usr/local
-  rm go1.12.7.linux-amd64.tar.gz
-
-
   # Get CouchDB image
   docker pull apache/couchdb:latest
-
 
   # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log
