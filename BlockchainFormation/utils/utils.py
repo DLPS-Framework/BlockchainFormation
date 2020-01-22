@@ -53,11 +53,11 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
                      f"(it usually takes less than {np.ceil(typical_time/60)} minutes)")
 
         for index, ip in enumerate(ips):
-            if status_flags[index] is False:
+            if (status_flags[index] == False):
                 try:
                     client_sftp = ssh_clients[index].open_sftp()
                     client_sftp.stat(path)
-                    if message is not False:
+                    if (message != False):
                         stdin, stdout, stderr = ssh_clients[index].exec_command(f"{func_part_one} {path} {func_part_two}")
 
                         # read line from stdout
@@ -86,7 +86,7 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
                         try:
                             client_sftp = ssh_clients[index].open_sftp()
                             client_sftp.stat(path)
-                            if message is not False:
+                            if (message != False):
                                 stdin, stdout, stderr = ssh_clients[index].exec_command(f"tail -n 1 {path}")
                                 if stdout.readlines()[0] == f"{message}\n":
                                     status_flags[index] = True
