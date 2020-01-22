@@ -37,4 +37,6 @@ def tezos_startup(config, logger, ssh_clients, scp_clients):
     :return:
     """
 
-    pass
+    for index, _ in enumerate(config['priv_ips']):
+        channel = ssh_clients[index].get_transport().open_session()
+        channel.exec_command("(cd /home/ubuntu/tezos && ./src/bin_node/tezos-sandboxed-node.sh 1 --connections 1 > /home/ubuntu/tezos_node.log)")
