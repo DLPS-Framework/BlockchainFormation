@@ -28,9 +28,28 @@ def couchdb_shutdown(config, logger, ssh_clients, scp_clients):
     :return:
     """
 
-    stdin, stdout, stderr = ssh_clients[0].exec_command("docker kill couchdb")
+    logger.info("Shutting down the CouchDB instance")
+
+    """
+    stdin, stdout, stderr = ssh_clients[0].exec_command("docker kill mycouch && rm -r /data/CouchDB_database_dir && mkdir /data/CouchDB_database_dir")
     logger.debug(stdout.readlines())
     logger.debug(stderr.readlines())
+
+    logger.info("Checking whether everything is shut down cleanly")
+    stdin, stdout, stderr = ssh_clients[0].exec_command("docker ps && docker image ls")
+    logger.debug(stdout.readlines())
+    logger.debug(stderr.readlines())
+    """
+
+    channel = ssh_clients[0].get_transport().open_session()
+    channel.exec_command("sudo reboot")
+
+    time.sleep(5)
+
+    # Wait until user Data is finished
+    if False in wait_till_done(config, ssh_clients, config['ips'], 30 * 60, 60, "/var/log/user_data_success.log", False, 10 * 60, logger):
+        logger.error('CouchDB shutdown successful')
+
 
     logger.info("")
     logger.info("**************** !!! CouchDB shutdown was successful !!! *********************")
@@ -44,6 +63,8 @@ def couchdb_startup(config, logger, ssh_clients, scp_clients):
     Runs the geth specific startup script
     :return:
     """
+
+    dir_name = os.path.dirname(os.path.realpath(__file__))
 
     # the indices of the blockchain nodes
     config['node_indices'] = list(range(0, config['vm_count']))
@@ -94,18 +115,25 @@ def couchdb_startup(config, logger, ssh_clients, scp_clients):
         logger.info("Docker swarm setup was not successful")
         sys.exit("Fatal error when performing docker swarm setup")
 
+    stdin, stdout, stderr = ssh_clients[0].exec_command("mkdir /data/CouchDB_database_dir && mkdir /home/ubuntu/couchdb && mkdir /home/ubuntu/couchdb/etc")
+    wait_and_log(stdout, stderr)
+    scp_clients[0].put(f"{dir_name}/setup", "/home/ubuntu/couchdb/etc", recursive=True)
+
+    start_docker(config, logger, ssh_clients)
+
+
+def start_docker(config, logger, ssh_clients):
+
     channel = ssh_clients[0].get_transport().open_session()
-    channel.exec_command("docker run --rm --name mycouch -p 5984:5984 -e COUCHDB_USER= -e COUCHDB_PASSWORD= couchdb")
+    channel.exec_command("docker run --rm --name mycouch -p 5984:5984 -e COUCHDB_USER= -e COUCHDB_PASSWORD= -v /data:/opt/couchdb/data -v /home/ubuntu/couchdb/etc:/opt/couchdb/etc/local.d couchdb")
 
     time.sleep(60)
 
     stdin, stdout, stderr = ssh_clients[0].exec_command("docker ps")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
+    wait_and_log(stdout, stderr)
 
     stdin, stdout, stderr = ssh_clients[0].exec_command(f"curl http://{config['priv_ips'][0]}:5984")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
+    wait_and_log(stdout, stderr)
 
     logger.info("")
     logger.info("**************** !!! CouchDB setup was successful !!! *********************")
@@ -113,6 +141,5 @@ def couchdb_startup(config, logger, ssh_clients, scp_clients):
 
 
 def couchdb_restart(config, logger, ssh_clients, scp_clients):
-
     couchdb_shutdown(config, logger, ssh_clients, scp_clients)
-    couchdb_startup(config, logger, ssh_clients, scp_clients)
+    start_docker(config, logger, ssh_clients)
