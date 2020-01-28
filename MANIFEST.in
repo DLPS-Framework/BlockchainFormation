@@ -15,4 +15,5 @@ include BlockchainFormation/blockchain_specifics/Geth/*
 include BlockchainFormation/blockchain_specifics/Parity/*
 include BlockchainFormation/blockchain_specifics/Client/*
 include BlockchainFormation/blockchain_specifics/Tezos/*
+include BlockchainFormation/blockchain_specifics/Tezos/setup/*
 include BlockchainFormation/utils/*
