@@ -812,8 +812,6 @@ def write_configtx(config, logger):
 
 def write_collections(config, logger):
 
-    dir_name = os.path.dirname(os.path.realpath(__file__))
-
     with open(f"{config['exp_dir']}/setup/collections.json", "w+") as file:
 
         if config['fabric_settings']['private_fors'] == "all":
@@ -823,10 +821,10 @@ def write_collections(config, logger):
 
         collections = []
 
-        for org, _ in enumerate(config['fabric_settings']['org_count']):
+        for org in range(1, config['fabric_settings']['org_count'] + 1):
             collection = {}
 
-            policy = "\"OR("
+            policy = "OR("
 
             for index in range(n):
                 if index != 0:
@@ -834,7 +832,7 @@ def write_collections(config, logger):
 
                 policy = policy + f"'Org{((org+index)%config['fabric_settings']['org_count']) + 1}MSP.member'"
 
-            policy = policy + ")\""
+            policy = policy + ")"
 
             collection['name'] = f"Collection{org}"
             collection['policy'] = policy
@@ -845,7 +843,7 @@ def write_collections(config, logger):
 
             collections.append(collection)
 
-    json.dump(collections, file, default=datetimeconverter, indent=4)
+        json.dump(collections, file, default=datetimeconverter, indent=4)
 
 
 def write_script(config, logger):
