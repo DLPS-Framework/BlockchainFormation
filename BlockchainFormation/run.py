@@ -233,6 +233,8 @@ class ArgParser:
 
     @staticmethod
     def _add_fabric_args(parser):
+        parser.add_argument('--version', help='specify in a dictionary fabric_version, fabric_ca_version, and thirdparty_version')
+        parser.add_argument('--channel_count', help='specify the number of channels which are set up')
         parser.add_argument('--database', help='choose between LevelDB and CouchDB as database', default='CouchDB')
         parser.add_argument('--org_count', help='specify number of organizations', type=int, default=2)
         parser.add_argument('--peer_count', help='specify number of peers per organization', type=int, default=3)
@@ -510,6 +512,8 @@ class ArgParser:
         elif blockchain_type == "fabric":
             return\
                 {
+                    "version": namespace_dict['version'],
+                    "channel_count": namespace_dict['channel_count'],
                     "database": namespace_dict['database'],
                     "org_count": namespace_dict['org_count'],
                     "peer_count": namespace_dict['peer_count'],
