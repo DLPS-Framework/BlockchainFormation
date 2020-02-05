@@ -123,9 +123,9 @@ class VMHandler:
         elif self.config['blockchain_type'] == 'fabric':
 
             os.system(f"cp {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric.sh {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh")
-            os.system(f"sed -i -e 's/substitute_fabric_version/{self.config['fabric_settings']['version']['fabric_version']}/g' {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh")
-            os.system(f"sed -i -e 's/substitute_fabric_ca_version/{self.config['fabric_settings']['version']['fabric_ca_version']}/g' {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh")
-            os.system(f"sed -i -e 's/substitute_fabric_thirdparty_version/{self.config['fabric_settings']['version']['thirdparty_version']}/g' {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh")
+            os.system(f"sed -i -e 's/substitute_fabric_version/{self.config['fabric_settings']['fabric_version']}/g' {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh")
+            os.system(f"sed -i -e 's/substitute_fabric_ca_version/{self.config['fabric_settings']['fabric_ca_version']}/g' {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh")
+            os.system(f"sed -i -e 's/substitute_fabric_thirdparty_version/{self.config['fabric_settings']['thirdparty_version']}/g' {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh")
 
             with open(f"{dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh", 'r') as content_file:
                 user_data_specific = content_file.read()
