@@ -128,13 +128,16 @@ function generateCerts (){
 # this crypto implementation.
 
 function generateAnchorPeerUpdate() {
+
+    CHANNEL_NAME=$2
+
     echo
-    echo "#################################################################"
-    echo "#######    Generating anchor peer update for Org$1MSP   ##########"
-    echo "#################################################################"
-    configtxgen -profile ChannelConfig -outputAnchorPeersUpdate ./channel-artifacts/Org$1MSPanchors.tx -channelID $CHANNEL_NAME -asOrg Org$1MSP
+    echo "###########################################################################################"
+    echo "#######    Generating anchor peer update for Org$1MSP for channel ${CHANNEL_NAME}   #######"
+    echo "###########################################################################################"
+    configtxgen -profile ChannelConfig -outputAnchorPeersUpdate ./channel-artifacts/Org$1MSPanchors$CHANNEL_NAME.tx -channelID $CHANNEL_NAME -asOrg Org$1MSP
     if [ "$?" -ne 0 ]; then
-      echo "Failed to generate anchor peer update for Org$1MSP..."
+      echo "Failed to generate anchor peer update for Org$1MSP on channel ${CHANNEL_NAME}..."
       exit 1
     fi
     echo
@@ -143,15 +146,18 @@ function generateAnchorPeerUpdate() {
 # Generate orderer genesis block, channel configuration transaction and
 # anchor peer update transactions
 function generateChannelArtifacts() {
+
+    CHANNEL_NAME=$1
+
     which configtxgen
     if [ "$?" -ne 0 ]; then
         echo "configtxgen tool not found. exiting"
         exit 1
     fi
 
-    echo "##########################################################"
-    echo "#########  Generating Orderer Genesis block ##############"
-    echo "##########################################################"
+    echo "#####################################################################"
+    echo "#########  Generating Orderer Genesis block for syschannel  #########"
+    echo "#####################################################################"
     # Note: For some unknown reason (at least for now) the block file can't be
     # named orderer.genesis.block or the orderer will fail to launch!
     # configtxgen -profile OneOrgOrdererGenesis -outputBlock ./channel-artifacts/genesis.block
@@ -163,17 +169,17 @@ function generateChannelArtifacts() {
         exit 1
     fi
     echo
-    echo "#################################################################"
-    echo "### Generating channel configuration transaction 'channel.tx' ###"
-    echo "#################################################################"
-    configtxgen -profile ChannelConfig -outputCreateChannelTx ./channel-artifacts/channel.tx -channelID $CHANNEL_NAME
+    echo "#######################################################################"
+    echo "### Generating channel configuration transaction ${CHANNEL_NAME}.tx ###"
+    echo "#######################################################################"
+    configtxgen -profile ChannelConfig -outputCreateChannelTx ./channel-artifacts/$CHANNEL_NAME.tx -channelID $CHANNEL_NAME
     if [ "$?" -ne 0 ]; then
-      echo "Failed to generate channel configuration transaction..."
+      echo "Failed to generate channel configuration transaction for channel ${CHANNEL_NAME}..."
       exit 1
     fi
 
     for ORG in substitute_enum_orgs; do
-        generateAnchorPeerUpdate $ORG
+        generateAnchorPeerUpdate $ORG $CHANNEL_NAME
     done
 }
 
@@ -185,18 +191,17 @@ OS_ARCH=$(echo "$(uname -s|tr '[:upper:]' '[:lower:]'|sed 's/mingw64_nt.*/window
 CLI_TIMEOUT=10
 #default for delay
 CLI_DELAY=3
-# channel name defaults to "mychannel"
-CHANNEL_NAME="mychannel"
 
 EXPMODE="Generating certs and genesis block for"
 
+declare -a CHANNELS=substitute_enum_channels
+
 # Announce what was requested
+for CHANNEL_NAME in ${CHANNELS[@]}; do
 
-echo "${EXPMODE} with channel '${CHANNEL_NAME}' and CLI timeout of '${CLI_TIMEOUT}'"
+    echo "${EXPMODE} with channel ${CHANNEL_NAME} and CLI timeout of ${CLI_TIMEOUT}"
 
-# ask for confirmation to proceed
-askProceed
-
-# generate crypto-material
-generateCerts
-generateChannelArtifacts
+    # generate crypto-material
+    generateCerts
+    generateChannelArtifacts $CHANNEL_NAME
+done

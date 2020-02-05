@@ -178,13 +178,24 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
     logger.debug(out)
     logger.debug(stderr.readlines())
 
+
     logger.info(f"Creating bmhn.sh and pushing it to {config['ips'][0]}")
     os.system(f"cp {dir_name}/setup/bmhn_raw.sh {config['exp_dir']}/setup/bmhn.sh")
     enum_orgs = "1"
     for org in range(2, config['fabric_settings']['org_count'] + 1):
         enum_orgs = enum_orgs + f" {org}"
 
+    enum_channels = '('
+    for channel in range(1, config['fabric_settings']['channel_count'] + 1):
+        if channel!=1:
+            enum_channels = enum_channels + ' '
+
+        enum_channels = enum_channels + f"mychannel{channel}"
+
+    enum_channels = enum_channels + ')'
+
     os.system(f"sed -i -e 's/substitute_enum_orgs/{enum_orgs}/g' {config['exp_dir']}/setup/bmhn.sh")
+    os.system(f"sed -i -e 's/substitute_enum_channels/{enum_channels}/g' {config['exp_dir']}/setup/bmhn.sh")
     stdin, stdout, stderr = ssh_clients[0].exec_command("rm -f /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/bmhn.sh")
     stdout.readlines()
     # logger.debug("".join(stdout.readlines()))
@@ -214,6 +225,8 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
     # pushing the ssh-key and the chaincode on the first vm
     scp_clients[0].put(f"{config['priv_key_path']}", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem")
     scp_clients[0].put(f"{dir_name}/chaincode/benchcontract", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode", recursive=True)
+    write_collections(config, logger)
+    scp_clients[0].put(f"{config['exp_dir']}/setup/collections.json", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode")
     logger.debug("Successfully pushed to index 0.")
 
     finished_indices = [indices[0]]
@@ -795,12 +808,49 @@ def write_configtx(config, logger):
 
 
     f.close()
-    
+
+
+def write_collections(config, logger):
+
+    dir_name = os.path.dirname(os.path.realpath(__file__))
+
+    with open(f"{config['exp_dir']}/setup/collections.json", "w+") as file:
+
+        if config['fabric_settings']['private_fors'] == "all":
+            n = config['fabric_settings']['org_count']
+        else:
+            n = config['fabric_settings']['private_fors']
+
+        collections = []
+
+        for org, _ in enumerate(config['fabric_settings']['org_count']):
+            collection = {}
+
+            policy = "\"OR("
+
+            for index in range(n):
+                if index != 0:
+                    policy = policy + ","
+
+                policy = policy + f"'Org{((org+index)%config['fabric_settings']['org_count']) + 1}MSP.member'"
+
+            policy = policy + ")\""
+
+            collection['name'] = f"Collection{org}"
+            collection['policy'] = policy
+            collection['requiredPeerCount'] = 1
+            collection['maxPeerCount'] = config['fabric_settings']['peer_count']
+            collection['blockToLive'] = 1000000
+            collection['memberOnlyRead'] = True
+
+            collections.append(collection)
+
+    json.dump(collections, file, default=datetimeconverter, indent=4)
+
 
 def write_script(config, logger):
     dir_name = os.path.dirname(os.path.realpath(__file__))
-    os.system(
-        f"cp {dir_name}/setup/script_raw_1.sh {config['exp_dir']}/setup/script.sh")
+    os.system(f"cp {dir_name}/setup/script_raw_1.sh {config['exp_dir']}/setup/script.sh")
 
     f = open(f"{config['exp_dir']}/setup/script2.sh", "w+")
 
@@ -1190,23 +1240,25 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
     string_cli_v = string_cli_v + f" -w /opt/gopath/src/github.com/hyperledger/fabric/peer"
 
     # execute script.sh on last node
-    stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 script.sh && ls -la && cd .. && ./scripts/script.sh)' |& tee /home/ubuntu/setup.log)")
-    out = stdout.readlines()
 
-    # save the cli command on the last node and save it in exp_dir
-    ssh_clients[index_last_node].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash\" >> /data/cli2.sh)")
+    for channel in range(config['fabric_settings']['channel_count']):
+        stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 script.sh && ls -la && cd .. && ./scripts/script.sh mychannel{channel+1})' |& tee /home/ubuntu/setup.log)")
+        out = stdout.readlines()
 
-    if out[len(out) - 1] == "========= All GOOD, BMHN execution completed =========== \n":
-        logger.info("")
-        logger.info("**************** !!! Fabric network formation was successful !!! *********************")
-        logger.info("")
-    else:
-        logger.info("")
-        logger.info("******************!!! ERROR: Fabric network formation failed !!! *********************")
-        for index, _ in enumerate(out):
-            logger.debug(out[index].replace("\n", ""))
+        # save the cli command on the last node and save it in exp_dir
+        ssh_clients[index_last_node].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash\" >> /data/cli2.sh)")
 
-        raise Exception("Blockchain did not start properly - Omitting or repeating")
+        if out[len(out) - 1] == "========= All GOOD, BMHN execution completed =========== \n":
+            logger.info("")
+            logger.info(f"**************** !!! Fabric network formation for channel{channel+1} was successful !!! *********************")
+            logger.info("")
+        else:
+            logger.info("")
+            logger.info(f"*******************!!! ERROR: Fabric network formation failed on channel{channel+1} !!! *********************")
+            for index, _ in enumerate(out):
+                logger.debug(out[index].replace("\n", ""))
+
+            raise Exception("Blockchain did not start properly - Omitting or repeating")
 
 
 def fabric_restart(config, logger, ssh_clients, scp_clients):
@@ -1220,7 +1272,7 @@ def fabric_restart(config, logger, ssh_clients, scp_clients):
 
 def push_stuff(config, ssh_clients, scp_clients, indices_sources, indices_targets, logger):
 
-    logger.debug(f"Sources: {indices_sources}, targets: {indices_targets}")
+    # logger.debug(f"Sources: {indices_sources}, targets: {indices_targets}")
 
     jobs = []
     for index, index_source in enumerate(indices_sources):

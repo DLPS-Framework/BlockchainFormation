@@ -3,7 +3,7 @@
 createChannel() {
 
     setGlobals 0 1
-    peer channel create -o orderer1.example.com:7050 -c $CHANNEL_NAME -f ./channel-artifacts/channel.tx substitute_tls>&log.txt
+    peer channel create -o orderer1.example.com:7050 -c $CHANNEL_NAME -f ./channel-artifacts/$CHANNEL_NAME.tx substitute_tls>&log.txt
     res=$?
     cat log.txt
     verifyResult $res "Channel creation failed"
@@ -15,7 +15,7 @@ updateAnchorPeers() {
     PEER=$1
     ORG=$2
     setGlobals $PEER $ORG
-    peer channel update -o orderer1.example.com:7050 -c $CHANNEL_NAME -f ./channel-artifacts/${CORE_PEER_LOCALMSPID}anchors.tx substitute_tls>&log.txt
+    peer channel update -o orderer1.example.com:7050 -c $CHANNEL_NAME -f ./channel-artifacts/${CORE_PEER_LOCALMSPID}anchors${CHANNEL_NAME}.tx substitute_tls>&log.txt
     res=$?
     cat log.txt
     verifyResult $res "Anchor peer update failed"
@@ -50,15 +50,18 @@ joinChannel () {
 }
 
 installBenchcontractChaincode () {
-    PEER=$1
-    ORG=$2
-    setGlobals $PEER $ORG
-    peer chaincode install -l node -n benchcontract -v 1.0 -p /opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/benchcontract substitute_tls>&log.txt
-    res=$?
-    cat log.txt
-    verifyResult $res "Benchcontract chaincode installation on remote peer PEER$PEER.ORG$ORG has Failed"
-    echo "$(date +'%Y-%m-%d %H:%M:%S:%3N')   ===================== Benchcontract chaincode successfully installed on remote peer PEER$PEER.ORG$ORG ===================== "
-    echo
+
+    if (test "$CHANNEL_NAME" = "mychannel1"); then
+      PEER=$1
+      ORG=$2
+      setGlobals $PEER $ORG
+      peer chaincode install -l node -n benchcontract -v 1.0 -p /opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/benchcontract substitute_tls>&log.txt
+      res=$?
+      cat log.txt
+      verifyResult $res "Benchcontract chaincode installation on remote peer PEER$PEER.ORG$ORG has Failed"
+      echo "$(date +'%Y-%m-%d %H:%M:%S:%3N')   ===================== Benchcontract chaincode successfully installed on remote peer PEER$PEER.ORG$ORG ===================== "
+      echo
+    fi
 }
 
 instantiateBenchcontractChaincode () {
@@ -68,7 +71,7 @@ instantiateBenchcontractChaincode () {
     peer chaincode instantiate -o orderer1.example.com:7050 -C $CHANNEL_NAME -l node -n benchcontract -v 1.0 -c '{"Args":["org.bench.benchcontract:instantiate"]}' -P 'substitute_endorsement' substitute_tls>&log.txt
     res=$?
     cat log.txt
-    verifyResult $res "Benchcontract chaincode instantiation on PEER$PEER.orgORG1 on channel '$CHANNEL_NAME' failed"
+      verifyResult $res "Benchcontract chaincode instantiation on PEER$PEER.orgORG1 on channel '$CHANNEL_NAME' failed"
     echo "$(date +'%Y-%m-%d %H:%M:%S:%3N')   ===================== Benchcontract chaincode instantiation on PEER$PEER.ORG$ORG on channel '$CHANNEL_NAME' was successful ===================== "
     echo
 }
@@ -103,7 +106,7 @@ benchcontractChaincodeQuery () {
     done
     echo
     cat log.txt
-    if test $rc -eq 0 ; then
+    if test $rc -eq 0; then
        echo "$(date +'%Y-%m-%d %H:%M:%S:%3N')   ===================== Benchcontract chaincode query on PEER$PEER.ORG$ORG on channel '$CHANNEL_NAME' was successful ===================== "
        echo
     else
