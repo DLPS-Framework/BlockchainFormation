@@ -1248,11 +1248,11 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
 
         if out[len(out) - 1] == "========= All GOOD, BMHN execution completed =========== \n":
             logger.info("")
-            logger.info(f"**************** !!! Fabric network formation for channel{channel+1} was successful !!! *********************")
+            logger.info(f"**************** !!! Fabric network formation for channel << mychannel{channel+1} >> was successful !!! *********************")
             logger.info("")
         else:
             logger.info("")
-            logger.info(f"*******************!!! ERROR: Fabric network formation failed on channel{channel+1} !!! *********************")
+            logger.info(f"*******************!!! ERROR: Fabric network formation failed on channel << mychannel{channel+1} >> !!! *********************")
             for index, _ in enumerate(out):
                 logger.debug(out[index].replace("\n", ""))
 
