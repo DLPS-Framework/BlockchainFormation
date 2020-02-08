@@ -226,7 +226,7 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
     scp_clients[0].put(f"{config['priv_key_path']}", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem")
     scp_clients[0].put(f"{dir_name}/chaincode/benchcontract", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode", recursive=True)
     write_collections(config, logger)
-    scp_clients[0].put(f"{config['exp_dir']}/setup/collections.json", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode")
+    scp_clients[0].put(f"{config['exp_dir']}/setup/collections.json", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode/benchcontract")
     logger.debug("Successfully pushed to index 0.")
 
     finished_indices = [indices[0]]
@@ -1240,7 +1240,7 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
     # execute script.sh on last node
 
     for channel in range(config['fabric_settings']['channel_count']):
-        stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 script.sh && ls -la && cd .. && ./scripts/script.sh mychannel{channel+1})' |& tee /home/ubuntu/setup.log)")
+        stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 script.sh && ls -la && cd .. && ./scripts/script.sh mychannel{channel+1})' |& tee /home/ubuntu/setup_mychannel{channel+1}.log)")
         out = stdout.readlines()
 
         # save the cli command on the last node and save it in exp_dir
