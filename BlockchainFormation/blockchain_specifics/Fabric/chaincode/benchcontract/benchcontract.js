@@ -72,6 +72,28 @@ class BenchContract extends Contract {
         return Buffer.from('1')
     }
 
+    async writeDataPrivate(ctx, name, key, value) {
+        await ctx.stub.putPrivateData(name,"key_" + key, Buffer.from("value_" + value))
+        return Buffer.from('2')
+    }
+
+
+    async writeDataPrivateImplicit(ctx, name, key, value) {
+        var collectionArray = name.split(",");
+        var promiseArray = [];
+        collectionArray.forEach(element => {
+            promiseArray.push(
+                ctx.stub.putPrivateData(
+                    element,
+                    key.toString(),
+                    Buffer.from(value)
+                )
+            );
+        });
+        await Promise.all(collectionArray);
+        return Buffer.from('1');
+    }
+
     /** Standard setters and getters
      * @param {Context} ctx the transaction context
      * @param {String} key  Primary key
@@ -79,6 +101,11 @@ class BenchContract extends Contract {
 
     async readData(ctx, key) {
         var tmp = await ctx.stub.getState("key_" + key)
+        return Buffer.from(tmp.toString())
+    }
+
+    async readDataPrivate(ctx, name, key) {
+        var tmp = await ctx.stub.getPrivateState(name, "key_" + key)
         return Buffer.from(tmp.toString())
     }
 

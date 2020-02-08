@@ -68,7 +68,7 @@ instantiateBenchcontractChaincode () {
     PEER=$1
     ORG=$2
     setGlobals $PEER $ORG
-    peer chaincode instantiate -o orderer1.example.com:7050 -C $CHANNEL_NAME -l node -n benchcontract -v 1.0 -c '{"Args":["org.bench.benchcontract:instantiate"]}' -P 'substitute_endorsement' substitute_tls>&log.txt
+    peer chaincode instantiate -o orderer1.example.com:7050 -C $CHANNEL_NAME -l node -n benchcontract -v 1.0 -c '{"Args":["org.bench.benchcontract:instantiate"]}' -P 'substitute_endorsement' --collections-config /opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/benchcontract/collections.json substitute_tls>&log.txt
     res=$?
     cat log.txt
       verifyResult $res "Benchcontract chaincode instantiation on PEER$PEER.orgORG1 on channel '$CHANNEL_NAME' failed"
