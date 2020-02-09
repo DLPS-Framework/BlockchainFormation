@@ -894,12 +894,22 @@ def write_script(config, logger):
     for org in range(2, config['fabric_settings']['org_count'] + 1):
         enum_orgs = enum_orgs + f" {org}"
 
-    enum_MSPmembers = " (\"'Org1MSP.member'\""
-    for org in range(2, config['fabric_settings']['org_count'] + 1):
-        enum_MSPmembers = enum_MSPmembers + f",\"'Org{org}MSP.member'\""
-    enum_MSPmembers = enum_MSPmembers + ")"
+    if config['fabric_settings']['endorsement_policy'] == "OR":
+        endorsers_count = 1
 
-    endorsement = config['fabric_settings']['endorsement_policy'] + enum_MSPmembers
+    elif config['fabric_settings']['endorsement_policy'] == "ALL":
+        endorsers_count = config['fabric_settings']['org_count']
+
+    elif config['fabric_settings']['endorsement_policy'] >= 1 and config['fabric_settings']['endorsement_policy'] <= config['fabric_settings']['org_count']:
+        endorsers_count = config['fabric_settings']['endorsement_policy']
+
+    else:
+        raise Exception("Invalid endorsement policy")
+
+    endorsement = f"OutOf ({endorsers_count}, \"'Org1MSP.member'\""
+    for org in range(2, config['fabric_settings']['org_count'] + 1):
+        endorsement = endorsement + f",\"'Org{org}MSP.member'\""
+    endorsement = endorsement + ")"
 
     os.system(f"sed -i -e 's/substitute_enum_peers/{enum_peers}/g' {config['exp_dir']}/setup/script.sh")
     os.system(f"sed -i -e 's/substitute_enum_orgs/{enum_orgs}/g' {config['exp_dir']}/setup/script.sh")
