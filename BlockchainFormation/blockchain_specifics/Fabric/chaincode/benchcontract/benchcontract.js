@@ -18,12 +18,10 @@
 SPDX-License-Identifier: Apache-2.0
 */
 
-'use strict';
+"use strict";
 
 // Fabric smart contract classes
-const { Contract, Context } = require('fabric-contract-api');
-
-
+const { Contract, Context } = require("fabric-contract-api");
 
 /**
  * Custom context
@@ -41,12 +39,12 @@ class BenchContext extends Context {
 class BenchContract extends Contract {
     constructor() {
         // Unique namespace when multiple contracts per chaincode file
-        super('org.bench.benchcontract');
+        super("org.bench.benchcontract");
     }
 
     /**
      * Define a custom context
-    */
+     */
     createContext() {
         return new BenchContext();
     }
@@ -58,7 +56,7 @@ class BenchContract extends Contract {
     async instantiate(ctx) {
         // No implementation required with this example
         // It could be where data migration is performed, if necessary
-        console.log('Instantiate the contract')
+        console.log("Instantiate the contract");
     }
 
     /** Standard setters and getters
@@ -68,30 +66,35 @@ class BenchContract extends Contract {
      */
 
     async writeData(ctx, key, value) {
-        await ctx.stub.putState("key_" + key, Buffer.from("value_" + value))
-        return Buffer.from('1')
+        await ctx.stub.putState("key_" + key, Buffer.from("value_" + value));
+        return Buffer.from("1");
     }
 
     async writeDataPrivate(ctx, name, key, value) {
-        await ctx.stub.putPrivateData(name,"key_" + key, Buffer.from("value_" + value))
-        return Buffer.from('2')
+        await ctx.stub.putPrivateData(name, "key_" + key, Buffer.from("value_" + value));
+        return Buffer.from("2");
     }
 
+    async writeDataPublicBufferPeer(ctx, key, bufferSize) {
+        const buffer = new Buffer(1024 * bufferSize);
+        await ctx.stub.putState("key_" + key, Buffer.from("value_" + buffer.toString()));
+        return Buffer.from("1");
+    }
+
+    async writeDataPrivateBufferPeer(ctx, name, key, bufferSize) {
+        const buffer = new Buffer(1024 * bufferSize);
+        await ctx.stub.putPrivateData(name, "key_" + key, Buffer.from("value_" + buffer.toString()));
+        return Buffer.from("2");
+    }
 
     async writeDataPrivateImplicit(ctx, name, key, value) {
         var collectionArray = name.split(",");
         var promiseArray = [];
         collectionArray.forEach(element => {
-            promiseArray.push(
-                ctx.stub.putPrivateData(
-                    element,
-                    key.toString(),
-                    Buffer.from(value)
-                )
-            );
+            promiseArray.push(ctx.stub.putPrivateData(element, key.toString(), Buffer.from(value)));
         });
         await Promise.all(collectionArray);
-        return Buffer.from('1');
+        return Buffer.from("2");
     }
 
     /** Standard setters and getters
@@ -100,13 +103,13 @@ class BenchContract extends Contract {
      */
 
     async readData(ctx, key) {
-        var tmp = await ctx.stub.getState("key_" + key)
-        return Buffer.from(tmp.toString())
+        var tmp = await ctx.stub.getState("key_" + key);
+        return Buffer.from(tmp.toString());
     }
 
     async readDataPrivate(ctx, name, key) {
-        var tmp = await ctx.stub.getPrivateState(name, "key_" + key)
-        return Buffer.from(tmp.toString())
+        var tmp = await ctx.stub.getPrivateData(name, "key_" + key);
+        return Buffer.from(tmp.toString());
     }
 
     /** Standard setters and getters
@@ -117,64 +120,92 @@ class BenchContract extends Contract {
      */
 
     async writeMuchData(ctx, len, start, delta) {
-        for (var i = parseInt(start, 10); i < (parseInt(start, 10) + parseInt(len, 10)); i++) {
-            await ctx.stub.putState("key_" + i.toString(), Buffer.from((parseInt(delta, 10) + i).toString()))
+        var promiseArray = [];
+        for (var i = parseInt(start, 10); i < parseInt(start, 10) + parseInt(len, 10); i++) {
+            promiseArray.push(ctx.stub.putState("key_" + i.toString(), Buffer.from((parseInt(delta, 10) + i).toString())));
         }
-        return Buffer.from('1')
+        await Promise.all(promiseArray);
+        return Buffer.from("1");
+    }
+
+    async writeMuchDataPrivate(ctx, name, len, start, delta) {
+        var promiseArray = [];
+        for (var i = parseInt(start, 10); i < parseInt(start, 10) + parseInt(len, 10); i++) {
+            promiseArray.push(ctx.stub.putPrivateData(name, "key_" + i.toString(), Buffer.from((parseInt(delta, 10) + i).toString())));
+        }
+        await Promise.all(promiseArray);
+        return Buffer.from("2");
     }
 
     async writeMuchData2(ctx, len, start, delta) {
-        var aggregate_key = {}
+        var aggregate_key = {};
         for (var i = 0; i < parseInt(len, 10); i++) {
-            aggregate_key["key_" + i.toString()] = (i + delta).toString()
+            aggregate_key["key_" + i.toString()] = (i + delta).toString();
         }
-        console.log(JSON.stringify(aggregate_key))
-        await ctx.stub.putState("key_" + start.toString(), Buffer.from(JSON.stringify(aggregate_key)))
-        return Buffer.from('1')
+        console.log(JSON.stringify(aggregate_key));
+        await ctx.stub.putState("key_" + start.toString(), Buffer.from(JSON.stringify(aggregate_key)));
+        return Buffer.from("1");
     }
 
-
-     /** Standard setters and getters
+    /** Standard setters and getters
      * @param {Context} ctx the transaction context
      * @param {String} len The number of writes
      * @param {String} start The index of the first write
      */
     async readMuchData(ctx, len, start) {
-        var sum = 0
-        for (var i = parseInt(start, 10); i < (parseInt(start, 10) + parseInt(len, 10)); i++) {
-            var tmp = await ctx.stub.getState("key_" + i.toString())
-            //console.log(sum)
-            sum += Number(tmp)
+        var promiseArray = [];
+        var sum = 0;
+        for (var i = parseInt(start, 10); i < parseInt(start, 10) + parseInt(len, 10); i++) {
+            promiseArray.push(
+                ctx.stub.getState("key_" + i.toString()).then(res => {
+                    sum += res;
+                })
+            );
         }
-        return Buffer.from(sum.toString())
+        await Promise.all(promiseArray);
+        return Buffer.from(sum.toString());
+    }
+
+    async readMuchDataPrivate(ctx, name, len, start) {
+        var promiseArray = [];
+        var sum = 0;
+        for (var i = parseInt(start, 10); i < parseInt(start, 10) + parseInt(len, 10); i++) {
+            promiseArray.push(
+                ctx.stub.getPrivateData(name, "key_" + i.toString()).then(res => {
+                    sum += res;
+                })
+            );
+        }
+        await Promise.all(promiseArray);
+        return Buffer.from(sum.toString());
     }
 
     async readMuchData2(ctx, len, start) {
-        var sum = 0
+        var sum = 0;
         try {
-            var tmp = await ctx.stub.getState("key_" + start.toString())
-            console.log(tmp)
-            var tmp2 = JSON.parse(tmp)
-            console.log(tmp2)
+            var tmp = await ctx.stub.getState("key_" + start.toString());
+            console.log(tmp);
+            var tmp2 = JSON.parse(tmp);
+            console.log(tmp2);
         } catch (err) {
-            console.log(err)
+            console.log(err);
         }
         try {
-            console.log(JSON.stringify(tmp2))
+            console.log(JSON.stringify(tmp2));
             for (var i = 0; i < parseInt(len, 10); i++) {
-                sum += Number(tmp2["key_" + i.toString()])
+                sum += Number(tmp2["key_" + i.toString()]);
             }
         } catch (err) {
-            console.log(err)
+            console.log(err);
         }
-        return Buffer.from(sum.toString())
+        return Buffer.from(sum.toString());
     }
 
     /** For overhead testing
      * @param {Context} ctx the transaction context
-    */
+     */
     async doNothing(ctx) {
-        return Buffer.from('1')
+        return Buffer.from("1");
     }
 
     /** Function for matrix multiplication
@@ -183,51 +214,50 @@ class BenchContract extends Contract {
     async matrixMultiplication(ctx, n) {
         // console.log(n)
         function multiplyMatrices(m1, m2) {
-            var result = []
+            var result = [];
             for (var i = 0; i < m1.length; i++) {
-                result[i] = []
+                result[i] = [];
                 for (var j = 0; j < m2[0].length; j++) {
-                    var sum = 0
+                    var sum = 0;
                     for (var k = 0; k < m1[0].length; k++) {
-                        sum += m1[i][k] * m2[k][j]
+                        sum += m1[i][k] * m2[k][j];
                     }
-                    result[i][j] = sum
+                    result[i][j] = sum;
                 }
             }
-            return result
+            return result;
         }
 
-        var f = 1
+        var f = 1;
         var m1 = [];
         for (var i = 0; i < n; i++) {
-            console.log(i)
+            console.log(i);
             m1[i] = [];
             for (var j = 0; j < n; j++) {
-                m1[i][j] = f
-                f++
+                m1[i][j] = f;
+                f++;
             }
         }
 
-        var m2 = m1
+        var m2 = m1;
 
-        var result = multiplyMatrices(m1, m2)
+        var result = multiplyMatrices(m1, m2);
 
-        var matrixSum = 0
+        var matrixSum = 0;
 
         for (var i = 0; i < result.length; ++i) {
             for (var j = 0; j < result[i].length; ++j) {
                 matrixSum += result[i][j];
             }
         }
-        return Buffer.from(matrixSum.toString())
+        return Buffer.from(matrixSum.toString());
     }
 
     async setMatrixMultiplication(ctx, n) {
-        var res = await this.matrixMultiplication(ctx, n)
-        await ctx.stub.putState("tmp", res.toString())
-        return Buffer.from(res.toString())
+        var res = await this.matrixMultiplication(ctx, n);
+        await ctx.stub.putState("tmp", res.toString());
+        return Buffer.from(res.toString());
     }
-
 }
 
 module.exports = BenchContract;
