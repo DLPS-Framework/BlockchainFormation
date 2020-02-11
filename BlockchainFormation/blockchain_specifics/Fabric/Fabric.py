@@ -172,13 +172,6 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
     # logger.debug("".join(stderr.readlines()))
     scp_clients[0].put(f"{config['exp_dir']}/setup/configtx.yaml", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/configtx.yaml")
 
-    stdin, stdout, stderr = ssh_clients[-1].exec_command("which configtxgen")
-    out = stdout.readlines()
-    logger.debug("Configtxgen version")
-    logger.debug(out)
-    logger.debug(stderr.readlines())
-
-
     logger.info(f"Creating bmhn.sh and pushing it to {config['ips'][0]}")
     os.system(f"cp {dir_name}/setup/bmhn_raw.sh {config['exp_dir']}/setup/bmhn.sh")
     enum_orgs = "1"
@@ -204,9 +197,7 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
 
     logger.info(f"Creating crypto-stuff on {config['ips'][0]} by executing bmhn.sh")
     stdin, stdout, stderr = ssh_clients[0].exec_command("rm -rf /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config")
-    stdout.readlines()
-    # logger.debug("".join(stdout.readlines()))
-    # logger.debug("".join(stderr.readlines()))
+    wait_and_log(stdout, stderr)
 
     stdin, stdout, stderr = ssh_clients[0].exec_command("( cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo y | bash ./bmhn.sh )")
     out = stdout.readlines()
@@ -351,7 +342,6 @@ def write_crypto_config(config, logger):
 
 
 def write_configtx(config, logger):
-    dir_name = os.path.dirname(os.path.realpath(__file__))
 
     f = open(f"{config['exp_dir']}/setup/configtx.yaml", "w+")
 
@@ -495,7 +485,8 @@ def write_configtx(config, logger):
     if config['fabric_settings']['orderer_type'].upper() == "RAFT":
 
         if config['fabric_settings']['tls_enabled'] != 1:
-            sys.exit("RAFT is only supported with TLS enabled")
+            logger.info("RAFT is only supported with TLS enabled")
+            raise Exception("RAFT is only supported with TLS enabled")
 
         f.write("\n    OrdererType: etcdraft\n\n")
 
