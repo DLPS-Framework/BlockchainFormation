@@ -76,15 +76,15 @@ class BenchContract extends Contract {
     }
 
     async writeDataPublicBufferPeer(ctx, key, bufferSize) {
-        const buffer = new Buffer(1024 * bufferSize);
+        const buffer = new Buffer(parseInt(bufferSize, 10));
         await ctx.stub.putState("key_" + key, Buffer.from("value_" + buffer.toString()));
-        return Buffer.from("1");
+        return Buffer.from("4");
     }
 
     async writeDataPrivateBufferPeer(ctx, name, key, bufferSize) {
-        const buffer = new Buffer(1024 * bufferSize);
+        const buffer = new Buffer(parseInt(bufferSize, 10));
         await ctx.stub.putPrivateData(name, "key_" + key, Buffer.from("value_" + buffer.toString()));
-        return Buffer.from("2");
+        return Buffer.from("4");
     }
 
     async writeDataPrivateImplicit(ctx, name, key, value) {
