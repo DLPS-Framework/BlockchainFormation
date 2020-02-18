@@ -57,9 +57,33 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
   bash -c  "sudo chown -R ubuntu:ubuntu /data"
 
+
+  printf '
+#!/bin/bash
+
+delay=$1
+targets=$2
+
+interface=ens5
+
+sudo tc qdisc del dev $interface root || echo "No existing interface $interface"
+sudo tc qdisc add dev $interface root handle 1: prio
+for i in ${targets[@]}; do
+    sudo tc filter add dev $interface parent 1:0 protocol ip prio 1 u32 match ip dst $i flowid 2:1
+    echo "set filter of $delay for $i"
+done
+sudo tc qdisc add dev $interface parent 1:1 handle 2: netem delay $delay
+
+' > /home/ubuntu/set_delays.sh
+
+  chmod 777 /home/ubuntu/set_delays.sh
+
+
   # switch to normal user
   cat << EOF | su ubuntu
   cd ~
+
+
 
   #echo "Initial Script finished, Starting more advanced installs now"
 
