@@ -96,7 +96,7 @@ def tezos_startup(config, logger, ssh_clients, scp_clients):
         scp_clients[index].put(f"{dir_name}/setup/make.sh", "/data/tezos")
         ssh_clients[index].exec_command("eval $(opam env --switch=/data/tezos --set-switch) && cd /data/tezos && make install >> /data/make2.log 2>&1 && source /data/tezos/src/bin_client/bash-completion.sh && echo 'Hallo' >> /data/success.log")
 
-    status_flags = wait_till_done(config, ssh_clients, config['ips'], 900, 10, "/data/success.log", "Hallo", 600, logger)
+    status_flags = wait_till_done(config, ssh_clients, config['ips'], 900, 60, "/data/success.log", "Hallo", 600, logger)
     if False in status_flags:
         raise Exception("At least one compilation was not successfull")
 
