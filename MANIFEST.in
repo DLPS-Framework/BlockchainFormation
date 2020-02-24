@@ -1,6 +1,7 @@
 include BlockchainFormation/UserDataScripts/*
 include BlockchainFormation/blockchain_specifics/*
 include BlockchainFormation/blockchain_specifics/Corda/*
+include BlockchainFormation/blockchain_specifics/Corda/setup/*
 include BlockchainFormation/blockchain_specifics/CouchDB/*
 include BlockchainFormation/blockchain_specifics/CouchDB/setup/*
 include BlockchainFormation/blockchain_specifics/Empty/*

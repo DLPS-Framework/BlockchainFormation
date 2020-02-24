@@ -37,6 +37,8 @@ def corda_startup(config, logger, ssh_clients, scp_clients):
     :return:
     """
 
+    config['node_indices'] = list(range(1, config['vm_count']))
+
     # Creating docker swarm
     logger.info("Preparing & starting docker swarm")
 
@@ -93,7 +95,11 @@ def corda_startup(config, logger, ssh_clients, scp_clients):
     logger.debug(stdout.readlines())
     logger.debug(stderr.readlines())
     # wait_and_log(stdout, stderr)
-    write_config(config, logger)
+    write_config_node(config, logger)
+
+    for client, _ in enumerate(config['priv_ips']):
+        if client != 0:
+            write_config_client(config, client, logger)
 
     scp_clients[0].put(f"{config['exp_dir']}/setup/build.gradle", "/data/samples/cordapp-example/workflows-kotlin/build.gradle")
     stdin, stdout, stderr = ssh_clients[0].exec_command("(cd /data/samples/cordapp-example && ./gradlew deployNodes)")
@@ -107,7 +113,7 @@ def corda_startup(config, logger, ssh_clients, scp_clients):
     logger.debug(stdout.readlines())
     logger.debug(stderr.readlines())
     for node, _ in enumerate(config['priv_ips']):
-        stdin, stdout, stderr = ssh_clients[node].exec_command("(cd /data/samples/cordapp-example/workflows-kotlin && mkdir build && cd build && mkdir nodes)")
+        stdin, stdout, stderr = ssh_clients[node].exec_command("(cd /data/samples/cordapp-example/workflows-kotlin && rm build.gradle && mkdir build && cd build && mkdir nodes && cd /data/samples/cordapp-example/clients && rm build.gradle)")
         logger.debug(stdout.readlines())
         logger.debug(stderr.readlines())
 
@@ -117,6 +123,7 @@ def corda_startup(config, logger, ssh_clients, scp_clients):
         else:
             scp_clients[node].put(f"{config['exp_dir']}/setup/nodes/Party{node}", "/data/samples/cordapp-example/workflows-kotlin/build/nodes", recursive=True)
             scp_clients[node].put(f"{config['exp_dir']}/setup/nodes/Party{node}_node.conf", "/data/samples/cordapp-example/workflows-kotlin/build/nodes")
+            scp_clients[node].put(f"{config['exp_dir']}/setup/build_client{node}.gradle", "/data/samples/cordapp-example/clients/build.gradle")
 
     logger.info("Starting all nodes")
     channels = []
@@ -125,6 +132,27 @@ def corda_startup(config, logger, ssh_clients, scp_clients):
             channel = ssh_clients[node].get_transport().open_session()
             channel.exec_command(f"(cd /data/samples/cordapp-example/workflows-kotlin/build/nodes/Party{node} && java -jar corda.jar >> ~/node.log 2>&1)")
             channels.append(channel)
+
+    logger.info("Starting all servers")
+    for node, _ in enumerate(config['priv_ips']):
+        if node != 0:
+            channel = ssh_clients[node].get_transport().open_session()
+            channel.exec_command(f"(cd /data/samples/cordapp-example && ./gradlew runServer >> ~/server.log 2>&1)")
+
+    time.sleep(180)
+
+    stdin, stdout, stderr = ssh_clients[1].exec_command("cat ~/node.log")
+    logger.info(stdout.readlines())
+    logger.info(stderr.readlines())
+
+    stdin, stdout, stderr = ssh_clients[1].exec_command("cat ~/server.log")
+    logger.info(stdout.readlines())
+    logger.info(stderr.readlines())
+
+    logger.info("Testing an iou transaction")
+    stdin, stdout, stderr = ssh_clients[1].exec_command(f"curl -i -X POST 'http://localhost:50005/api/example/create-iou?iouValue=12&partyName=O=Party2,L=London,C=GB' -H 'Content-Type: application/x-www-form-urlencoded'")
+    logger.info(stdout.readlines())
+    logger.info(stderr.readlines())
 
 
 
@@ -136,11 +164,11 @@ def corda_restart(config, logger, ssh_clients, scp_clients):
 
     pass
 
-def write_config(config, logger):
+def write_config_node(config, logger):
 
     dir_name = os.path.dirname(os.path.realpath(__file__))
     logger.debug(f"Dir_name: {dir_name}")
-    os.system(f"cp {dir_name}/setup/build_raw.gradle {config['exp_dir']}/setup/build.gradle")
+    os.system(f"cp {dir_name}/setup/build_raw_node.gradle {config['exp_dir']}/setup/build.gradle")
 
     f = open(f"{config['exp_dir']}/setup/build.gradle", "a")
     
@@ -176,14 +204,27 @@ def write_config(config, logger):
             f.write(f"            address('{ip}:10001')\n")
             f.write(f"            adminAddress('localhost:10002')\n")
             f.write("        }\n")
-            # f.write("        artemisPort 10002\n")
-            # f.write("        webAddress ('0.0.0.0:10003')\n")
-            # f.write("        webPort 10003")
-            # f.write("        devMode = true")
             f.write(f"        rpcUsers = [[user: 'user1', 'password': 'test', 'permissions': ['ALL']]]\n")
             f.write("    }\n")
 
     f.write("}\n")
 
     f.close()
+    
+    
+def write_config_client(config, client, logger):
+
+    dir_name = os.path.dirname(os.path.realpath(__file__))
+    logger.debug(f"Dir_name: {dir_name}")
+    os.system(f"cp {dir_name}/setup/build_raw_client.gradle {config['exp_dir']}/setup/build_client{client}.gradle")
+
+    ip = config['priv_ips'][client]
+
+    f = open(f"{config['exp_dir']}/setup/build_client{client}.gradle", "a")
+
+    f.write("task runServer(type: JavaExec, dependsOn: jar) {\n")
+    f.write("    classpath = sourceSets.main.runtimeClasspath\n")
+    f.write("    main = 'com.example.server.ServerKt'\n")
+    f.write(f"    args '--server.rpc.host={ip}', '--server.port=50005', '--config.rpc.host={ip}', '--config.rpc.port=10001', '--config.rpc.username=user1', '--config.rpc.password=test'\n")
+    f.write("}\n")
 
