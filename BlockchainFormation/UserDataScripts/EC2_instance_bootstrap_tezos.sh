@@ -47,7 +47,7 @@
 
   sudo apt-get install -qq -yy libev-dev libgmp-dev libhidapi-dev m4 perl pkg-config
 
-  (cd /data/tezos; git checkout alphanet; opam init -a)
+  (cd /data/tezos; opam init -a)
   export PATH=/data/tezos:$PATH
   source /data/tezos/src/bin_client/bash-completion.sh
   export TEZOS_CLIENT_UNSAFE_DISABLE_DISCLAIMER=Y

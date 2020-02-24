@@ -100,13 +100,7 @@ add_sandboxed_bootstrap_identities() {
 
 activate_alpha() {
 
-    ${client} \
-        -block genesis \
-        activate protocol ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK \
-        with fitness 1 \
-        and key activator \
-        and parameters "${parameters_file}" \
-        --timestamp $(TZ='AAA+1' date +%FT%TZ)
+    ${client} -block genesis activate protocol ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK with fitness 1 and key activator and parameters "${parameters_file}" --timestamp $(TZ='AAA+1' date +%FT%TZ)
 }
 
 usage() {
