@@ -904,6 +904,7 @@ def write_script(config, logger):
 
     os.system(f"sed -i -e 's/substitute_enum_peers/{enum_peers}/g' {config['exp_dir']}/setup/script.sh")
     os.system(f"sed -i -e 's/substitute_enum_orgs/{enum_orgs}/g' {config['exp_dir']}/setup/script.sh")
+    os.system(f"sed -i -e 's/substitute_keyspace/{config['fabric_settings']['keyspace_size']}/g' {config['exp_dir']}/setup/script.sh")
     os.system(f"sed -i -e 's/substitute_endorsement/{endorsement}/g' {config['exp_dir']}/setup/script.sh")
     os.system(f"sed -i -e 's#substitute_tls#{string_tls}#g' {config['exp_dir']}/setup/script.sh")
 

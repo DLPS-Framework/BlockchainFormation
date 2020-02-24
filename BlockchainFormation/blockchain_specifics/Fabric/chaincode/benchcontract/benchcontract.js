@@ -53,10 +53,17 @@ class BenchContract extends Contract {
      * Instantiate to perform any setup of the ledger that might be required.
      * @param {Context} ctx the transaction context
      */
-    async instantiate(ctx) {
+    async instantiate(ctx, len) {
         // No implementation required with this example
         // It could be where data migration is performed, if necessary
         console.log("Instantiate the contract");
+        console.log(len);
+        var promiseArray = [];
+        for (var i = parseInt(0, 10); i < parseInt(len, 10); i++) {
+            promiseArray.push(ctx.stub.putState("key_" + i.toString(), Buffer.from(JSON.stringify({ value: i }))));
+        }
+        await Promise.all(promiseArray);
+        return Buffer.from("1");
     }
 
     /** Standard setters and getters
@@ -76,15 +83,15 @@ class BenchContract extends Contract {
     }
 
     async writeDataPublicBufferPeer(ctx, key, bufferSize) {
-        const buffer = new Buffer(parseInt(bufferSize, 10));
+        const buffer = new Buffer(Number(bufferSize));
         await ctx.stub.putState("key_" + key, Buffer.from("value_" + buffer.toString()));
-        return Buffer.from("4");
+        return Buffer.from("1");
     }
 
     async writeDataPrivateBufferPeer(ctx, name, key, bufferSize) {
-        const buffer = new Buffer(parseInt(bufferSize, 10));
+        const buffer = new Buffer(Number(bufferSize));
         await ctx.stub.putPrivateData(name, "key_" + key, Buffer.from("value_" + buffer.toString()));
-        return Buffer.from("4");
+        return Buffer.from("2");
     }
 
     async writeDataPrivateImplicit(ctx, name, key, value) {
@@ -104,6 +111,7 @@ class BenchContract extends Contract {
 
     async readData(ctx, key) {
         var tmp = await ctx.stub.getState("key_" + key);
+        console.log(tmp);
         return Buffer.from(tmp.toString());
     }
 
@@ -257,6 +265,77 @@ class BenchContract extends Contract {
         var res = await this.matrixMultiplication(ctx, n);
         await ctx.stub.putState("tmp", res.toString());
         return Buffer.from(res.toString());
+    }
+
+    async complexQuery(ctx, value) {
+        const allResults = [];
+        var query = {
+            selector: {
+                value: {
+                    $eq: Number(value)
+                }
+            }
+        };
+        var iterator = await ctx.stub.getQueryResult(JSON.stringify(query));
+        while (true) {
+            const res = await iterator.next();
+            if (res.value) {
+                // if not a getHistoryForKey iterator then key is contained in res.value.key
+                allResults.push(res.value.value.toString("utf8"));
+            }
+
+            // check to see if we have reached then end
+            if (res.done) {
+                // explicitly close the iterator
+                await iterator.close();
+                return Buffer.from(allResults.toString());
+            }
+        }
+    }
+
+    async complexQueryPrivate(ctx, name, value) {
+        const allResults = [];
+        var query = {
+            selector: {
+                value: {
+                    $eq: Number(value)
+                }
+            }
+        };
+        var iterator = await ctx.stub.getPrivateDataQueryResult(name, JSON.stringify(query));
+        while (true) {
+            const res = await iterator.next();
+            if (res.value) {
+                // if not a getHistoryForKey iterator then key is contained in res.value.key
+                allResults.push(res.value.value.toString("utf8"));
+            }
+
+            // check to see if we have reached then end
+            if (res.done) {
+                // explicitly close the iterator
+                await iterator.close();
+                return Buffer.from(allResults.toString());
+            }
+        }
+    }
+
+    async ccQuery(ctx, from, to) {
+        const startKey = from;
+        const endKey = to;
+        const allResults = [];
+        for await (const {key, value} of ctx.stub.getStateByRange(startKey, endKey)) {
+            const strValue = Buffer.from(value).toString('utf8');
+            let record;
+            try {
+                record = JSON.parse(strValue);
+            } catch (err) {
+                console.log(err);
+                record = strValue;
+            }
+            allResults.push({ Key: key, Record: record });
+        }
+        console.info(allResults);
+        return Buffer.from(allResults.length.toString());
     }
 }
 
