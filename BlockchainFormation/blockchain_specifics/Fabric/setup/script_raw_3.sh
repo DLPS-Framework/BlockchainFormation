@@ -71,7 +71,7 @@ instantiateBenchcontractChaincode () {
     peer chaincode instantiate -o orderer1.example.com:7050 -C $CHANNEL_NAME -l node -n benchcontract -v 1.0 -c '{"Args":["org.bench.benchcontract:instantiate", "substitute_keyspace"]}' -P 'substitute_endorsement' --collections-config /opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/benchcontract/collections.json substitute_tls>&log.txt
     res=$?
     cat log.txt
-      verifyResult $res "Benchcontract chaincode instantiation on PEER$PEER.orgORG1 on channel '$CHANNEL_NAME' failed"
+      verifyResult $res "$(date +'%Y-%m-%d %H:%M:%S:%3N') Benchcontract chaincode instantiation on PEER$PEER.orgORG1 on channel '$CHANNEL_NAME' failed"
     echo "$(date +'%Y-%m-%d %H:%M:%S:%3N')   ===================== Benchcontract chaincode instantiation on PEER$PEER.ORG$ORG on channel '$CHANNEL_NAME' was successful ===================== "
     echo
 }

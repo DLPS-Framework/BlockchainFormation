@@ -844,7 +844,6 @@ def write_script(config, logger):
     f = open(f"{config['exp_dir']}/setup/script2.sh", "w+")
 
     f.write("\n\nsetGlobals() {\n\n")
-
     f.write("    CORE_PEER_ADDRESS=peer$1.org$2.example.com:7051\n")
     f.write("    CORE_PEER_LOCALMSPID=Org$2MSP\n")
 
@@ -1031,6 +1030,7 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
         string_orderer_base = ""
         string_orderer_base = string_orderer_base + f" --network={my_net} --name orderer{orderer}.example.com -p 7050:7050"
         string_orderer_base = string_orderer_base + f" -e FABRIC_LOGGING_SPEC={config['fabric_settings']['log_level']}"
+        string_orderer_base = string_orderer_base + f" -e ORDERER_GENERAL_KEEPALIVE_SERVERTIMEOUT=1000s"
         string_orderer_base = string_orderer_base + f" -e ORDERER_HOME=/var/hyperledger/orderer"
         string_orderer_base = string_orderer_base + f" -e ORDERER_GENERAL_LISTENADDRESS=0.0.0.0"
         string_orderer_base = string_orderer_base + f" -e ORDERER_GENERAL_LISTENPORT=7050"
@@ -1140,6 +1140,10 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
             # string_peer_core = string_peer_core + f" -e CORE_LOGGING_MSP={config['fabric_settings']['log_level']}"
             string_peer_core = string_peer_core + f" -e CORE_PEER_ADDRESS=peer{peer}.org{org}.example.com:7051"
             string_peer_core = string_peer_core + f" -e CORE_PEER_ADDRESSAUTODETECT=false"
+            string_peer_core = string_peer_core + f" -e CORE_CHAINCODE_EXECUTETIMEOUT=1000s"
+            string_peer_core = string_peer_core + f" -e CORE_PEER_KEEPALIVE_CLIENT_TIMEOUT=1000s"
+            string_peer_core = string_peer_core + f" -e CORE_PEER_KEEPALIVE_DELIVERYCLIENT_TIMEOUT=1000s"
+            string_peer_core = string_peer_core + f" -e CORE_LEDGER_STATE_COUCHDBCONFIG_REQUESTTIMEOUT=1000s"
             string_peer_core = string_peer_core + f" -e CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock"
             string_peer_core = string_peer_core + f" -e CORE_PEER_NETWORKID={my_net}"
             # string_peer_core = string_peer_core + f" -e CORE_NEXT=true"
