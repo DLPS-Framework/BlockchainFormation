@@ -42,7 +42,7 @@
   wget https://github.com/ocaml/opam/releases/download/2.0.3/opam-2.0.3-x86_64-linux
   sudo cp opam-2.0.3-x86_64-linux /usr/local/bin/opam
   sudo chmod a+x /usr/local/bin/opam
-  git clone https://gitlab.com/tezos/tezos.git
+  (git clone https://gitlab.com/tezos/tezos.git && cd tezos && checkout alphanet && cd ..)
   sudo chmod -R 755 /data/tezos
 
   sudo apt-get install -qq -yy libev-dev libgmp-dev libhidapi-dev m4 perl pkg-config

@@ -92,6 +92,7 @@ def tezos_startup(config, logger, ssh_clients, scp_clients):
             scp_clients[index].put(f"{config['exp_dir']}/setup/script_{type}_{index}.sh", f"/data/tezos/src/bin_{type}/script.sh")
 
 
+    logger.info("Making Tezos binaries")
     for index, _ in enumerate(config['priv_ips']):
         scp_clients[index].put(f"{dir_name}/setup/make.sh", "/data/tezos")
         ssh_clients[index].exec_command("eval $(opam env --switch=/data/tezos --set-switch) && cd /data/tezos && make install >> /data/make2.log 2>&1 && source /data/tezos/src/bin_client/bash-completion.sh && echo 'Hallo' >> /data/success.log")
@@ -103,13 +104,15 @@ def tezos_startup(config, logger, ssh_clients, scp_clients):
 
     for index, _ in enumerate(config['priv_ips']):
         channel = ssh_clients[index].get_transport().open_session()
-        channel.exec_command(f"(eval $(opam env --switch=/data/tezos --set-switch) && cd /data/tezos/src/bin_node && chmod 777 script.sh && (bash ./script.sh > /data/tezos_node.log) && (which tezos-node > /data/which.log))")
+        # channel.exec_command(f"(eval $(opam env --switch=/data/tezos --set-switch) && cd /data/tezos/src/bin_node && chmod 777 script.sh && (bash ./script.sh > /data/tezos_node.log) && (which tezos-node > /data/which.log))")
+        channel.exec_command(f"(cd /data/tezos && ./src/bin_node/tezos-sandboxed-node.sh 1 --connections 1 >> ~/node.log)")
 
     time.sleep(5*len(config['priv_ips']))
     # wait_till_done (überall steht etwas von Worker in /data/tezos_node.log)
 
     for index, ip in enumerate(config['ips']):
-        stdin, stdout, stderr = ssh_clients[index].exec_command(f"(eval $(opam env --switch=/data/tezos --set-switch) && cd /data/tezos/src/bin_client && chmod 777 script.sh && (bash ./script.sh > /data/tezos_client.log) && which tezos-client)")
+        # stdin, stdout, stderr = ssh_clients[index].exec_command(f"(eval $(opam env --switch=/data/tezos --set-switch) && cd /data/tezos/src/bin_client && chmod 777 script.sh && (bash ./script.sh > /data/tezos_client.log) && which tezos-client)")
+        stdin, stdout, stderr = ssh_clients[index].exec_command(f"(cd /data/tezos && eval `./src/bin_client/tezos-init-sandboxed-client.sh 1` && which tezos-client && tezos-activate-alpha)")
         out = stdout.readlines()
         logger.info(f"out on node {index} @ {ip} : {out}")
         logger.info(stderr.readlines())
