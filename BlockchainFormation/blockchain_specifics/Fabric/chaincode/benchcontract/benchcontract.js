@@ -63,6 +63,7 @@ class BenchContract extends Contract {
             promiseArray.push(ctx.stub.putState("key_" + i.toString(), Buffer.from(JSON.stringify({ value: i }))));
         }
         await Promise.all(promiseArray);
+        await ctx.stub.putState("initSize", Buffer.from(len.toString()));
         return Buffer.from("1");
     }
 
@@ -268,7 +269,6 @@ class BenchContract extends Contract {
     }
 
     async complexQuery(ctx, value) {
-        const allResults = [];
         var query = {
             selector: {
                 value: {
@@ -276,25 +276,24 @@ class BenchContract extends Contract {
                 }
             }
         };
-        var iterator = await ctx.stub.getQueryResult(JSON.stringify(query));
-        while (true) {
-            const res = await iterator.next();
-            if (res.value) {
-                // if not a getHistoryForKey iterator then key is contained in res.value.key
-                allResults.push(res.value.value.toString("utf8"));
-            }
 
-            // check to see if we have reached then end
-            if (res.done) {
-                // explicitly close the iterator
-                await iterator.close();
-                return Buffer.from(allResults.toString());
+        const filteredResults = [];
+        for await (const { key, value } of ctx.stub.getQueryResult(JSON.stringify(query))) {
+            const strValue = Buffer.from(value).toString("utf8");
+            let record;
+            try {
+                record = JSON.parse(strValue);
+            } catch (err) {
+                console.log(err);
+                record = strValue;
             }
+            filteredResults.push({ Key: key, Record: record });
         }
+        console.log(filteredResults);
+        return Buffer.from(filteredResults.length.toString());
     }
 
     async complexQueryPrivate(ctx, name, value) {
-        const allResults = [];
         var query = {
             selector: {
                 value: {
@@ -302,29 +301,27 @@ class BenchContract extends Contract {
                 }
             }
         };
-        var iterator = await ctx.stub.getPrivateDataQueryResult(name, JSON.stringify(query));
-        while (true) {
-            const res = await iterator.next();
-            if (res.value) {
-                // if not a getHistoryForKey iterator then key is contained in res.value.key
-                allResults.push(res.value.value.toString("utf8"));
-            }
 
-            // check to see if we have reached then end
-            if (res.done) {
-                // explicitly close the iterator
-                await iterator.close();
-                return Buffer.from(allResults.toString());
+        const filteredResults = [];
+        for await (const { key, value } of ctx.stub.getPrivateDataQueryResult(name, JSON.stringify(query))) {
+            const strValue = Buffer.from(value).toString("utf8");
+            let record;
+            try {
+                record = JSON.parse(strValue);
+            } catch (err) {
+                console.log(err);
+                record = strValue;
             }
+            filteredResults.push({ Key: key, Record: record });
         }
+        return Buffer.from(filteredResults.length.toString());
     }
 
-    async ccQuery(ctx, from, to) {
-        const startKey = from;
-        const endKey = to;
+    async ccQuery(ctx, value) {
         const allResults = [];
-        for await (const {key, value} of ctx.stub.getStateByRange(startKey, endKey)) {
-            const strValue = Buffer.from(value).toString('utf8');
+        let length = await ctx.stub.getState("initSize");
+        for await (const { key, value } of ctx.stub.getStateByRangeWithPagination("", "", Number(length))) {
+            const strValue = Buffer.from(value).toString("utf8");
             let record;
             try {
                 record = JSON.parse(strValue);
@@ -334,8 +331,30 @@ class BenchContract extends Contract {
             }
             allResults.push({ Key: key, Record: record });
         }
-        console.info(allResults);
-        return Buffer.from(allResults.length.toString());
+        var filteredResults = allResults.filter(res => {
+            return res.Record.value == value;
+        });
+        return Buffer.from(filteredResults.length.toString());
+    }
+
+    async ccQueryPrivate(ctx, value) {
+        const allResults = [];
+        let length = await ctx.stub.getState("initSize");
+        for await (const { key, value } of ctx.stub.getStateByRangeWithPagination("", "", Number(length))) {
+            const strValue = Buffer.from(value).toString("utf8");
+            let record;
+            try {
+                record = JSON.parse(strValue);
+            } catch (err) {
+                console.log(err);
+                record = strValue;
+            }
+            allResults.push({ Key: key, Record: record });
+        }
+        var filteredResults = allResults.filter(res => {
+            return res.Record.value == value;
+        });
+        return Buffer.from(filteredResults.length.toString());
     }
 }
 
