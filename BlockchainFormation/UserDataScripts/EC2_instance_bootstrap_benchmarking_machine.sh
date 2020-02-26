@@ -4,8 +4,6 @@
   sudo apt-get update
   sudo apt-get -y upgrade || echo "Upgrading in indy_bootstrap failed" >> /home/ubuntu/upgrade_fail2.log
 
-  git clone <<insert URL here>>
-
   sudo apt-get install python3
   sudo pip3 install asn1crypto==0.24.0 attrdict==2.0.1 attrs==19.3.0 Automat==0.6.0 base58==1.0.3 bcrypt==3.1.7 blinker==1.4 boto3==1.9.252
   sudo pip3 install botocore==1.12.252 certifi==2019.9.11 cffi==1.13.0 chardet==3.0.4 click==6.7 cloud-init==19.2 colorama==0.3.7
