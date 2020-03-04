@@ -1,4 +1,4 @@
-#  Copyright 2019  ChainLab
+#  Copyright 2020 ChainLab
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -47,6 +47,7 @@ class ArgParser:
         parser_termination.add_argument('--config', '-c', help='enter path to config file')
         parser_termination.set_defaults(goal='termination')
 
+
     @staticmethod
     def _add_blockchain_subparsers(superparser):
         """
@@ -57,81 +58,80 @@ class ArgParser:
 
         subparsers = superparser.add_subparsers(help='Choose a blockchain type')
 
+        # base parser
+        parser_base = subparsers.add_parser('base', help='Base setup, only starts VM & installs basic packages, no blockchain')
+        parser_base.set_defaults(blockchain_type='base')
+        ArgParser._add_common_args(parser_base)
+        ArgParser._add_loadbalancer_args(parser_base)
+        # base does no need any specific args
+
+        # client parser
+        parser_client = subparsers.add_parser('client', help='Client network')
+        parser_client.set_defaults(blockchain_type='client')
+        ArgParser._add_common_args(parser_client)
+        ArgParser._add_client_args(parser_client)
+
         # corda parser
-        parser_corda = subparsers.add_parser('corda', help='Corda Network')
+        parser_corda = subparsers.add_parser('corda', help='Corda network')
         parser_corda.set_defaults(blockchain_type='corda')
         ArgParser._add_common_args(parser_corda)
         ArgParser._add_corda_args(parser_corda)
         
         # couchdb parser
-        parser_couchdb = subparsers.add_parser('couchdb', help='Single couchdb node')
+        parser_couchdb = subparsers.add_parser('couchdb', help='Single CouchDB node')
         parser_couchdb.set_defaults(blockchain_type='couchdb')
         ArgParser._add_common_args(parser_couchdb)
         ArgParser._add_couchdb_args(parser_couchdb)
 
         # fabric parser
-        parser_fabric = subparsers.add_parser('fabric', help='Fabric Network')
+        parser_fabric = subparsers.add_parser('fabric', help='Fabric network')
         parser_fabric.set_defaults(blockchain_type='fabric')
         ArgParser._add_common_args(parser_fabric)
         ArgParser._add_fabric_args(parser_fabric)
         
         # empty parser
-        parser_empty = subparsers.add_parser('empty', help='empty node setup')
+        parser_empty = subparsers.add_parser('empty', help='Empty nodes')
         parser_empty.set_defaults(blockchain_type='empty')
         ArgParser._add_common_args(parser_empty)
         ArgParser._add_empty_args(parser_empty)
 
         # geth parser
-        parser_geth = subparsers.add_parser('geth', help='Geth Network')
+        parser_geth = subparsers.add_parser('geth', help='Geth network')
         parser_geth.set_defaults(blockchain_type='geth')
         ArgParser._add_common_args(parser_geth)
         ArgParser._add_loadbalancer_args(parser_geth)
         ArgParser._add_geth_args(parser_geth)
 
         # indy parser
-        parser_indy = subparsers.add_parser('indy', help='Indy Network')
+        parser_indy = subparsers.add_parser('indy', help='Indy network')
         parser_indy.set_defaults(blockchain_type='indy')
         ArgParser._add_common_args(parser_indy)
         ArgParser._add_indy_args(parser_indy)
 
         # parity parser
-        parser_parity = subparsers.add_parser('parity', help='Parity Network')
+        parser_parity = subparsers.add_parser('parity', help='Parity network')
         parser_parity.set_defaults(blockchain_type='parity')
         ArgParser._add_common_args(parser_parity)
         ArgParser._add_loadbalancer_args(parser_parity)
         ArgParser._add_parity_args(parser_parity)
 
         # quorum parser
-        parser_quorum = subparsers.add_parser('quorum', help='Quorum Network')
+        parser_quorum = subparsers.add_parser('quorum', help='Quorum network')
         parser_quorum.set_defaults(blockchain_type='quorum')
         ArgParser._add_common_args(parser_quorum)
         ArgParser._add_quorum_args(parser_quorum)
 
         # sawtooth parser
-        parser_sawtooth = subparsers.add_parser('sawtooth', help='Sawtooth Network')
+        parser_sawtooth = subparsers.add_parser('sawtooth', help='Sawtooth network')
         parser_sawtooth.set_defaults(blockchain_type='sawtooth')
         ArgParser._add_common_args(parser_sawtooth)
         ArgParser._add_sawtooth_args(parser_sawtooth)
         
         # tezos parser
-        parser_tezos = subparsers.add_parser('tezos', help='tezos Network')
+        parser_tezos = subparsers.add_parser('tezos', help='Tezos network')
         parser_tezos.set_defaults(blockchain_type='tezos')
         ArgParser._add_common_args(parser_tezos)
         ArgParser._add_tezos_args(parser_tezos)
-
-        # client parser
-        parser_client = subparsers.add_parser('client', help='Set up Clients')
-        parser_client.set_defaults(blockchain_type='client')
-        ArgParser._add_common_args(parser_client)
-        ArgParser._add_client_args(parser_client)
-
-        # base parser
-        parser_base = subparsers.add_parser('base',
-                                            help='Base Setup, only starts VM & installs basic packages, no blockchain')
-        parser_base.set_defaults(blockchain_type='base')
-        ArgParser._add_common_args(parser_base)
-        ArgParser._add_loadbalancer_args(parser_base)
-        # base does no need any specific args
 
 
     @staticmethod
@@ -145,23 +145,23 @@ class ArgParser:
                             help='True or False whether you want a application load balancer',
                             default=False, type=bool)
         parser.add_argument('--lb_subnet_ids', '-lb_st',
-                            help='load balancer subnet ids (at least two from different availability zones)', default=['subnet-123','subnet-234'], nargs='+')
+                            help='load balancer subnet ids (at least two from different availability zones)', default=['subnet-123', 'subnet-234'], nargs='+')
         parser.add_argument('--lb_security_group_ids', '-lb_sg',
                             help='security group, multiple values allowed', default=["sg-123123"], nargs='+')
-        parser.add_argument('--lb_port', '-lb_p', help='which port should load balancer listen AND hit', type=int, default=8545)
+        parser.add_argument('--lb_port', '-lb_p', help='which port should load balancer listen to AND hit', type=int, default=8545)
         parser.add_argument('--lb_hosted_zone_id', '-hzi',
                             help='hosted zone id for route 53', default='iuiuiut')
 
 
-
     @staticmethod
     def storage_type(x):
-        """Check if the chosen storage is in a given range (Needs to be >1 else the mounting process of the UserData
+        """Checks if the chosen storage is in a given range (Needs to be >1 else the mounting process of the UserData
         script fails)"""
         x = int(x)
         if x < 9 or x > 2048:
             raise argparse.ArgumentTypeError("Minimum storage is 9GB, maximum is 1024 GB")
         return x
+
 
     @staticmethod
     def _add_common_args(parser):
@@ -171,15 +171,18 @@ class ArgParser:
         :return:
         """
 
-        parser.add_argument('--vm_count', '-vmc', help='specify how many VM you want to start', type=int)
-        parser.add_argument('--instance_type', '-it', help='specify what type of instances you want to start',
-                                 default='t2.micro', choices=['t2.nano','t2.micro','t2.small','t2.medium','t2.large', 't2.xlarge','t2.2xlarge','m5.large','m5.xlarge','m5.2xlarge','m5.8xlarge'])
+        parser.add_argument('--vm_count', '-vmc',
+                            help='specify how many VM you want to start', type=int)
+        parser.add_argument('--instance_type', '-it',
+                            help='specify what type of instances you want to start',
+                            default='t2.micro', choices=['t2.nano', 't2.micro', 't2.small', 't2.medium', 't2.large', 't2.xlarge', 't2.2xlarge',
+                                                         'm5.large', 'm5.xlarge', 'm5.2xlarge', 'm5.4xlarge', 'm5.8xlarge'])
         parser.add_argument('--aws_credentials', '-cred',
-                                 help='path to aws credentials', default=os.path.expanduser('~/.aws/credentials'))
+                            help='path to aws credentials', default=os.path.expanduser('~/.aws/credentials'))
         parser.add_argument('--key_name', '-kn',
-                                       help='name of aws credentials key', default="blockchain")
+                            help='name of aws credentials key', default="blockchain")
         parser.add_argument('--aws_config', '-aws_con',
-                                 help='path to aws config', default=os.path.expanduser('~/.aws/config'))
+                            help='path to aws config', default=os.path.expanduser('~/.aws/config'))
         parser.add_argument('--aws_region', '-aws_r',
                             help='aws region where images should be hosted', default='eu-central-1')
         parser.add_argument('--aws_http_proxy', '-aws_http_proxy',
@@ -191,27 +194,27 @@ class ArgParser:
                             help='aws no proxy (only needed for private VPCs)',
                             default='localhost,127.0.0.1')
         parser.add_argument('--priv_key_path', '-key',
-                                 help='path to  ssh key', default=os.path.expanduser('~/.ssh/blockchain'))
+                            help='path to  ssh key', default=os.path.expanduser('~/.ssh/blockchain'))
         parser.add_argument('--image_id', '-img_id',
-                                       help='image ID for vm (default is to get newest ubuntu 18 build)', default=None)
+                            help='image ID for vm (default is to get newest ubuntu 18 build)', default=None)
         parser.add_argument('--image_version', '-img_v',
                             help='ubuntu version (default = 18)', default=18, type=int)
         parser.add_argument('--VolumeSize', '-s',
-                                 help='amount of VolumeSize in GB: min 8, max 1024', type=ArgParser.storage_type, default=32)
+                            help='amount of VolumeSize in GB: min 8, max 1024', type=ArgParser.storage_type, default=32)
         parser.add_argument('--KmsKeyId', '-KId',
-                                 help='KmsKeyId for Encryption, None for no Encryption', default=None)
+                            help='KmsKeyId for Encryption, None for no Encryption', default=None)
         parser.add_argument('--profile', '-p',
-                                 help='name of aws profile, None for no profile switching', default='block_exp')
+                            help='name of aws profile, None for no profile switching', default='block_exp')
         parser.add_argument('--tag_name', '-t',
-                                 help='tag for aws', default='blockchain_experiment')
+                            help='tag for aws', default='blockchain_experiment')
         parser.add_argument('--subnet_id', '-st',
-                                 help='subnet id', default='subnet-123')
+                            help='subnet id', default='subnet-123')
         parser.add_argument('--security_group_id', '-sg',
-                                 help='security group, multiple values allowed', default=["sg-123"],nargs='+')
+                            help='security group, multiple values allowed', default=["sg-123"],nargs='+')
         parser.add_argument('--public_ip', '-pub_ip',
                             help='True or False if public IP is needed (remember to define correct subnet/security))', default=False, type=bool)
         parser.add_argument('--proxy_user', '-pu',
-                                 help='proxy user; None for NO proxy ', default=None)
+                            help='proxy user; None for NO proxy ', default=None)
         parser.add_argument('--http_proxy', '-http_proxy',
                             help='HTTP proxy url and port ', default=None)
         parser.add_argument('--https_proxy', '-https_proxy',
@@ -223,100 +226,135 @@ class ArgParser:
         parser.add_argument('--aws_spot_instances',
                             help='Boolean if spot instances should be used for aws', default=False, type=bool)
 
+
     @staticmethod
     def _add_corda_args(parser):
         parser.add_argument('--message', help='test message', default='Hallo')
+
 
     @staticmethod
     def _add_couchdb_args(parser):
         pass
 
+
     @staticmethod
     def _add_fabric_args(parser):
-        parser.add_argument('--version', help='specify in a dictionary fabric_version, fabric_ca_version, and thirdparty_version')
-        parser.add_argument('--channel_count', help='specify the number of channels which are set up')
-        parser.add_argument('--database', help='choose between LevelDB and CouchDB as database', default='CouchDB')
-        parser.add_argument('--org_count', help='specify number of organizations', type=int, default=2)
-        parser.add_argument('--peer_count', help='specify number of peers per organization', type=int, default=3)
-        parser.add_argument('--orderer_type', help='specify the orderer type chosen from "solo" and "raft", default="solo"')
-        parser.add_argument('--orderer_count', help='specify number of orderers - if orderer_type is "solo", then orderer_count must be 1', type=int, default=1)
-        parser.add_argument('--kafka_count', help='specify number of kafka nodes - only relevant if orderer_type is kafka', type=int, default=3)
-        parser.add_argument('--zookeeper_count', help='specify number of zookeepers - only relevant if orderer_type is kafka', type=int, default=5)
-        parser.add_argument('--batch_timeout', help='specify the amount of seconds to wait before creating a batch',
-                            type=int, default=2)
-        parser.add_argument('--max_message_count', help='specify the maximum number of messages to permit in a batch',
-                            type=int, default=10)
+        parser.add_argument('--fabric_version',
+                            help='specify the fabric version', choices=["1.4.4", "2.0.0"], default="2.0.0")
+        parser.add_argument('--fabric_ca_version',
+                            help='specify the fabric ca version', choices=["1.4.4"], default="1.4.4")
+        parser.add_argument('--thirdparty_version',
+                            help='specify the thirdparty version', choices=["0.4.18"], default="0.4.18")
+        parser.add_argument('--channel_count',
+                            help='specify the number of channels which are set up')
+        parser.add_argument('--database',
+                            help='choose between LevelDB and CouchDB as database', choices=["CouchDB", "LevelDB"], default='CouchDB')
+        parser.add_argument('--external',
+                            help='specify whether the CouchDB runs on a separate vm, 0=no, 1=yes', choices=[0, 1], default=0)
+        parser.add_argument('--org_count',
+                            help='specify number of organizations', type=int, default=2)
+        parser.add_argument('--peer_count',
+                            help='specify number of peers per organization', type=int, default=3)
+        parser.add_argument('--orderer_type',
+                            help='specify the orderer type', choices=["solo", "kafka", "raft"], default="raft")
+        parser.add_argument('--orderer_count',
+                            help='specify number of orderers - if orderer_type is "solo", then orderer_count must be 1', type=int, default=1)
+        parser.add_argument('--kafka_count',
+                            help='specify number of kafka nodes - only relevant if orderer_type is kafka', type=int, default=3)
+        parser.add_argument('--zookeeper_count',
+                            help='specify number of zookeepers - only relevant if orderer_type is kafka', type=int, default=5)
+        parser.add_argument('--batch_timeout',
+                            help='specify the amount of seconds to wait before creating a batch', type=int, default=2)
+        parser.add_argument('--max_message_count',
+                            help='specify the maximum number of messages to permit in a batch', type=int, default=10)
         parser.add_argument('--absolute_max_bytes',
-                            help='specify the absolute maximum number of MB allowed for the serialized messages in a batch',
-                            type=int, default=99)
+                            help='specify the absolute maximum number of MB allowed for the serialized messages in a batch', type=int, default=99)
         parser.add_argument('--preferred_max_bytes',
-                            help='specify the preferred maximum number of KB allowed for the serialized messages in a batch',
-                            type=int, default=512)
+                            help='specify the preferred maximum number of KB allowed for the serialized messages in a batch', type=int, default=512)
         parser.add_argument('--tls_enabled',
-                            help='specify whether communication in the network is encrypted; chosse between 0 (tls disables) and 1 (tls enabled)',
-                            type=int, default=1)
+                            help='specify whether communication in the network is encrypted; choose between 0 (tls disables) and 1 (tls enabled)', choices=[0, 1], default=1)
+        # parser.add_argument('--install_chaincode',
+        #                     help='specify whether a chaincode (the benchcontract, to be used by benchmarking) should be pre-installed', choices=[0, 1], default=1)
         parser.add_argument('--endorsement_policy',
-                            help='specify the endorsement policy for the benchmarking test; choose between "AND" and "OR" (currently two organizations), default="OR"')
+                            help='specify the endorsement policy for the benchmarking test; i.e., the number of orgs which has to agree, where x corresponds to OutOf(x, all)', default=1)
+        parser.add_argument('--private_fors',
+                            help='specify the size of all private collections', type=int, default=2)
+        parser.add_argument('--collection_index',
+                            help='specify whether data collections are defined explicitly or implicitly', choices=["explicit"], default="explicit")
+        parser.add_argument('--keyspace_size',
+                            help='specify the size of the keyspace of the pre-installed benchcontract (should be less than 100000)', type=int, default=10000)
+        parser.add_argument('--valuespace_size',
+                            help='specify the size of the valuespace of the pre-installed benchcontract', type=int, default=100000)
         parser.add_argument('--log_level',
-                            help='the logging severity levels are specified using case-insensitive strings chosen from << FATAL | PANIC | ERROR | WARNING | INFO | DEBUG >>',
-                            default="debug")
+                            help='the logging severity levels are specified', choices=["FATAL", "PANIC", "ERROR", "WARNING", "INFO", "DEBUG"], default="DEBUG")
+
 
     @staticmethod
     def _add_empty_args(parser):
         pass
 
+
     @staticmethod
     def _add_geth_args(parser):
         # https://github.com/ethereum/go-ethereum/wiki/Command-Line-Options
-        parser.add_argument('--chainid', '-ci', help='specify chainID', type=int, default=11)
-        parser.add_argument('--period', '-pd', help='specify clique period', type=int, default=5)
-        parser.add_argument('--epoch', '-eh', help='specify clique epoch', type=int, default=30000)
-        parser.add_argument('--balance', '-bal', help='specify start balance of account', default="0x200000000000000000000000000000000000000000000000000000000000000")
-        parser.add_argument('--timestamp', '-tp', help='specify timestamp of genesis', default="0x00")
-        parser.add_argument('--gaslimit', '-gl', help='specify gasLimit', default="0x2fefd8")
-        parser.add_argument('--num_acc', '-na', help='specify number of accounts added to each node', type=int, default=None)
-        parser.add_argument('--cache', help='megabytes of memory allocated to internal caching', type=int, default=1024)
-        parser.add_argument('--cache.database', help='percentage of cache memory allowance to use for database io',
-                            type=int, default=75)
-        parser.add_argument('--cache.gc', help='percentage of cache memory allowance to use for trie pruning', type=int,
-                            default=25)
-        #parser.add_argument('--trie-cache-gens', help='number of trie node generations to keep in memory', type=int,
-            #                default=120)
-        parser.add_argument('--txpool.rejournal', help='time interval to regenerate the local transaction journal',
-                            default='1h0m0s')
+        parser.add_argument('--chainid', '-ci',
+                            help='specify chainID', type=int, default=11)
+        parser.add_argument('--period', '-pd',
+                            help='specify clique period', type=int, default=5)
+        parser.add_argument('--epoch', '-eh',
+                            help='specify clique epoch', type=int, default=30000)
+        parser.add_argument('--balance', '-bal',
+                            help='specify start balance of account', default="0x200000000000000000000000000000000000000000000000000000000000000")
+        parser.add_argument('--timestamp', '-tp',
+                            help='specify timestamp of genesis', default="0x00")
+        parser.add_argument('--gaslimit', '-gl',
+                            help='specify gasLimit', default="0x2fefd8")
+        parser.add_argument('--num_acc', '-na',
+                            help='specify number of accounts added to each node', type=int, default=None)
+        parser.add_argument('--cache',
+                            help='megabytes of memory allocated to internal caching', type=int, default=1024)
+        parser.add_argument('--cache.database',
+                            help='percentage of cache memory allowance to use for database io', type=int, default=75)
+        parser.add_argument('--cache.gc',
+                            help='percentage of cache memory allowance to use for trie pruning', type=int, default=25)
+        # parser.add_argument('--trie-cache-gens',
+        #                    help='number of trie node generations to keep in memory', type=int, default=120)
+        parser.add_argument('--txpool.rejournal',
+                            help='time interval to regenerate the local transaction journal', default='1h0m0s')
         parser.add_argument('--txpool.accountslots',
-                            help='minimum number of executable transaction slots guaranteed per account', type=int,
-                            default=16)
+                            help='minimum number of executable transaction slots guaranteed per account', type=int, default=16)
         parser.add_argument('--txpool.globalslots',
-                            help='maximum number of executable transaction slots for all accounts', type=int,
-                            default=4096)
+                            help='maximum number of executable transaction slots for all accounts', type=int, default=4096)
         parser.add_argument('--txpool.accountqueue',
-                            help='maximum number of non-executable transaction slots permitted per account', type=int,
-                            default=64)
+                            help='maximum number of non-executable transaction slots permitted per account', type=int, default=64)
         parser.add_argument('--txpool.globalqueue',
-                            help='maximum number of non-executable transaction slots for all accounts', type=int,
-                            default=1024)
-        parser.add_argument('--txpool.lifetime', help='maximum amount of time non-executable transaction are queued',
-                            default='3h0m0s')
+                            help='maximum number of non-executable transaction slots for all accounts', type=int, default=1024)
+        parser.add_argument('--txpool.lifetime', help='maximum amount of time non-executable transaction are queued', default='3h0m0s')
         parser.add_argument('--minerthreads',
-                            help=' Number of CPU threads to use for mining (default: 8)',
-                            type=int, default=8)
+                            help=' Number of CPU threads to use for mining (default: 8)', type=int, default=8)
         parser.add_argument('--signers',
-                            help='Percentage of nodes who are signers (default: 1.0)',
-                            type=float, default=1.0)
+                            help='Percentage of nodes who are signers (default: 1.0)', type=float, default=1.0)
+
 
     @staticmethod
     def _add_indy_args(parser):
-        parser.add_argument('--clients', help='some number defining the maximum amount of clients', type=int, default=5)
-        parser.add_argument('--public_network', help='Choose 1 if you need a network available over pulbic ips', type=int, default=0)
+        parser.add_argument('--clients',
+                            help='some number defining the maximum amount of clients', type=int, default=5)
+        parser.add_argument('--public_network',
+                            help='Choose 1 if you need a network available over public ips', type=int, default=0)
+
 
     @staticmethod
     def _add_parity_args(parser):
-        parser.add_argument('--step_duration', '-sd', help='specify step_duration', type=int, default=5)
-        parser.add_argument('--num_acc', '-na', help='specify number of accounts added to each node', type=int,
+        parser.add_argument('--step_duration', '-sd',
+                            help='specify step_duration', type=int, default=5)
+        parser.add_argument('--num_acc', '-na',
+                            help='specify number of accounts added to each node', type=int,
                             default=None)
-        parser.add_argument('--gaslimit', '-gl', help='specify gasLimit', default="0x5B8D80")
-        parser.add_argument('--balance', '-bal', help='specify start balance of account', default="0x200000000000000000000000000000000000000000000000000000000000000")
+        parser.add_argument('--gaslimit', '-gl',
+                            help='specify gasLimit', default="0x5B8D80")
+        parser.add_argument('--balance', '-bal',
+                            help='specify start balance of account', default="0x200000000000000000000000000000000000000000000000000000000000000")
         parser.add_argument('--tx_queue_mem_limit',
                             help='Maximum amount of memory that can be used by the transaction queue. Setting this parameter to 0 disables limiting. (default: 4)', type=int, default=4)
         parser.add_argument('--tx_queue_size',
@@ -330,40 +368,73 @@ class ArgParser:
         parser.add_argument('--cache_size_state',
                             help='Specify the maximum size of memory to use for the statecache. (default: 25)', type=int, default=25)
         parser.add_argument('--server_threads',
-                            help='RPC server threads (default: 4)',
-                            type=int, default=4)
+                            help='RPC server threads (default: 4)', type=int, default=4)
         parser.add_argument('--signers',
-                            help='Percentage of nodes who are signers (default: 1.0)',
-                            type=float, default=1.0)
+                            help='Ratio of nodes who are signers (default: 1.0)', type=float, default=1.0)
+
 
     @staticmethod
     def _add_quorum_args(parser):
-        parser.add_argument('--raft_blocktime', help='amount of time between raft block creations in milliseconds', type=int, default=50)
-        parser.add_argument('--istanbul_blockperiod', help='block period for istanbul consensus in seconds', type=int, default=1)
-        parser.add_argument('--istanbul_minerthreads', help='number of miner threads for istanbul consensus', type=int, default=1)
-        parser.add_argument('--cache', help='megabytes of memory allocated to internal caching', type=int, default=1024)
-        parser.add_argument('--cache.database', help='percentage of cache memory allowance to use for database io', type=int, default=75)
-        parser.add_argument('--cache.gc', help='percentage of cache memory allowance to use for trie pruning', type=int, default=25)
-        # parser.add_argument('--trie-cache-gens', help='number of trie node generations to keep in memory', type=int, default=120)
-        parser.add_argument('--txpool.rejournal', help='time interval to regenerate the local transaction journal', default='1h0m0s')
-        parser.add_argument('--txpool.accountslots', help='minimum number of executable transaction slots guaranteed per account', type=int, default=16)
-        parser.add_argument('--txpool.globalslots', help='maximum number of executable transaction slots for all accounts', type=int, default=4096)
-        parser.add_argument('--txpool.accountqueue', help='maximum number of non-executable transaction slots permitted per account', type=int, default=64)
-        parser.add_argument('--txpool.globalqueue', help='maximum number of non-executable transaction slots for all accounts', type=int, default=1024)
-        parser.add_argument('--txpool.lifetime', help='maximum amount of time non-executable transaction are queued', default='3h0m0s')
-        parser.add_argument('--private_fors', help='number of recipients for private transactions (at most one less than tessera nodes)', default="all")
+        parser.add_argument('--raft_blocktime',
+                            help='amount of time between raft block creations in milliseconds', type=int, default=50)
+        parser.add_argument('--istanbul_blockperiod',
+                            help='block period for istanbul consensus in seconds', type=int, default=1)
+        parser.add_argument('--istanbul_minerthreads',
+                            help='number of miner threads for istanbul consensus', type=int, default=1)
+        parser.add_argument('--cache',
+                            help='megabytes of memory allocated to internal caching', type=int, default=1024)
+        parser.add_argument('--cache.database',
+                            help='percentage of cache memory allowance to use for database io', type=int, default=75)
+        parser.add_argument('--cache.gc',
+                            help='percentage of cache memory allowance to use for trie pruning', type=int, default=25)
+        parser.add_argument('--trie-cache-gens', help='number of trie node generations to keep in memory', type=int, default=120)
+        parser.add_argument('--txpool.rejournal',
+                            help='time interval to regenerate the local transaction journal', default='1h0m0s')
+        parser.add_argument('--txpool.accountslots',
+                            help='minimum number of executable transaction slots guaranteed per account', type=int, default=16)
+        parser.add_argument('--txpool.globalslots',
+                            help='maximum number of executable transaction slots for all accounts', type=int, default=4096)
+        parser.add_argument('--txpool.accountqueue',
+                            help='maximum number of non-executable transaction slots permitted per account', type=int, default=64)
+        parser.add_argument('--txpool.globalqueue',
+                            help='maximum number of non-executable transaction slots for all accounts', type=int, default=1024)
+        parser.add_argument('--txpool.lifetime',
+                            help='maximum amount of time non-executable transaction are queued', default='3h0m0s')
+        parser.add_argument('--private_fors',
+                            help='number of recipients for private transactions (at most one less than the number of tessera nodes)', default="all")
+
 
     @staticmethod
     def _add_sawtooth_args(parser):
-        pass
+        # for more detailed explanations see https://sawtooth.hyperledger.org/faq/settings/
+        parser.add_argument('--sawtooth.consensus.algorithm.name',
+                            help='the consensus algorithm', choices=["Devmode", "PoET", "RAFT", "PBFT"], default="PBFT"),
+        parser.add_argument('--sawtooth.poet.initial_wait_time',
+                            help='the initial waiting time for PoET consensus before looking for a new block in seconds', type=int, default=1)
+        parser.add_argument('--sawtooth.poet.target_wait_time',
+                            help='the expected block time for PoET consensus in seconds', type=int, default=1)
+        parser.add_argument('--sawtooth.publisher.max_batches_per_block',
+                            help='the maximum nubmer of batches per block', type=int, default=100)
+        parser.add_argument('--sawtooth.consensus.pbft.block_publishing_delay',
+                            help='the batch timeout for PBFT consensus', type=int, default=1000)
+        parser.add_argument('--sawtooth.consensus.raft.heartbeat_tick',
+                            help='the heartbeat tick for RAFT consensus in seconds', type=int, default=2)
+        parser.add_argument('--sawtooth.consensus.raft.election_tick',
+                            help='the election tick for RAFT consensus in seconds', type=int, default=1)
+        parser.add_argument('--sawtooth.consensus.raft.period',
+                            help='RAFT consensus period in seconds', type=int, default=50)
+
 
     @staticmethod
     def _add_tezos_args(parser):
         pass
 
+
     @staticmethod
     def _add_client_args(parser):
-        parser.add_argument('--target_network_conf', '-gl', help='Config where client IPs are attached to', default=None)
+        parser.add_argument('--target_network_conf', '-gl',
+                            help='Config where client IPs are attached to', default=None)
+
 
     def create_config(self, namespace_dict, blockchain_type):
         """
@@ -412,6 +483,7 @@ class ArgParser:
 
         return config
 
+
     @staticmethod
     def _add_ebs_settings(namespace_dict):
         """
@@ -435,6 +507,7 @@ class ArgParser:
                 'KmsKeyId': namespace_dict['KmsKeyId']
                     }
 
+
     @staticmethod
     def _add_aws_proxy_settings(namespace_dict):
         """
@@ -451,6 +524,7 @@ class ArgParser:
                 }
         else:
             return None
+
 
     @staticmethod
     def _add_proxy_settings(namespace_dict):
@@ -471,6 +545,7 @@ class ArgParser:
         else:
             return None
 
+
     @staticmethod
     def _add_load_balancer_config(namespace_dict):
 
@@ -488,6 +563,7 @@ class ArgParser:
                 {
                     "add_loadbalancer": False
                 }
+
 
     @staticmethod
     def _add_blockchain_type_config(namespace_dict, blockchain_type):
@@ -513,8 +589,12 @@ class ArgParser:
             return\
                 {
                     "version": namespace_dict['version'],
+                    "fabric_version": namespace_dict['fabric_version'],
+                    "fabric_ca_version": namespace_dict['fabric_ca_version'],
+                    "thirdparty_version": namespace_dict['fabric_thirdparty_version'],
                     "channel_count": namespace_dict['channel_count'],
                     "database": namespace_dict['database'],
+                    "external": namespace_dict['external'],
                     "org_count": namespace_dict['org_count'],
                     "peer_count": namespace_dict['peer_count'],
                     "orderer_type": namespace_dict['orderer_type'],
@@ -532,7 +612,11 @@ class ArgParser:
                     "preferred_max_bytes": namespace_dict['preferred_max_bytes'],
                     "tls_enabled": namespace_dict['tls_enabled'],
                     "endorsement_policy": namespace_dict['endorsement_policy'],
-                    "log_level": namespace_dict['log_level']
+                    "log_level": namespace_dict['log_level'],
+                    "private_fors": namespace_dict['private_fors'],
+                    "collection_index": namespace_dict['collection_index'],
+                    "keyspace_size": namespace_dict['keyspace_size'],
+                    "valuespace_size": namespace_dict['valuespace_size']
 
                 }
 
@@ -551,11 +635,11 @@ class ArgParser:
                     "timestamp": namespace_dict['timestamp'],
                     "gaslimit": namespace_dict['gaslimit'],
                     "num_acc": namespace_dict['num_acc'],
-                    #https://github.com/ethereum/go-ethereum/wiki/Command-Line-Options
+                    # https://github.com/ethereum/go-ethereum/wiki/Command-Line-Options
                     "cache": namespace_dict['cache'],
                     "cache.database": namespace_dict['cache.database'],
                     "cache.gc": namespace_dict['cache.gc'],
-                    #"trie-cache-gens": namespace_dict['trie-cache-gens'],
+                    "trie-cache-gens": namespace_dict['trie-cache-gens'],
                     "txpool.rejournal": namespace_dict['txpool.rejournal'],
                     "txpool.accountslots": namespace_dict['txpool.accountslots'],
                     "txpool.globalslots": namespace_dict['txpool.globalslots'],
@@ -572,6 +656,7 @@ class ArgParser:
                 {
                     "clients": namespace_dict['clients'],
                     "public_network": namespace_dict['public_network']
+
                 }
 
         elif blockchain_type == "parity":
@@ -613,10 +698,15 @@ class ArgParser:
         elif blockchain_type == "sawtooth":
             return\
                 {
-                    "sawtooth.consensus.algorithm.name": namespace_dict["sawtooth.consensus.algorithm.name"],
-                    "sawtooth.poet.initial_wait_time": namespace_dict["sawtooth.poet.initial_wait_time"],
-                    "sawtooth.poet.target_wait_time": namespace_dict["sawtooth.poet.target_wait_time"],
-                    "sawtooth.publisher.max_batches_per_block": namespace_dict["sawtooth.publisher.max_batches_per_block"]
+                    "sawtooth.consensus.algorithm.name": namespace_dict['sawtooth.consensus.algorithm.name'],
+                    "sawtooth.poet.initial_wait_time": namespace_dict['sawtooth.poet.initial_wait_time'],
+                    "sawtooth.poet.target_wait_time": namespace_dict['sawtooth.poet.target_wait_time'],
+                    "sawtooth.publisher.max_batches_per_block": namespace_dict['sawtooth.publisher.max_batches_per_block'],
+                    "sawtooth.consensus.pbft.block_publishing_delay": namespace_dict['sawtooth.consensus.pbft.block_publishing_delay'],
+                    "sawtooth.consensus.raft.heartbeat_tick": namespace_dict['sawtooth.consensus.raft.heartbeat_tick'],
+                    "sawtooth.consensus.raft.election_tick": namespace_dict['sawtooth.consensus.raft.election_tick'],
+                    "sawtooth.consensus.raft.period": namespace_dict['sawtooth.consensus.raft.period']
+
                 }
 
         elif blockchain_type == "tezos":

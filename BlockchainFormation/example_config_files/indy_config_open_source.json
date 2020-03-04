@@ -36,6 +36,7 @@
   ],
   "blockchain_type": "indy",
   "indy_settings": {
-    "clients": 128
+    "clients": 128,
+    "public_ip": 0
   }
 }

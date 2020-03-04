@@ -1,4 +1,4 @@
-#  Copyright 2019  ChainLab
+#  Copyright 2020 ChainLab
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -69,6 +69,7 @@ class LBHandler:
             with open(f"{self.config['exp_dir']}/config.json", 'w') as outfile:
                 json.dump(self.config, outfile, indent=4, default=datetimeconverter)
 
+
     def create_lb(self):
         """
         Creates the Load Balancer itself
@@ -106,6 +107,7 @@ class LBHandler:
         self.logger.info(f"DNSName: {self.config['load_balancer_settings']['DNSName']}")
         self.logger.info(f"LoadBalancerArn: {self.config['load_balancer_settings']['LoadBalancerArn']}")
 
+
     def create_target_group(self):
         """
         Creates Target Group
@@ -137,6 +139,7 @@ class LBHandler:
 
         self.logger.info(f"TargetGroupArn: {self.config['load_balancer_settings']['TargetGroupArn']}")
 
+
     def create_listener(self):
         """
         Creates listener
@@ -161,6 +164,7 @@ class LBHandler:
 
         self.logger.info(f"ListenerArn: {self.config['load_balancer_settings']['ListenerArn']}")
 
+
     def register_targets(self):
         """Register target for target group"""
         self.logger.info("Registering targets now")
@@ -171,6 +175,7 @@ class LBHandler:
         )
 
         #self.logger.debug(rt_response)
+
 
     def create_dns_mapping(self):
         """Map LB DNS name to route 53 dns record"""
@@ -209,6 +214,7 @@ class LBHandler:
         self.config['load_balancer_settings']['route53_dns'] = route53_dns_name
         self.logger.info(f"Route53 dns address which you can hit with web3 etc.: {self.config['load_balancer_settings']['route53_dns']}")
 
+
     def delete_dns_mapping(self):
         """delete route 53 record"""
 
@@ -237,6 +243,7 @@ class LBHandler:
                 ]
             }
         )
+
 
     def shutdown_lb(self):
         """Shutdown load balancer and target group"""

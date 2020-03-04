@@ -37,10 +37,15 @@
   "blockchain_type": "fabric",
   "fabric_settings":
   {
+    "fabric_version": "2.0.0",
+    "fabric_ca_version": "1.4.4",
+    "thirdparty_version": "0.4.18",
+    "channel_count": 1,
     "database": "LevelDB",
+    "external": 0,
     "org_count": 5,
     "peer_count": 1,
-    "orderer_type": "kafka",
+    "orderer_type": "raft",
     "orderer_count": 3,
     "kafka_count": 4,
     "zookeeper_count": 3,
@@ -54,7 +59,11 @@
     "absolute_max_bytes": 99,
     "preferred_max_bytes": 2048,
     "tls_enabled": 1,
-    "endorsement_policy": "OR",
-    "log_level": "INFO"
+    "endorsement_policy": 2,
+    "log_level": "DEBUG",
+    "private_fors": 2,
+    "collection_index": "explicit",
+    "keyspace_size": 10000,
+    "valuespace_size": 10000
   }
 }

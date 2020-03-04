@@ -1,4 +1,4 @@
-#  Copyright 2019  ChainLab
+#  Copyright 2020 ChainLab
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ from scp import SCPClient
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from BlockchainFormation.cost_calculator import AWSCostCalculator
+
 from BlockchainFormation.blockchain_specifics.Corda.Corda import *
 from BlockchainFormation.blockchain_specifics.CouchDB.CouchDB import *
 from BlockchainFormation.blockchain_specifics.Fabric.Fabric import *
@@ -35,6 +36,7 @@ from BlockchainFormation.blockchain_specifics.Quorum.Quorum import *
 from BlockchainFormation.blockchain_specifics.Sawtooth.Sawtooth import *
 from BlockchainFormation.blockchain_specifics.Tezos.Tezos import *
 from BlockchainFormation.blockchain_specifics.Client.Client import *
+
 from BlockchainFormation.lb_handler import *
 from BlockchainFormation.utils.utils import *
 
@@ -72,6 +74,7 @@ class VMHandler:
                 os.environ["HTTP_PROXY"] = f"http://{self.config['proxy']['http_proxy']}"
 
             os.environ["NO_PROXY"] = self.config['proxy']['no_proxy']
+
         else:
             self.logger.info("No proxy set since proxy user is None or proxy already set")
 
@@ -83,6 +86,7 @@ class VMHandler:
         self.session = boto3.Session(profile_name=self.config['profile'])
         self.ec2_instances = None
         self.aws_calculator = AWSCostCalculator(self.session)
+
 
     def create_user_data(self):
         """creates the user data script depending on experiment type. The user data is built out of base script and
@@ -120,6 +124,7 @@ class VMHandler:
             eof = "\nEOF"
             user_data_combined = user_data_base + user_data_specific + eof
 
+        # if the blockchain type is fabric, we can modify the version of the docker images
         elif self.config['blockchain_type'] == 'fabric':
 
             os.system(f"cp {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric.sh {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh")
@@ -144,11 +149,13 @@ class VMHandler:
 
         return user_data_combined
 
+
     def run_general_startup(self):
         """
         General startup script needed for all blockchain frameworks. After general part is finished, the specific startup script are kicked off
         :return:
         """
+
         def search_newest_image(list_of_images):
             """
             Search for the newest ubuntu image from a given list
@@ -200,46 +207,12 @@ class VMHandler:
         # catching errors
         # self.logger.debug(f"vm_count: {self.config['vm_count']}")
 
-        if self.config['blockchain_type'] == 'fabric':
-            # FIXME: Can this be moved to Blockchain specifics? (Implementing a Get function or something like that)
-            # self.logger.debug(f"Checking whether vm_count equals the expected number of necessary nodes")
+        if self.config['blockchain_type'] == "fabric":
+            fabric_check_config(self.config, self.logger)
 
-            if self.config['fabric_settings']['orderer_type'].upper() == "KAFKA":
-                count = self.config['fabric_settings']['org_count'] * self.config['fabric_settings']['peer_count'] \
-                        + self.config['fabric_settings']['orderer_count'] + self.config['fabric_settings']['zookeeper_count']\
-                        + self.config['fabric_settings']['kafka_count']
-            elif self.config['fabric_settings']['orderer_type'].upper() == "RAFT":
-                count = self.config['fabric_settings']['org_count'] * self.config['fabric_settings']['peer_count'] + self.config['fabric_settings']['orderer_count']
-            elif self.config['fabric_settings']['orderer_type'].upper() == "SOLO":
-                count = self.config['fabric_settings']['org_count'] * self.config['fabric_settings']['peer_count'] + 1
-                if self.config['fabric_settings']['orderer_count'] != 1:
-                    self.logger.info(f"It seems that orderer_count is different from the expected number of orderers for orderer type 'solo'")
-                    self.logger.info(f"Setting orderer_count to 1")
-                    self.config['fabric_settings']['orderer_count'] = 1
-            else:
-                raise Exception("No valid orderer type")
+        elif self.config['blockchain_type'] == "sawtooth":
+            sawtooth_check_config(self.config, self.logger)
 
-            if count != self.config['vm_count']:
-                self.logger.info(f"It seems that vm_count ({self.config['vm_count']}) is different from the expected number of necessary nodes ({count})")
-                self.logger.info(f"Setting vm_count to {count}")
-                self.config['vm_count'] = count
-
-        if self.config['blockchain_type'] == "sawtooth":
-            if self.config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "DEVMODE":
-                if self.config['vm_count'] != 1:
-                    raise Exception("Devmode only works with one node")
-
-            elif self.config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "POET":
-                if self.config['vm_count'] < 3:
-                    raise Exception("PoET consensus only works with at least 3 nodes")
-
-            elif self.config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "PBFT":
-                if self.config['vm_count'] < 4:
-                    raise Exception("PBFT consensus only works with at least 4 nodes")
-            elif self.config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "RAFT":
-                pass
-            else:
-                raise Exception("Currently, only Devmode, PoET, RAFT, and PBFT consensus are supported")
 
         ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
         image = ec2.Image(self.config['image']['image_id'])
@@ -415,6 +388,7 @@ class VMHandler:
         # if yes_or_no("Do you want to shut down the whole network?"):
             # self.run_general_shutdown()
 
+
     def _run_specific_startup(self, ssh_clients, scp_clients):
         """starts startup for given config (geth, parity, etc....)"""
 
@@ -479,6 +453,7 @@ class VMHandler:
             self.logger.exception(e)
             self.logger.info("Some scp_client was already closed")
 
+
     def run_general_shutdown(self):
         """
          Stops and terminates all VMs and calculates causes aws costs.
@@ -493,7 +468,7 @@ class VMHandler:
             self.logger.info(f"At least on of the instances was already stopped, hence no logs can be pulled from the machines, terminating them in the next step")
 
         else:
-            # ccreate ssh and scp channels
+            # create ssh and scp channels
             ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
 
             for index, ip in enumerate(self.config['ips']):
@@ -536,6 +511,7 @@ class VMHandler:
 
         self.logger.info("All instances terminated -  script is finished")
 
+
     def _run_specific_shutdown(self, ssh_clients, scp_clients):
         """Runs the specific shutdown scripts depending on blockchain_type"""
 
@@ -548,11 +524,14 @@ class VMHandler:
         else:
             pass
 
+
     def get_config_path(self):
         return f"{self.config['exp_dir']}/config.json"
 
+
     def get_config(self):
         return self.config
+
 
     def set_target_network_conf(self, dir_name):
         """
@@ -564,6 +543,7 @@ class VMHandler:
 
         with open(f"{self.config['exp_dir']}/config.json", 'w') as outfile:
             json.dump(self.config, outfile, default=datetimeconverter, indent=4)
+
 
     @staticmethod
     def create_ssh_scp_clients(config, logger=None):
