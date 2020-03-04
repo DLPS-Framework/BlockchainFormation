@@ -1,4 +1,4 @@
-#  Copyright 2019  ChainLab
+#  Copyright 2020 ChainLab
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -18,18 +18,22 @@ import os
 
 ROOT = os.path.join(os.path.dirname(__file__), 'BlockchainFormation')
 
-# TODO Add more required packages
+# TODO Add more required packages - splitting between BlockchainFormation, ClientFormation and ChainLab
 requires = [
             'boto3>=1.9.134',
+            'botocore>=1.13.20',
             'web3>=5.1.0',
             'paramiko>=2.6.0',
-            'numpy>=1.17.3']
+            'numpy>=1.17.3',
+            'scp>=0.13.12',
+            'pytz>=2019.3',
+            'wheel>=0.33.6']
 
 setuptools.setup(
     name="BlockchainFormation",
     version="0.0.1",
     author="ChainLab",
-    description="Framework to set up DLT on aws ec2 instances",
+    description="Framework to set up DLTs on AWS EC2",
     #long_description=open('README.MD').read(),
     license="Apache License 2.0",
     install_requires=requires,

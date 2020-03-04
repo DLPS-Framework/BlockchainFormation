@@ -1,4 +1,4 @@
-#  Copyright 2019  ChainLab
+#  Copyright 2020 ChainLab
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -102,6 +102,15 @@ class AWSCostCalculator:
         # Get current price for a given instance, region and os
         # make operation system not hardcoded
         instance_price_per_hour = float(self._get_instance_price(self._get_region_name(self.config['aws_region']), self.config['instance_type'], 'Linux'))
+
+        # lookup from hard coded list if the api request fails
+        if instance_price_per_hour == 0:
+            if self.config['instance_type'] == "m5.large":
+                instance_price_per_hour = 0.096
+            elif self.config['instance_type'] == "m5.xlarge":
+                instance_price_per_hour = 0.192
+            elif self.config['instance_type'] == "m5.2xlarge":
+                instance_price_per_hour = 0.384
 
         # For example, let's say that you provision a 2000 GB volume for 12 hours (43,200 seconds) in a 30 day month.
         # In a region that charges $0.10 per GB-month, you would be charged $3.33 for the volume ($0.10 per GB-month
