@@ -18,6 +18,26 @@ import random
 from BlockchainFormation.utils.utils import *
 
 
+def sawtooth_check_config(config, logger):
+
+    logger.debug(f"Checking the sawtooth config")
+    if config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "DEVMODE":
+        if config['vm_count'] != 1:
+            raise Exception("Devmode only works with one node")
+
+    elif config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "POET":
+        if config['vm_count'] < 3:
+            raise Exception("PoET consensus only works with at least 3 nodes")
+
+    elif config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "PBFT":
+        if config['vm_count'] < 4:
+            raise Exception("PBFT consensus only works with at least 4 nodes")
+    elif config['sawtooth_settings']['sawtooth.consensus.algorithm.name'].upper() == "RAFT":
+        pass
+    else:
+        raise Exception("Currently, only Devmode, PoET, RAFT, and PBFT consensus are supported")
+
+
 def sawtooth_shutdown(config, logger, ssh_clients, scp_clients):
 
     """

@@ -1,4 +1,4 @@
-#  Copyright 2019  ChainLab
+#  Copyright 2020 ChainLab
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -29,26 +29,39 @@ from BlockchainFormation.utils.utils import *
 import threading
 
 
+def fabric_check_config(config, logger):
+
+    logger.debug(f"Checking the fabric config")
+    if config['fabric_settings']['orderer_type'].upper() == "KAFKA":
+        count = config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count'] \
+                + config['fabric_settings']['orderer_count'] + config['fabric_settings']['zookeeper_count'] \
+                + config['fabric_settings']['kafka_count']
+    elif config['fabric_settings']['orderer_type'].upper() == "RAFT":
+        count = config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count'] + config['fabric_settings']['orderer_count']
+    elif config['fabric_settings']['orderer_type'].upper() == "SOLO":
+        count = config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count'] + 1
+        if config['fabric_settings']['orderer_count'] != 1:
+            logger.info(f"It seems that orderer_count is different from the expected number of orderers for orderer type 'solo'")
+            logger.info(f"Setting orderer_count to 1")
+            config['fabric_settings']['orderer_count'] = 1
+    else:
+        raise Exception("No valid orderer type")
+
+    # if the CouchDB is separate, double the number of vms required for the peers
+    if config['fabric_settings']['database'] == "CouchDB" and config['fabric_settings']['external'] == 1:
+        count = count + config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count']
+
+    if count != config['vm_count']:
+        logger.info(f"It seems that vm_count ({config['vm_count']}) is different from the expected number of necessary nodes ({count})")
+        logger.info(f"Setting vm_count to {count}")
+        config['vm_count'] = count
+
+
 def fabric_shutdown(config, logger, ssh_clients, scp_clients):
     """
     runs the fabric specific shutdown operations (e.g. pulling the associated logs from the VMs)
     :return:
     """
-
-    # for index, _ in enumerate(config['priv_ips']):
-        # scp_clients[index].get("/home/ubuntu/*.log", f"{config['exp_dir']}/fabric_logs")
-        # scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
-
-    # the indices of the different roles
-    config['orderer_indices'] = list(range(0, config['fabric_settings']['orderer_count']))
-    config['peer_indices'] = list(range(config['fabric_settings']['orderer_count'], config['fabric_settings']['orderer_count'] + config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count']))
-
-    if config['fabric_settings']['orderer_type'].upper() == "KAFKA":
-        config['zookeeper_indices'] = list(range(config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'], config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count']))
-        config['kafka_indices'] = list(range(config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count'], config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count'] + config['fabric_settings']['kafka_count']))
-    else:
-        config['zookeeper_indices'] = []
-        config['kafka_indices'] = []
 
     for index, _ in enumerate(ssh_clients):
         stdin, stdout, stderr = ssh_clients[index].exec_command("docker stop $(docker ps -a -q) && docker rm -f $(docker ps -a -q) && docker rmi $(docker images | grep 'my-net' | awk '{print $1}')")
@@ -89,15 +102,35 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
     dir_name = os.path.dirname(os.path.realpath(__file__))
 
     # the indices of the different roles
-    config['orderer_indices'] = list(range(0, config['fabric_settings']['orderer_count']))
-    config['peer_indices'] = list(range(config['fabric_settings']['orderer_count'], config['fabric_settings']['orderer_count'] + config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count']))
+    if config['fabric_settings']['database'] == "CouchDB" and config['fabric_settings']['external'] == 1:
+        config['orderer_indices'] = list(range(0, config['fabric_settings']['orderer_count']))
+        config['peer_indices'] = list(range(config['fabric_settings']['orderer_count'], config['fabric_settings']['orderer_count'] + config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count']))
+        config['db_indices'] = list(range(config['fabric_settings']['orderer_count'] + config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count'], config['fabric_settings']['orderer_count'] + 2 * config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count']))
 
-    if config['fabric_settings']['orderer_type'].upper() == "KAFKA":
-        config['zookeeper_indices'] = list(range(config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'], config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count']))
-        config['kafka_indices'] = list(range(config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count'], config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count'] + config['fabric_settings']['kafka_count']))
+        if config['fabric_settings']['orderer_type'].upper() == "KAFKA":
+            config['zookeeper_indices'] = list(range(config['fabric_settings']['orderer_count'] + 2 * config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'],
+                                                     config['fabric_settings']['orderer_count'] + 2 * config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count']))
+            config['kafka_indices'] = list(range(config['fabric_settings']['orderer_count'] + 2 * config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count'],
+                                                 config['fabric_settings']['orderer_count'] + 2 * config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count'] + config['fabric_settings']['kafka_count']))
+        else:
+            config['zookeeper_indices'] = []
+            config['kafka_indices'] = []
+
+
     else:
-        config['zookeeper_indices'] = []
-        config['kafka_indices'] = []
+        config['orderer_indices'] = list(range(0, config['fabric_settings']['orderer_count']))
+        config['peer_indices'] = list(range(config['fabric_settings']['orderer_count'], config['fabric_settings']['orderer_count'] + config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count']))
+        config['db_indices'] = config['peer_indices']
+
+        if config['fabric_settings']['orderer_type'].upper() == "KAFKA":
+            config['zookeeper_indices'] = list(range(config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'],
+                                                     config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count']))
+            config['kafka_indices'] = list(range(config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count'],
+                                                 config['fabric_settings']['orderer_count'] + config['fabric_settings']['peer_count'] * config['fabric_settings']['org_count'] + config['fabric_settings']['zookeeper_count'] + config['fabric_settings']['kafka_count']))
+        else:
+            config['zookeeper_indices'] = []
+            config['kafka_indices'] = []
+
 
     # the indices of the blockchain nodes
     config['node_indices'] = config['peer_indices']
@@ -1096,8 +1129,10 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
     logger.info(f"Starting databases and peers")
     for org in range(1, config['fabric_settings']['org_count'] + 1):
         for peer in range(0, config['fabric_settings']['peer_count']):
-            index = config['peer_indices'][(org-1) * config['fabric_settings']['peer_count'] + peer]
-            ip = config['ips'][index]
+            index_peer = config['peer_indices'][(org-1) * config['fabric_settings']['peer_count'] + peer]
+            index_db = config['db_indices'][(org-1) * config['fabric_settings']['peer_count'] + peer]
+            ip_peer = config['ips'][index_peer]
+            ip_db = config['ips'][index_db]
 
             if config['fabric_settings']['database'] == "CouchDB":
                 # set up CouchDB configuration
@@ -1107,8 +1142,8 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
                 string_database_base = string_database_base + f" -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE={my_net}"
 
                 # Starting the CouchDBs
-                logger.debug(f" - Starting database couchdb{peer}.org{org} on {ip}")
-                channel = ssh_clients[index].get_transport().open_session()
+                logger.debug(f" - Starting database couchdb{peer}.org{org} on {ip_db}")
+                channel = ssh_clients[index_db].get_transport().open_session()
                 channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_database_base + f" hyperledger/fabric-couchdb &> /home/ubuntu/couchdb{peer}.org{org}.log)")
 
             # Setting up configuration of peer like with docker compose
@@ -1183,10 +1218,10 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
             string_peer_v = string_peer_v + f" -w /opt/gopath/src/github.com/hyperledger/fabric/peer"
 
             # Starting the peers
-            logger.debug(f" - Starting peer{peer}.org{org} on {ip}")
-            channel = ssh_clients[index].get_transport().open_session()
+            logger.debug(f" - Starting peer{peer}.org{org} on {ip_peer}")
+            channel = ssh_clients[index_peer].get_transport().open_session()
             channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + f" hyperledger/fabric-peer peer node start &> /home/ubuntu/peer{peer}.org{org}.log)")
-            ssh_clients[index].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + " hyperledger/fabric-tools /bin/bash\" >> /data/cli.sh)")
+            ssh_clients[index_peer].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + " hyperledger/fabric-tools /bin/bash\" >> /data/cli.sh)")
 
     # Waiting for a few seconds until all peers and orderers have started
 
