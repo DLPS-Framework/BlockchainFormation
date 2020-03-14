@@ -24,7 +24,7 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
   export hsname=$(cat /etc/hostname)
   bash -c 'echo 127.0.0.1 localhost $hsname >> /etc/hosts'
 
-  # Do not delete the following lines, as it is needed to insert proxy; temp fix -> replace placeholder with string.replace in vm_handler.py
+  # Do not delete the following lines, as it is needed to insert proxy; temp fix -> replace placeholder with string.replace in node_handler.py
   # PROXY_PLACEHOLDER, DO NOT DELETE!
 
 
@@ -77,19 +77,33 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
   printf '
 #!/bin/bash
 
-delay=$1
-targets=$2
+mode=$1
+delay=$2
+targets=$3
 
 interface=ens5
 
-sudo tc qdisc del dev $interface root || echo "No existing interface $interface"
-sudo tc qdisc add dev $interface root handle 1: prio
-for i in ${targets[@]}; do
-    sudo tc filter add dev $interface parent 1:0 protocol ip prio 1 u32 match ip dst $i flowid 2:1
-    echo "set filter of $delay for $i"
-done
-sudo tc qdisc add dev $interface parent 1:1 handle 2: netem delay $delay
+function set_delays () {
 
+    sudo tc qdisc del dev $interface root || echo "No existing interface $interface"
+    sudo tc qdisc add dev $interface root handle 1: prio
+    for i in ${targets[@]}; do
+        sudo tc filter add dev $interface parent 1:0 protocol ip prio 1 u32 match ip dst $i flowid 2:1
+        echo "set filter of $delay for $i"
+    done
+    sudo tc qdisc add dev $interface parent 1:1 handle 2: netem delay $delay
+
+}
+
+function remove_delays () {
+    sudo tc qdisc del dev $interface root || echo "No existing interface $interface"
+}
+
+if [ "$mode" == "set" ]; then
+    set_delays
+else
+    remove_delays
+fi
 ' > /home/ubuntu/set_delays.sh
 
   chmod 777 /home/ubuntu/set_delays.sh

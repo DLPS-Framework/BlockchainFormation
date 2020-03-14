@@ -62,6 +62,7 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
 
                         # read line from stdout
                         stdout_line = stdout.readlines()[0]
+                        # logger.debug(f"Read {stdout_line}")
 
                         # Check if stdout equals the wanted message
                         if stdout_line == f"{message}\n":
@@ -78,6 +79,7 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
 
                 # Try again if SSHException
                 except paramiko.SSHException:
+                    # logger.debug(f"File not yet available on {ip}")
                     try:
                         # logger.debug(f"    --> Reconnecting {ip}...")
                         ssh_key_priv = paramiko.RSAKey.from_private_key_file(config['priv_key_path'])

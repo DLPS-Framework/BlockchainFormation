@@ -6,8 +6,10 @@ include BlockchainFormation/blockchain_specifics/CouchDB/*
 include BlockchainFormation/blockchain_specifics/CouchDB/setup/*
 include BlockchainFormation/blockchain_specifics/Empty/*
 include BlockchainFormation/blockchain_specifics/Fabric/chaincode/benchcontract/*
+include BlockchainFormation/blockchain_specifics/Fabric/chaincode/benchcontract/META-INF/statedb/couchdb/indexes/*
 include BlockchainFormation/blockchain_specifics/Fabric/setup/*
 include BlockchainFormation/blockchain_specifics/Fabric/*
+include BlockchainFormation/blockchain_specifics/Eos/*
 include BlockchainFormation/blockchain_specifics/Indy/*
 include BlockchainFormation/blockchain_specifics/Sawtooth/processor/*
 include BlockchainFormation/blockchain_specifics/Sawtooth/*

@@ -61,9 +61,6 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
     # the indices of the blockchain nodes
     config['node_indices'] = list(range(0, config['vm_count']))
 
-    # uploading the benchcontract processor (smart contract code)
-    upload_processors(config, scp_clients, logger)
-
     logger.info("Creating directories for saving data and logs locally")
     os.mkdir(f"{config['exp_dir']}/sawtooth_logs")
 
@@ -134,6 +131,8 @@ def sawtooth_startup(config, logger, ssh_clients, scp_clients):
         wait_and_log(stdout, stderr)
 
     sawtooth_start(config, ssh_clients, logger)
+
+    install_benchcontract(config, ssh_clients, scp_clients, logger)
 
 
 def sawtooth_start(config, ssh_clients, logger):
@@ -338,7 +337,6 @@ def sawtooth_start(config, ssh_clients, logger):
 
     time.sleep(10)
 
-    start_processors(config, ssh_clients, logger)
     check_network(config, ssh_clients, logger)
 
 
@@ -384,6 +382,12 @@ def upload_processors(config, scp_clients, logger):
     logger.info("Uploading benchcontract processor on each node")
     for node, _ in enumerate(config['priv_ips']):
         scp_clients[node].put(dir_name + "/processor", "/data", recursive=True)
+
+
+def install_benchcontract(config, ssh_clients, scp_clients, logger):
+
+    upload_processors(config, scp_clients, logger)
+    start_processors(config, ssh_clients, logger)
 
 
 def check_network(config, ssh_clients, logger):

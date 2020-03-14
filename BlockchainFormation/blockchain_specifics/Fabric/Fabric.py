@@ -285,6 +285,9 @@ def fabric_startup(config, logger, ssh_clients, scp_clients):
 
     start_docker_containers(config, logger, ssh_clients, scp_clients)
 
+    setup_network(config, ssh_clients, scp_clients, logger, "network_setup")
+    install_chaincode(config, ssh_clients, scp_clients, logger)
+
     logger.info("Getting logs from vms")
 
     for index, ip in enumerate(config['ips']):
@@ -870,11 +873,12 @@ def write_collections(config, logger):
         json.dump(collections, file, default=datetimeconverter, indent=4)
 
 
-def write_script(config, logger):
-    dir_name = os.path.dirname(os.path.realpath(__file__))
-    os.system(f"cp {dir_name}/setup/script_raw_1.sh {config['exp_dir']}/setup/script.sh")
+def write_script(config, logger, name):
 
-    f = open(f"{config['exp_dir']}/setup/script2.sh", "w+")
+    dir_name = os.path.dirname(os.path.realpath(__file__))
+    os.system(f"cp {dir_name}/setup/script_raw_1.sh {config['exp_dir']}/setup/{name}.sh")
+
+    f = open(f"{config['exp_dir']}/setup/{name}.sh", "a")
 
     f.write("\n\nsetGlobals() {\n\n")
     f.write("    CORE_PEER_ADDRESS=peer$1.org$2.example.com:7051\n")
@@ -897,7 +901,19 @@ def write_script(config, logger):
 
     f.close()
 
-    os.system(f"cp {dir_name}/setup/script_raw_3.sh {config['exp_dir']}/setup/script3.sh")
+    if name == "network_setup":
+
+        os.system(f"cat {dir_name}/setup/script_raw_3.sh >> {config['exp_dir']}/setup/{name}.sh")
+
+    elif name == "chaincode_installation":
+
+        os.system(f"cat {dir_name}/setup/script_raw_2.sh >> {config['exp_dir']}/setup/{name}.sh")
+
+    else:
+        logger.info("Invalid operation")
+        raise Exception("Invalid operation")
+
+
     if config['fabric_settings']['tls_enabled'] == 1:
         # logger.debug("    --> TLS environment variables set")
         string_tls = f"--tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem"
@@ -905,8 +921,6 @@ def write_script(config, logger):
         string_tls = f""
 
     # append the parts of script to the final script
-    os.system(f"cat {config['exp_dir']}/setup/script2.sh >> {config['exp_dir']}/setup/script.sh && rm {config['exp_dir']}/setup/script2.sh")
-    os.system(f"cat {config['exp_dir']}/setup/script3.sh >> {config['exp_dir']}/setup/script.sh && rm {config['exp_dir']}/setup/script3.sh")
 
     # substitute the enumeration of peers and orgs
     enum_peers = "0"
@@ -934,11 +948,11 @@ def write_script(config, logger):
         endorsement = endorsement + f",\"'Org{org}MSP.member'\""
     endorsement = endorsement + ")"
 
-    os.system(f"sed -i -e 's/substitute_enum_peers/{enum_peers}/g' {config['exp_dir']}/setup/script.sh")
-    os.system(f"sed -i -e 's/substitute_enum_orgs/{enum_orgs}/g' {config['exp_dir']}/setup/script.sh")
-    os.system(f"sed -i -e 's/substitute_keyspace/{config['fabric_settings']['keyspace_size']}/g' {config['exp_dir']}/setup/script.sh")
-    os.system(f"sed -i -e 's/substitute_endorsement/{endorsement}/g' {config['exp_dir']}/setup/script.sh")
-    os.system(f"sed -i -e 's#substitute_tls#{string_tls}#g' {config['exp_dir']}/setup/script.sh")
+    os.system(f"sed -i -e 's/substitute_enum_peers/{enum_peers}/g' {config['exp_dir']}/setup/{name}.sh")
+    os.system(f"sed -i -e 's/substitute_enum_orgs/{enum_orgs}/g' {config['exp_dir']}/setup/{name}.sh")
+    os.system(f"sed -i -e 's/substitute_keyspace/{config['fabric_settings']['keyspace_size']}/g' {config['exp_dir']}/setup/{name}.sh")
+    os.system(f"sed -i -e 's/substitute_endorsement/{endorsement}/g' {config['exp_dir']}/setup/{name}.sh")
+    os.system(f"sed -i -e 's#substitute_tls#{string_tls}#g' {config['exp_dir']}/setup/{name}.sh")
 
 
 def start_docker_containers(config, logger, ssh_clients, scp_clients):
@@ -1227,15 +1241,120 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
 
     time.sleep(10)
 
+
+def fabric_restart(config, logger, ssh_clients, scp_clients):
+    try:
+        fabric_shutdown(config, logger, ssh_clients, scp_clients)
+        start_docker_containers(config, logger, ssh_clients, scp_clients)
+    except Exception as e:
+        logger.exception(e)
+        fabric_shutdown(config, logger, ssh_clients, scp_clients)
+        start_docker_containers(config, logger, ssh_clients, scp_clients)
+
+
+def push_stuff(config, ssh_clients, scp_clients, indices_sources, indices_targets, logger):
+
+    # logger.debug(f"Sources: {indices_sources}, targets: {indices_targets}")
+
+    jobs = []
+    for index, index_source in enumerate(indices_sources):
+        # logger.debug(f"Creating thread {index} for pushing from {index_source} to {indices_targets[index]}")
+        thread = threading.Thread(target=push_stuff_single(config, ssh_clients, scp_clients, index_source, indices_targets[index], logger))
+        # logger.debug(f"Starting thread {index}")
+        thread.start()
+        jobs.append(thread)
+
+    for j in jobs:
+        # logger.debug(f"Joining thread {j}")
+        j.join()
+
+
+def push_chaincode(config, ssh_clients, scp_clients, indices_sources, indices_targets, logger):
+
+    # logger.debug(f"Sources: {indices_sources}, targets: {indices_targets}")
+
+    jobs = []
+    for index, index_source in enumerate(indices_sources):
+        # logger.debug(f"Creating thread {index} for pushing from {index_source} to {indices_targets[index]}")
+        thread = threading.Thread(target=push_chaincode_single(config, ssh_clients, scp_clients, index_source, indices_targets[index], logger))
+        # logger.debug(f"Starting thread {index}")
+        thread.start()
+        jobs.append(thread)
+
+    for j in jobs:
+        # logger.debug(f"Joining thread {j}")
+        j.join()
+
+
+def push_stuff_single(config, ssh_clients, scp_clients, index_source, index_target, logger):
+
+    # logger.debug(f"Starting to push to index {index_target}")
+    # deleting data at the vm associated with source_index and copying it to the vm associated with the target index
+    # use scp -v for verbose mode
+    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"ssh -o 'StrictHostKeyChecking no' -i /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem ubuntu@{config['priv_ips'][index_target]} 'sudo rm -rf /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts && echo Success'")
+    wait_and_log(stdout, stderr)
+    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
+    wait_and_log(stdout, stderr)
+    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
+    wait_and_log(stdout, stderr)
+
+    push_chaincode_single(config, ssh_clients, scp_clients, index_source, index_target, logger)
+    # logger.debug(f"Successfully pushed to index {index_target}")
+
+
+def push_chaincode_single(config, ssh_clients, scp_clients, index_source, index_target, logger):
+    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
+    wait_and_log(stdout, stderr)
+
+
+def upload_chaincode(config, ssh_clients, scp_clients, logger):
+
+    dir_name = os.path.dirname(os.path.realpath(__file__))
+
+    logger.info("Pushing and chaincode to all nodes")
+    indices = config['orderer_indices'] + config['peer_indices']
+
+    # pushing the ssh-key and the chaincode on the first vm
+    scp_clients[0].put(f"{config['priv_key_path']}", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem")
+    scp_clients[0].put(f"{dir_name}/chaincode/benchcontract", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode", recursive=True)
+    write_collections(config, logger)
+    scp_clients[0].put(f"{config['exp_dir']}/setup/collections.json", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode/benchcontract")
+    logger.debug("Successfully pushed to index 0.")
+
+    finished_indices = [indices[0]]
+    remaining_indices = indices[1:len(indices)]
+    while remaining_indices != []:
+        n_targets = min(len(finished_indices), len(remaining_indices))
+        indices_sources = finished_indices[0:n_targets]
+        indices_targets = remaining_indices[0:n_targets]
+
+        push_chaincode(config, ssh_clients, scp_clients, indices_sources, indices_targets, logger)
+
+        finished_indices = indices_sources + indices_targets
+        remaining_indices = remaining_indices[n_targets:]
+
+    # deleting the ssh-keys after having finished
+    for _, index in enumerate(indices):
+        stdin, stdout, stderr = ssh_clients[index].exec_command(f"rm /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem")
+        stdout.readlines()
+
+
+def setup_network(config, ssh_clients, scp_clients, logger, name):
+
+    my_net = "my-net"
+
     index_last_node = config['peer_indices'][-1]
     # Creating script and pushing it to the last node
     logger.debug(f"Executing script on {config['ips'][index_last_node]}  which creates channel, adds peers to channel, installs and instantiates all chaincode - can take some minutes")
-    write_script(config, logger)
+
     stdin, stdout, stderr = ssh_clients[index_last_node].exec_command("rm -f /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/script.sh")
     stdout.readlines()
+
+    write_script(config, logger, name)
+
     # logger.debug(stdout.readlines())
     # logger.debug(stdout.readlines())
-    scp_clients[index_last_node].put(f"{config['exp_dir']}/setup/script.sh", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/script.sh")
+    scp_clients[index_last_node].put(f"{config['exp_dir']}/setup/{name}.sh", f"/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/{name}.sh")
 
     # Setting up configuration of cli like with docker compose
     string_cli_base = ""
@@ -1247,7 +1366,7 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
     for orderer in range(1, config['fabric_settings']['orderer_count'] + 1):
         string_cli_link = string_cli_link + f" --link orderer{orderer}.example.com:orderer{orderer}.example.com"
 
-    for org in range(1, org + 1):
+    for org in range(1, config['fabric_settings']['org_count'] + 1):
         for peer in range(0, config['fabric_settings']['peer_count'] + 1):
             string_cli_link = string_cli_link + f" --link peer{peer}.org{org}.example.com:peer{peer}.org{org}.example.com"
 
@@ -1281,65 +1400,26 @@ def start_docker_containers(config, logger, ssh_clients, scp_clients):
     # execute script.sh on last node
 
     for channel in range(config['fabric_settings']['channel_count']):
-        stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 script.sh && ls -la && cd .. && ./scripts/script.sh mychannel{channel+1})' |& tee /home/ubuntu/setup_mychannel{channel+1}.log)")
+        stdin, stdout, stderr = ssh_clients[index_last_node].exec_command(
+            f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash -c '(ls -la && cd scripts && ls -la && chmod 777 {name}.sh && ls -la && cd .. && ./scripts/{name}.sh mychannel{channel + 1})' |& tee /home/ubuntu/setup_mychannel{channel + 1}.log)")
         out = stdout.readlines()
 
         # save the cli command on the last node and save it in exp_dir
         ssh_clients[index_last_node].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash\" >> /data/cli2.sh)")
 
-        if out[len(out) - 1] == "========= All GOOD, BMHN execution completed =========== \n":
+        if out[len(out) - 1] == "========= All GOOD, script completed =========== \n":
             logger.info("")
-            logger.info(f"**************** !!! Fabric network formation for channel << mychannel{channel+1} >> was successful !!! *********************")
+            logger.info(f"**************** !!! Fabric network formation for channel << mychannel{channel + 1} >> was successful !!! *********************")
             logger.info("")
         else:
             logger.info("")
-            logger.info(f"*******************!!! ERROR: Fabric network formation failed on channel << mychannel{channel+1} >> !!! *********************")
+            logger.info(f"*******************!!! ERROR: Fabric network formation failed on channel << mychannel{channel + 1} >> !!! *********************")
             for index, _ in enumerate(out):
                 logger.debug(out[index].replace("\n", ""))
 
             raise Exception("Blockchain did not start properly - Omitting or repeating")
 
 
-def fabric_restart(config, logger, ssh_clients, scp_clients):
-    try:
-        fabric_shutdown(config, logger, ssh_clients, scp_clients)
-        start_docker_containers(config, logger, ssh_clients, scp_clients)
-    except Exception as e:
-        logger.exception(e)
-        fabric_shutdown(config, logger, ssh_clients, scp_clients)
-        start_docker_containers(config, logger, ssh_clients, scp_clients)
+def install_chaincode(config, ssh_clients, scp_clients, logger):
 
-def push_stuff(config, ssh_clients, scp_clients, indices_sources, indices_targets, logger):
-
-    # logger.debug(f"Sources: {indices_sources}, targets: {indices_targets}")
-
-    jobs = []
-    for index, index_source in enumerate(indices_sources):
-        # logger.debug(f"Creating thread {index} for pushing from {index_source} to {indices_targets[index]}")
-        thread = threading.Thread(target=push_stuff_single(config, ssh_clients, scp_clients, index_source, indices_targets[index], logger))
-        # logger.debug(f"Starting thread {index}")
-        thread.start()
-        jobs.append(thread)
-
-    for j in jobs:
-        # logger.debug(f"Joining thread {j}")
-        j.join()
-
-
-def push_stuff_single(config, ssh_clients, scp_clients, index_source, index_target, logger):
-
-    # logger.debug(f"Starting to push to index {index_target}")
-    # deleting data at the vm associated with source_index and copying it to the vm associated with the target index
-    # use scp -v for verbose mode
-    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"ssh -o 'StrictHostKeyChecking no' -i /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem ubuntu@{config['priv_ips'][index_target]} 'sudo rm -rf /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts && echo Success'")
-    wait_and_log(stdout, stderr)
-    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
-    wait_and_log(stdout, stderr)
-    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
-    wait_and_log(stdout, stderr)
-    stdin, stdout, stderr = ssh_clients[index_source].exec_command(f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
-    wait_and_log(stdout, stderr)
-    # logger.debug(f"Successfully pushed to index {index_target}")
-
-
-
+    setup_network(config, ssh_clients, scp_clients, logger, "chaincode_installation")

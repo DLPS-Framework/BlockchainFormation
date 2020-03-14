@@ -29,6 +29,7 @@ from BlockchainFormation.blockchain_specifics.Corda.Corda import *
 from BlockchainFormation.blockchain_specifics.CouchDB.CouchDB import *
 from BlockchainFormation.blockchain_specifics.Fabric.Fabric import *
 from BlockchainFormation.blockchain_specifics.Empty.Empty import *
+from BlockchainFormation.blockchain_specifics.Eos.Eos import *
 from BlockchainFormation.blockchain_specifics.Indy.Indy import *
 from BlockchainFormation.blockchain_specifics.Geth.Geth import *
 from BlockchainFormation.blockchain_specifics.Parity.Parity import *
@@ -405,6 +406,9 @@ class VMHandler:
         elif self.config['blockchain_type'] == 'empty':
             empty_startup(self.config, self.logger, ssh_clients, scp_clients)
 
+        elif self.config['blockchain_type'] == 'eos':
+            eos_startup(self.config, self.logger, ssh_clients, scp_clients)
+
         elif self.config['blockchain_type'] == 'indy':
             indy_startup(self.config, self.logger, ssh_clients, scp_clients)
 
@@ -423,6 +427,7 @@ class VMHandler:
 
                 else:
                     self.logger.info(f"VMs are not being shutdown")
+
         if self.config['blockchain_type'] == 'client' or self.config['blockchain_type'] == 'indy_client':
             client_startup(self.config, self.logger, ssh_clients, scp_clients)
 

@@ -95,6 +95,12 @@ class ArgParser:
         ArgParser._add_common_args(parser_empty)
         ArgParser._add_empty_args(parser_empty)
 
+        # eos parser
+        parser_eos = subparsers.add_parser('empty', help='Eos network')
+        parser_eos.set_defaults(blockchain_type='eos')
+        ArgParser._add_common_args(parser_eos)
+        ArgParser._add_empty_args(parser_eos)
+
         # geth parser
         parser_geth = subparsers.add_parser('geth', help='Geth network')
         parser_geth.set_defaults(blockchain_type='geth')
@@ -291,6 +297,11 @@ class ArgParser:
 
     @staticmethod
     def _add_empty_args(parser):
+        pass
+
+
+    @staticmethod
+    def _add_eos_args(parser):
         pass
 
 
@@ -624,6 +635,12 @@ class ArgParser:
             return\
                 {
                 }
+
+        elif blockchain_type == "eos":
+            return\
+                {
+                }
+
 
         elif blockchain_type == "geth":
             return\

@@ -14,9 +14,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-
-  cd /data
-
   # Getting updates and upgrades
   sudo apt-get update
   sudo apt-get -y upgrade || echo "Upgrading in fabric_bootstrap failed" >> /home/ubuntu/upgrade_fail2.log
@@ -47,28 +44,28 @@
   # Testing whether docker runs without user permissions
   docker run hello-world
 
-  sudo apt install -y gcc
-  sudo apt install -y jq
-  sudo apt-get install -y make
-  sudo apt-get install -y unzip
-  sudo apt-get install -y bubblewrap
+  sudo apt-get update \
+&& sudo apt-get upgrade \
+&& sudo apt install -y rsync git m4 build-essential patch unzip bubblewrap wget pkg-config libgmp-dev libev-dev libhidapi-dev ntp rng-tools\
+&& echo "HRNGDEVICE=/dev/urandom" | sudo tee -a /etc/default/rng-tools \
+&& /etc/init.d/rng-tools start \
+&& wget https://github.com/ocaml/opam/releases/download/2.0.5/opam-2.0.5-x86_64-linux \
+&& sudo cp opam-2.0.5-x86_64-linux /usr/local/bin/opam \
+&& sudo chmod a+x /usr/local/bin/opam \
+&& git clone https://gitlab.com/tezos/tezos.git \
+&& cd tezos \
+&& git checkout alphanet \
+&& opam init -a \
+&& opam switch create tezos ocaml-base-compiler.4.07.1 \
+&& eval $(opam env) \
+&& export PATH=/home/ubuntu/tezos/_opam/bin/:$PATH \
+&& make build-deps \
+&& eval $(opam env) \
+&& export PATH=/home/ubuntu/tezos/_opam/bin/:$PATH \
+&& make \
+&& ~/tezos/tezos-node identity generate
 
-  sudo apt install -y rsync git m4 build-essential patch unzip bubblewrap wget pkg-config libgmp-dev libev-dev libhidapi-dev which
-  wget https://github.com/ocaml/opam/releases/download/2.0.3/opam-2.0.3-x86_64-linux
-  sudo cp opam-2.0.3-x86_64-linux /usr/local/bin/opam
-  sudo chmod a+x /usr/local/bin/opam
-  (git clone https://gitlab.com/tezos/tezos.git && cd tezos && checkout alphanet && cd ..)
-  sudo chmod -R 755 /data/tezos
-
-  sudo apt-get install -qq -yy libev-dev libgmp-dev libhidapi-dev m4 perl pkg-config
-
-  (cd /data/tezos; opam init -a)
-  export PATH=/data/tezos:$PATH
-  source /data/tezos/src/bin_client/bash-completion.sh
-  export TEZOS_CLIENT_UNSAFE_DISABLE_DISCLAIMER=Y
-  (cd /data/tezos; make build-deps)
-  export PATH=/data/tezos:$PATH
-  export TEZOS_CLIENT_UNSAFE_DISABLE_DISCLAIMER=Y
+~/tezos/tezos-node identity generate
 
 
   # =======  Create success indicator at end of this script ==========
