@@ -114,6 +114,12 @@ class ArgParser:
         ArgParser._add_common_args(parser_indy)
         ArgParser._add_indy_args(parser_indy)
 
+        # leveldb parser
+        parser_leveldb = subparsers.add_parser('leveldb', help='Single LevelDB node')
+        parser_leveldb.set_defaults(blockchain_type='leveldb')
+        ArgParser._add_common_args(parser_leveldb)
+        ArgParser._add_indy_args(parser_leveldb)
+
         # parity parser
         parser_parity = subparsers.add_parser('parity', help='Parity network')
         parser_parity.set_defaults(blockchain_type='parity')
@@ -353,6 +359,11 @@ class ArgParser:
                             help='some number defining the maximum amount of clients', type=int, default=5)
         parser.add_argument('--public_network',
                             help='Choose 1 if you need a network available over public ips', type=int, default=0)
+
+
+    @staticmethod
+    def _add_leveldb_args(parser):
+        pass
 
 
     @staticmethod
@@ -674,6 +685,11 @@ class ArgParser:
                     "clients": namespace_dict['clients'],
                     "public_network": namespace_dict['public_network']
 
+                }
+
+        elif blockchain_type == "leveldb":
+            return\
+                {
                 }
 
         elif blockchain_type == "parity":

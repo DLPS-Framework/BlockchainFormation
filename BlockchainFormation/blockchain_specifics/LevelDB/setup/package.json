@@ -1,0 +1,16 @@
+{
+  "name": "LevelDB_Server",
+  "version": "1.0.0",
+  "main": "leveldb.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ChainLab",
+  "license": "ISC",
+  "dependencies": {
+    "http": "0.0.0",
+    "level": "^6.0.1"
+  },
+  "devDependencies": {},
+  "description": ""
+}
