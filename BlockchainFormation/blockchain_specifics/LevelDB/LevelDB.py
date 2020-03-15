@@ -89,23 +89,48 @@ def leveldb_startup(config, logger, ssh_clients, scp_clients):
 
     scp_clients[0].put(f"{dir_name}/setup", "/home/ubuntu", recursive=True)
 
+    logger.info("Installing npm packages")
     channel = ssh_clients[0].get_transport().open_session()
-    channel.exec_command(f"(cd setup && . ~/.profile && npm install >> ~/install.log && echo 'Success' >> ~/install.log)")
-    wait_till_done(config, ssh_clients, config['ips'], 180, 10, "~/install.log", "Success", 30, logger)
+    channel.exec_command(f"(cd setup && . ~/.profile && npm install >> /home/ubuntu/setup/install.log && echo Success >> /home/ubuntu/setup/install.log)")
+
+    status_flags = wait_till_done(config, ssh_clients, config['ips'], 180, 10, "/home/ubuntu/setup/install.log", "Success", 30, logger)
+    # if False in status_flags:
+        # raise Exception("Installation failed")
 
 
     logger.info("Starting the server")
-
     stdin, stdout, stderr = ssh_clients[0].exec_command("echo '{\n    \"ip\": \"" + f"{config['priv_ips'][0]}" + "\"\n}' >> ~/setup/config.json")
     logger.debug(stdout.readlines())
     logger.debug(stderr.readlines())
 
     channel = ssh_clients[0].get_transport().open_session()
-    channel.exec_command(f"(cd setup && node server.js)")
-
-
+    channel.exec_command(f"(source /home/ubuntu/.profile && cd setup && node server.js >> /home/ubuntu/server.log)")
 
 
 def leveldb_restart(config, logger, ssh_clients, scp_clients):
 
-    pass
+    logger.info("Getting the pid of the server")
+    stdin, stdout, stderr = ssh_clients[0].exec_command("pidof node")
+    out = stdout.readlines()
+    logger.debug(out)
+    logger.debug(stderr.readlines())
+
+    pid = out[0].replace("\n", "")
+
+    logger.info("Killing the server and deleting the logs")
+    stdin, stdout, stderr = ssh_clients[0].exec_command(f"kill {pid} && rm /home/ubuntu/server.log")
+    logger.debug(stdout.readlines())
+    logger.debug(stderr.readlines())
+
+    logger.info("Checking whether the process has been killed")
+    stdin, stdout, stderr = ssh_clients[0].exec_command("ps aux | grep node")
+    logger.debug(stdout.readlines())
+    logger.debug(stderr.readlines())
+
+    logger.info("Restarting the server")
+    channel = ssh_clients[0].get_transport().open_session()
+    channel.exec_command(f"(source /home/ubuntu/.profile && cd setup && node server.js >> /home/ubuntu/server.log)")
+
+
+
+

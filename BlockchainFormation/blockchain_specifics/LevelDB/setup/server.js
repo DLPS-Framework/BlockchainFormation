@@ -80,16 +80,7 @@ server.on("request", async (req, res) => {
                         res.writeHead(200, "Success");
                         res.end("Successful");
 
-                    } else {
-
-                        console.log("Not supported");
-                        res.writeHead(400, "Not supported");
-                        res.end("This request is not supported");
-                    }
-
-                } else if (req.method == "GET") {
-
-                    if (req.url == "/readData") {
+                    } else if (req.url == "/readData") {
 
                         let dataJson = JSON.parse(data);
                         let key = dataJson['key'];
@@ -134,4 +125,4 @@ server.on("request", async (req, res) => {
 })
 
 server.listen(1337, config['ip']);
-console.log('Server running at http://"' + config['ip'] + '":1337/');
+console.log('Server running at http://' + config['ip'] + ':1337');

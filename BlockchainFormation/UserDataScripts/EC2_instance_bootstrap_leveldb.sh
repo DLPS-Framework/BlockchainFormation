@@ -48,6 +48,8 @@
   wget http://archive.ubuntu.com/ubuntu/pool/main/l/leveldb/libleveldb-dev_1.20-2_amd64.deb
   sudo apt-get install -y ./libleveldb-dev_1.20-2_amd64.deb
 
+  rm -rf ./libleveldb-dev_1.20-2_amd64.deb
+
 
   wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash || wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash || wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash
   . ~/.nvm/nvm.sh
