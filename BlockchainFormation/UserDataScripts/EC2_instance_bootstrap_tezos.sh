@@ -16,7 +16,7 @@
 
   # Getting updates and upgrades
   sudo apt-get update
-  sudo apt-get -y upgrade || echo "Upgrading in fabric_bootstrap failed" >> /home/ubuntu/upgrade_fail2.log
+  sudo apt-get -y upgrade
 
   # Getting curl
   sudo apt install curl
@@ -44,6 +44,25 @@
   # Testing whether docker runs without user permissions
   docker run hello-world
 
+
+   # Installing nvm, node.js and npm
+  wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash || wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash || wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash
+  . ~/.nvm/nvm.sh
+  . ~/.profile
+  . ~/.bashrc
+
+  nvm install 8.16.0
+  echo "export PATH=$PATH:/home/ubuntu/.nvm/versions/node/v8.16.0/bin" >> /home/ubuntu/.profile
+  . ~/.profile
+  . ~/.bashrc
+  echo "node version: $(node -v)"
+  echo "npm version: $(npm -v)"
+  # for installing truffle/contract
+  echo "nvm version: $(nvm version)"
+  sudo apt update
+
+
+  # Installing tezos alphanet
   sudo apt-get update \
 && sudo apt-get upgrade \
 && sudo apt install -y rsync git m4 build-essential patch unzip bubblewrap wget pkg-config libgmp-dev libev-dev libhidapi-dev ntp rng-tools\
@@ -65,11 +84,54 @@
 && make \
 && ~/tezos/tezos-node identity generate
 
-~/tezos/tezos-node identity generate
+printf '{
+    "genesis_pubkey":
+      "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2"
+}
+' >> /home/ubuntu/genesis_pubkey.json
+
+printf '#/bin/bash
+
+BOOTSTRAP1_IDENTITY="tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx"
+BOOTSTRAP1_PUBLIC="edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav"
+BOOTSTRAP1_SECRET="unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh"
+
+BOOTSTRAP2_IDENTITY="tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN"
+BOOTSTRAP2_PUBLIC="edpktzNbDAUjUk697W7gYg2CRuBQjyPxbEg8dLccYYwKSKvkPvjtV9"
+BOOTSTRAP2_SECRET="unencrypted:edsk39qAm1fiMjgmPkw1EgQYkMzkJezLNewd7PLNHTkr6w9XA2zdfo"
+
+BOOTSTRAP3_IDENTITY="tz1faswCTDciRzE4oJ9jn2Vm2dvjeyA9fUzU"
+BOOTSTRAP3_PUBLIC="edpkuTXkJDGcFd5nh6VvMz8phXxU3Bi7h6hqgywNFi1vZTfQNnS1RV"
+BOOTSTRAP3_SECRET="unencrypted:edsk4ArLQgBTLWG5FJmnGnT689VKoqhXwmDPBuGx3z4cvwU9MmrPZZ"
+
+BOOTSTRAP4_IDENTITY="tz1b7tUupMgCNw2cCLpKTkSD1NZzB5TkP2sv"
+BOOTSTRAP4_PUBLIC="edpkuFrRoDSEbJYgxRtLx2ps82UdaYc1WwfS9sE11yhauZt5DgCHbU"
+BOOTSTRAP4_SECRET="unencrypted:edsk2uqQB9AY4FvioK2YMdfmyMrer5R8mGFyuaLLFfSRo8EoyNdht3"
+
+BOOTSTRAP5_IDENTITY="tz1ddb9NMYHZi5UzPdzTZMYQQZoMub195zgv"
+BOOTSTRAP5_PUBLIC="edpkv8EUUH68jmo3f7Um5PezmfGrRF24gnfLpH3sVNwJnV5bVCxL2n"
+BOOTSTRAP5_SECRET="unencrypted:edsk4QLrcijEffxV31gGdN2HU7UpyJjA8drFoNcmnB28n89YjPNRFm"
+
+ADDR=\$1
+
+~/tezos/tezos-client --addr \$ADDR --port 18730 import secret key bootstrap1 \${BOOTSTRAP1_SECRET}
+~/tezos/tezos-client --addr \$ADDR --port 18730 import secret key bootstrap2 \${BOOTSTRAP2_SECRET}
+~/tezos/tezos-client --addr \$ADDR --port 18730 import secret key bootstrap3 \${BOOTSTRAP3_SECRET}
+~/tezos/tezos-client --addr \$ADDR --port 18730 import secret key bootstrap4 \${BOOTSTRAP4_SECRET}
+~/tezos/tezos-client --addr \$ADDR --port 18730 import secret key bootstrap5 \${BOOTSTRAP5_SECRET}
+' >> ~/import.sh && sudo chmod 775 ~/import.sh
+
+printf '#/bin/bash
+
+ADDR=\$1
+
+ACTIVATOR_SECRET="unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6"
+~/tezos/tezos-client --addr \$ADDR --port 18730 import secret key activator \${ACTIVATOR_SECRET}
+~/tezos/tezos-client --addr \$ADDR --port 18730 -block genesis activate protocol Pt24m4xiPbLDhVgVfABUjirbmda3yohdN82Sp9FeuAXJ4eV9otd with fitness 1 and key activator and parameters ~/tezos/sandbox-parameters.json --timestamp \$(TZ="AAA+1" date +%%FT%%TZ)
+' >> ~/bootstrap.sh && sudo chmod 775 ~/bootstrap.sh
 
 
   # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log
-  sudo reboot
 
 EOF

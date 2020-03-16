@@ -142,7 +142,6 @@ class VMHandler:
 
             os.system(f"rm {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh")
 
-
         else:
 
             with open(f"{dir_name}/UserDataScripts/EC2_instance_bootstrap_{self.config['blockchain_type']}.sh", 'r') as content_file:
@@ -212,6 +211,9 @@ class VMHandler:
 
         if self.config['blockchain_type'] == "fabric":
             fabric_check_config(self.config, self.logger)
+
+        elif self.config['blockchain_type'] == "eos":
+            eos_check_config(self.config, self.logger)
 
         elif self.config['blockchain_type'] == "sawtooth":
             sawtooth_check_config(self.config, self.logger)

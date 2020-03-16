@@ -10,6 +10,7 @@ include BlockchainFormation/blockchain_specifics/Fabric/chaincode/benchcontract/
 include BlockchainFormation/blockchain_specifics/Fabric/setup/*
 include BlockchainFormation/blockchain_specifics/Fabric/*
 include BlockchainFormation/blockchain_specifics/Eos/*
+recursive-include BlockchainFormation/blockchain_specifics/Eos/contracts *
 include BlockchainFormation/blockchain_specifics/Indy/*
 include BlockchainFormation/blockchain_specifics/LevelDB/*
 include BlockchainFormation/blockchain_specifics/LevelDB/setup/*
