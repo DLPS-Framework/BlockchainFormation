@@ -15,11 +15,11 @@
 #  limitations under the License.
 
 
-  # Getting updates (and upgrades)
+  # Getting updates and upgrades
   sudo apt-get update
-  sudo apt-get -y upgrade || echo "Upgrading in indy_bootstrap failed" >> /home/ubuntu/upgrade_fail2.log
+  sudo apt-get -y upgrade
 
-   # Getting curl
+  # Getting curl
   sudo apt install curl
 
   # Installing docker

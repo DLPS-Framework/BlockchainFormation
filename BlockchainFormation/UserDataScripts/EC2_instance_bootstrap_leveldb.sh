@@ -15,9 +15,9 @@
 #  limitations under the License.
 
 
-  # Getting updates (and upgrades)
+  # Getting updates and upgrades
   sudo apt-get update
-  sudo apt-get -y upgrade || echo "Upgrading in indy_bootstrap failed" >> /home/ubuntu/upgrade_fail2.log
+  sudo apt-get -y upgrade
 
    # Getting curl
   sudo apt install curl
@@ -29,6 +29,7 @@
   sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
   sudo apt-get update
   sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
   # Testing the installation
   docker --version
   sudo docker run hello-world
@@ -45,12 +46,13 @@
   # Testing whether docker runs without user permissions
   docker run hello-world
 
+  # Installing LevelDB for Ubuntu
   wget http://archive.ubuntu.com/ubuntu/pool/main/l/leveldb/libleveldb-dev_1.20-2_amd64.deb
   sudo apt-get install -y ./libleveldb-dev_1.20-2_amd64.deb
-
+  # Cleaning the directory
   rm -rf ./libleveldb-dev_1.20-2_amd64.deb
 
-
+  # Installing nvm, node.js and npm
   wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash || wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash || wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash
   . ~/.nvm/nvm.sh
   . ~/.profile
@@ -65,7 +67,6 @@
   # for installing truffle/contract
   echo "nvm version: $(nvm version)"
   sudo apt update
-
 
   # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log
