@@ -38,15 +38,73 @@ def eos_startup(config, logger, ssh_clients, scp_clients):
 
     dir_name = os.path.dirname(os.path.realpath(__file__))
 
-    stdin, stdout, stderr = ssh_clients[0].exec_command("cleos wallet create --name=mywallet --to-console | tail -n 1")
+    # the indices of the blockchain nodes
+    config['node_indices'] = list(range(1, config['vm_count']))
+
+    # create directories for the fabric logs and all the setup data (crypto-stuff, config files and scripts which are exchanged with the VMs)
+    os.mkdir(f"{config['exp_dir']}/eos_logs")
+
+    # Creating docker swarm
+    logger.info("Preparing & starting docker swarm")
+
+    stdin, stdout, stderr = ssh_clients[0].exec_command("sudo docker swarm init")
     out = stdout.readlines()
-    logger.debug(out)
-    logger.debug(stderr.readlines())
+    # for index, _ in enumerate(out):
+    #     logger.debug(out[index].replace("\n", ""))
 
+    # logger.debug("".join(stderr.readlines()))
+
+    stdin, stdout, stderr = ssh_clients[0].exec_command("sudo docker swarm join-token manager")
+    out = stdout.readlines()
+    # logger.debug(out)
+    # logger.debug("".join(stderr.readlines()))
+    join_command = out[2].replace("    ", "").replace("\n", "")
+
+    config['join_command'] = "sudo " + join_command
+
+    for index, _ in enumerate(config['priv_ips']):
+
+        if index != 0:
+            stdin, stdout, stderr = ssh_clients[index].exec_command("sudo " + join_command)
+            out = stdout.readlines()
+            # logger.debug(out)
+            # logger.debug("".join(stderr.readlines()))
+
+    # Name of the swarm network
+    my_net = "my-net"
+    stdin, stdout, stderr = ssh_clients[0].exec_command(f"sudo docker network create --subnet 10.10.0.0/16 --attachable --driver overlay {my_net}")
+    out = stdout.readlines()
+    # logger.debug(out)
+    # logger.debug("".join(stderr.readlines()))
+    network = out[0].replace("\n", "")
+
+    logger.info("Testing whether setup was successful")
+    stdin, stdout, stderr = ssh_clients[0].exec_command("sudo docker node ls")
+    out = stdout.readlines()
+    for index, _ in enumerate(out):
+        logger.debug(out[index].replace("\n", ""))
+
+    logger.debug("".join(stderr.readlines()))
+    if len(out) == len(config['priv_ips']) + 1:
+        logger.info("Docker swarm started successfully")
+    else:
+        logger.info("Docker swarm setup was not successful")
+        sys.exit("Fatal error when performing docker swarm setup")
+
+
+    # Starting Eos
     passwords = []
-    passwords.append(out[0].replace("\n", ""))
 
-    logger.info(f"Passwords: {passwords}")
+    for index, _ in enumerate(config['priv_ips']):
+
+        stdin, stdout, stderr = ssh_clients[index].exec_command("cleos wallet create --name=mywallet --to-console | tail -n 1")
+        out = stdout.readlines()
+        logger.debug(out)
+        logger.debug(stderr.readlines())
+
+        passwords.append(out[0].replace("\n", ""))
+
+    logger.info(f"Wallet passwords: {passwords}")
 
     priv_keys = []
     pub_keys = []
@@ -61,23 +119,26 @@ def eos_startup(config, logger, ssh_clients, scp_clients):
         priv_keys.append(out[0].replace("\n", "").replace("Private key: ", ""))
         pub_keys.append(out[1].replace("\n", "").replace("Public key: ", ""))
 
+        # logger.info("Increasing the unlock time of the wallet")
+        # stdin, stdout, stderr = ssh_clients[0].exec_command("keosd --unlock-timeout=9999999")
+        # stdout.readlines()
+        # stderr.readlines()
+
+        logger.info("Unlocking the wallet")
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos wallet unlock --name=mywallet --password={passwords[0]}")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+
+        logger.info("Importing the key to the wallet")
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos wallet import --name=mywallet --private-key={priv_keys[0]}")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+
     logger.info(f"Private keys: {priv_keys}")
     logger.info(f"Public keys: {pub_keys}")
 
-    # logger.info("Increasing the unlock time of the wallet")
-    # stdin, stdout, stderr = ssh_clients[0].exec_command("keosd --unlock-timeout=9999999")
-    # stdout.readlines()
-    # stderr.readlines()
-
-    logger.info("Unlocking the wallet")
-    stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos wallet unlock --name=mywallet --password={passwords[0]}")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
-
-    logger.info("Importing the wallet")
-    stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos wallet import --name=mywallet --private-key={priv_keys[0]}")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
+    config['priv_keys'] = priv_keys
+    config['pub_keys'] = pub_keys
 
     for index, _ in enumerate(config['priv_ips']):
 
@@ -88,6 +149,17 @@ def eos_startup(config, logger, ssh_clients, scp_clients):
 
         logger.info("Replacing the relevant keys of the genesis start script")
         stdin, stdout, stderr = ssh_clients[index].exec_command(f"sed -i -e 's/EOS_PUB_DEV_KEY/{pub_keys[index]}/g' ~/bootbios/genesis/genesis_start.sh ~/bootbios/genesis/start.sh && sed -i -e 's/EOS_PRIV_DEV_KEY/{priv_keys[index]}/g' ~/bootbios/genesis/genesis_start.sh ~/bootbios/genesis/start.sh")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+
+        logger.info("Replacing the relevant producer names")
+
+        if index == 0:
+            producer_name = "eosio"
+        else:
+            producer_name = f"producer{index}"
+
+        stdin, stdout, stderr = ssh_clients[index].exec_command(f"sed -i -e 's/substitute_producer_name/{producer_name}/g' ~/bootbios/genesis/genesis_start.sh ~/bootbios/genesis/start.sh")
         logger.debug(stdout.readlines())
         logger.debug(stderr.readlines())
 
@@ -176,14 +248,14 @@ def eos_startup(config, logger, ssh_clients, scp_clients):
     stdin, stdout, stderr = ssh_clients[0].exec_command("cleos set contract eosio contracts/build/contracts/eosio.bios -p eosio "
                                                         "&& cleos push action eosio activate '[\"f0af56d2c5a48d60a4a5b5c903edfb7db3a736a94ed589d0b797df33ff9d3e1d\"]' -p eosio "
                                                         "&& cleos push action eosio activate '[\"2652f5f96006294109b3dd0bbde63693f55324af452b799ee137a81a905eed25\"]' -p eosio "
-                                                        "&&cleos push action eosio activate '[\"8ba52fe7a3956c5cd3a656a3174b931d3bb2abb45578befc59f283ecd816a405\"]' -p eosio "
-                                                        "&&cleos push action eosio activate '[\"ad9e3d8f650687709fd68f4b90b41f7d825a365b02c23a636cef88ac2ac00c43\"]' -p eosio "
-                                                        "&&cleos push action eosio activate '[\"68dcaa34c0517d19666e6b33add67351d8c5f69e999ca1e37931bc410a297428\"]' -p eosio "
-                                                        "&&cleos push action eosio activate '[\"e0fb64b1085cc5538970158d05a009c24e276fb94e1a0bf6a528b48fbc4ff526\"]' -p eosio "
-                                                        "&&cleos push action eosio activate '[\"ef43112c6543b88db2283a2e077278c315ae2c84719a8b25f25cc88565fbea99\"]' -p eosio "
-                                                        "&&cleos push action eosio activate '[\"4a90c00d55454dc5b059055ca213579c6ea856967712a56017487886a4d4cc0f\"]' -p eosio "
-                                                        "&&cleos push action eosio activate '[\"1a99a59d87e06e09ec5b028a9cbb7749b4a5ad8819004365d02dc4379a8b7241\"]' -p eosio "
-                                                        "&&cleos push action eosio activate '[\"4e7bf348da00a945489b2a681749eb56f5de00b900014e137ddae39f48f69d67\"]' -p eosio ")
+                                                        "&& cleos push action eosio activate '[\"8ba52fe7a3956c5cd3a656a3174b931d3bb2abb45578befc59f283ecd816a405\"]' -p eosio "
+                                                        "&& cleos push action eosio activate '[\"ad9e3d8f650687709fd68f4b90b41f7d825a365b02c23a636cef88ac2ac00c43\"]' -p eosio "
+                                                        "&& cleos push action eosio activate '[\"68dcaa34c0517d19666e6b33add67351d8c5f69e999ca1e37931bc410a297428\"]' -p eosio "
+                                                        "&& cleos push action eosio activate '[\"e0fb64b1085cc5538970158d05a009c24e276fb94e1a0bf6a528b48fbc4ff526\"]' -p eosio "
+                                                        "&& cleos push action eosio activate '[\"ef43112c6543b88db2283a2e077278c315ae2c84719a8b25f25cc88565fbea99\"]' -p eosio "
+                                                        "&& cleos push action eosio activate '[\"4a90c00d55454dc5b059055ca213579c6ea856967712a56017487886a4d4cc0f\"]' -p eosio "
+                                                        "&& cleos push action eosio activate '[\"1a99a59d87e06e09ec5b028a9cbb7749b4a5ad8819004365d02dc4379a8b7241\"]' -p eosio "
+                                                        "&& cleos push action eosio activate '[\"4e7bf348da00a945489b2a681749eb56f5de00b900014e137ddae39f48f69d67\"]' -p eosio ")
     logger.debug(stdout.readlines())
     logger.debug(stderr.readlines())
 
@@ -202,41 +274,60 @@ def eos_startup(config, logger, ssh_clients, scp_clients):
     logger.debug(stderr.readlines())
 
 
-    stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos system newaccount eosio --transfer eosio1 {pub_keys[0]} --stake-net \"100000000.0000 SYS\" --stake-cpu \"100000000.0000 SYS\" --buy-ram-kbytes 8192")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
+    for index, node in enumerate(config['node_indices']):
+
+        logger.info(f"Importing the private key of producer{index+1} to the wallet on the eosio node")
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos wallet import --name=mywallet --private-key={priv_keys[node]}")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos system newaccount eosio --transfer producer{node} {pub_keys[node]} --stake-net \"100000000.0000 SYS\" --stake-cpu \"100000000.0000 SYS\" --buy-ram-kbytes 8192")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos system regproducer producer{node} {pub_keys[node]}")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
 
     time.sleep(2)
 
-    stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos system newaccount eosio --transfer eosio0 {pub_keys[0]} --stake-net \"100000000.0000 SYS\" --stake-cpu \"100000000.0000 SYS\" --buy-ram-kbytes 8192")
-    stdout.readlines()
-    stderr.readlines()
+    for index, node in enumerate(config['node_indices']):
 
-    time.sleep(2)
+            logger.info("Sending SYS token to the producer")
+            stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos transfer eosio producer{node} \"1000000 SYS\" \"Hallo\"")
+            logger.debug("".join(stdout.readlines()))
+            logger.debug("".join(stderr.readlines()))
 
-    stdin, stdout, stderr = ssh_clients[1].exec_command(f"cleos system newaccount eosio --transfer eosio1 {pub_keys[1]} --stake-net \"100000000.0000 SYS\" --stake-cpu \"100000000.0000 SYS\" --buy-ram-kbytes 8192")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
+            time.sleep(2)
 
-    time.sleep(2)
+            logger.info("Getting the current balance")
+            stdin, stdout, stderr = ssh_clients[node].exec_command(f"cleos get currency balance eosio.token producer{node} SYS")
+            logger.debug("".join(stdout.readlines()))
+            logger.debug("".join(stderr.readlines()))
 
-    stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos system regproducer eosio {pub_keys[0]}")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
+            time.sleep(2)
 
-    time.sleep(2)
+            logger.info("Staking...")
+            stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos system delegatebw producer{node} producer{node} \"20 SYS\" \"20 SYS\"")
+            logger.debug("".join(stdout.readlines()))
+            logger.debug("".join(stderr.readlines()))
 
-    stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos system listproducers")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
+            time.sleep(2)
 
-    time.sleep(2)
+            logger.info("Voting...")
+            stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos system voteproducer prods producer{node} producer{node}")
+            logger.debug("".join(stdout.readlines()))
+            logger.debug("".join(stderr.readlines()))
 
-    stdin, stdout, stderr = ssh_clients[0].exec_command("cleos system voteproducer prods chainlab eosio0 eosio1 eosio2")
-    logger.debug(stdout.readlines())
-    logger.debug(stderr.readlines())
 
-    time.sleep(2)
+    stdin, stdout, stderr = ssh_clients[0].exec_command("cleos system listproducers")
+    logger.debug("".join(stdout.readlines()))
+    logger.debug("".join(stderr.readlines()))
+
+    # stdin, stdout, stderr = ssh_clients[0].exec_command("sudo shutdown -h now")
+    # logger.debug("".join(stdout.readlines()))
+    # logger.debug("".join(stderr.readlines()))
+
 
 def eos_restart(config, logger, ssh_clients, scp_clients):
     """
@@ -245,3 +336,11 @@ def eos_restart(config, logger, ssh_clients, scp_clients):
     """
 
     pass
+
+
+def eos_check_config(config, logger):
+
+    logger.debug(f"Modifying the eos config")
+    config['vm_count'] = config['vm_count'] + 1
+
+

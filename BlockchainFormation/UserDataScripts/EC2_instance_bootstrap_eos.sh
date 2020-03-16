@@ -19,6 +19,33 @@
   sudo apt-get update
   sudo apt-get -y upgrade
 
+  # Getting curl
+  sudo apt install curl
+
+  # Installing docker
+  sudo apt-get update
+  sudo apt-get install -y apt-transport-https ca-certificates gnupg-agent software-properties-common
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+  sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+  sudo apt-get update
+  sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
+  # Testing the installation
+  docker --version
+  sudo docker run hello-world
+
+  # Installing docker-compose
+  sudo curl -L "https://github.com/docker/compose/releases/download/1.24.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+  sudo chmod +x /usr/local/bin/docker-compose
+  # Testing the installation
+  docker-compose --version
+
+  # Eventually user permissions need to be adjusted... rebooting required!
+  sudo usermod -aG docker ubuntu
+  newgrp docker
+  # Testing whether docker runs without user permissions
+  docker run hello-world
+
   sudo apt-get install -y clang cmake unzip jq
 
   wget https://github.com/EOSIO/eos/releases/download/v2.0.3/eosio_2.0.3-1-ubuntu-18.04_amd64.deb
@@ -83,7 +110,7 @@ nodeos \
 --data-dir \$DATADIR"/data" \
 --blocks-dir \$DATADIR"/blocks" \
 --config-dir \$DATADIR"/config" \
---producer-name eosio \
+--producer-name substitute_producer_name \
 --http-server-address 0.0.0.0:8888 \
 --p2p-listen-endpoint 0.0.0.0:4444 \
 --access-control-allow-origin=* \
@@ -115,7 +142,7 @@ nodeos \
 --data-dir \$DATADIR"/data" \
 --blocks-dir \$DATADIR"/blocks" \
 --config-dir \$DATADIR"/config" \
---producer-name eosio. \
+--producer-name substitute_producer_name \
 --http-server-address 0.0.0.0:8888 \
 --p2p-listen-endpoint 0.0.0.0:4444 \
 --access-control-allow-origin=* \
@@ -156,6 +183,5 @@ ls -al
 
   # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log
-  sudo reboot
 
 EOF
