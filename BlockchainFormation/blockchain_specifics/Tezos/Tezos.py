@@ -96,7 +96,7 @@ def tezos_startup(config, logger, ssh_clients, scp_clients):
         logger.debug(stderr.readlines())
 
     channel = ssh_clients[0].get_transport().open_session()
-    channel.exec_command("~/tezos/tezos-node identity generate --data-dir ~/test && ~/tezos/tezos-node run --data-dir ~/test --sandbox=/home/ubuntu/genesis_pubkey.json >> ~/node.log 2>&1")
+    channel.exec_command("~/tezos/tezos-node run --data-dir ~/test --sandbox=/home/ubuntu/genesis_pubkey.json >> ~/node.log 2>&1")
     time.sleep(30)
 
     stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/bootstrap.sh {config['priv_ips'][0]}")
@@ -115,13 +115,10 @@ def tezos_startup(config, logger, ssh_clients, scp_clients):
 
 
     for index, _ in enumerate(config['priv_ips']):
-        stdin, stdout, stderr = ssh_clients[index].exec_command(f"~/tezos/tezos-node config init --data-dir ~/test --connections {len(config['priv_ips'])} --expected-pow 0 --rpc-addr {config['priv_ips'][index]}:18730 --net-addr {config['priv_ips'][index]}:19730 {peers_string}")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
 
-    channel = ssh_clients[0].get_transport().open_session()
-    channel.exec_command("~/tezos/tezos-node identity generate --data-dir ~/test && ~/tezos/tezos-node run --data-dir ~/test >> ~/node.log 2>&1")
-    time.sleep(30)
+        channel = ssh_clients[index].get_transport().open_session()
+        channel.exec_command("~/tezos/tezos-node identity generate --data-dir ~/test && ~/tezos/tezos-node run --data-dir ~/test >> ~/node.log 2>&1")
+        time.sleep(30)
 
     for index, _ in enumerate(config['priv_ips']):
         stdin, stdout, stderr = ssh_clients[index].exec_command(f"~/import.sh {config['priv_ips'][index]}")
@@ -129,11 +126,11 @@ def tezos_startup(config, logger, ssh_clients, scp_clients):
         logger.debug(stderr.readlines())
 
         channel = ssh_clients[index].get_transport().open_session()
-        channel.exec_command(f"~/tezos/tezos-baker-004-Pt24m4xi --addr {config['priv_ips'][0]} --port 18730 run with local node /home/ubuntu/test >> ~/baker.log 2>&1")
+        channel.exec_command(f"~/tezos/tezos-baker-004-Pt24m4xi --addr {config['priv_ips'][index]} --port 18730 run with local node /home/ubuntu/test >> ~/baker.log 2>&1")
         channel = ssh_clients[index].get_transport().open_session()
-        channel.exec_command(f"~/tezos/tezos-accuser-004-Pt24m4xi --addr {config['priv_ips'][0]} --port 18730 run >> ~/accuser.log 2>&1")
+        channel.exec_command(f"~/tezos/tezos-accuser-004-Pt24m4xi --addr {config['priv_ips'][index]} --port 18730 run >> ~/accuser.log 2>&1")
         channel = ssh_clients[index].get_transport().open_session()
-        channel.exec_command(f"~/tezos/tezos-endorser-004-Pt24m4xi --addr {config['priv_ips'][0]} --port 18730 run >> ~/endorser.log 2>&1")
+        channel.exec_command(f"~/tezos/tezos-endorser-004-Pt24m4xi --addr {config['priv_ips'][index]} --port 18730 run >> ~/endorser.log 2>&1")
 
 
     for index, _ in enumerate(config['priv_ips']):

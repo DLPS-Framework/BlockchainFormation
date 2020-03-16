@@ -82,7 +82,7 @@
 && eval $(opam env) \
 && export PATH=/home/ubuntu/tezos/_opam/bin/:$PATH \
 && make \
-&& ~/tezos/tezos-node identity generate
+&& ~/tezos/tezos-node identity generate --data-dir ~/test
 
 printf '{
     "genesis_pubkey":
