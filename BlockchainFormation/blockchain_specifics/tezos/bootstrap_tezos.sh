@@ -28,9 +28,6 @@
   sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
   sudo apt-get update
   sudo apt-get install -y docker-ce docker-ce-cli containerd.io
-  # Testing the installation
-  docker --version
-  sudo docker run hello-world
 
   # Installing docker-compose
   sudo curl -L "https://github.com/docker/compose/releases/download/1.24.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
@@ -41,9 +38,6 @@
   # Eventually user permissions need to be adjusted... rebooting required!
   sudo usermod -aG docker ubuntu
   newgrp docker
-  # Testing whether docker runs without user permissions
-  docker run hello-world
-
 
    # Installing nvm, node.js and npm
   wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash || wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash || wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash

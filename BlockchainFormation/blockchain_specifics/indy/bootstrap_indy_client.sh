@@ -26,9 +26,7 @@
   . ~/.nvm/nvm.sh
   . ~/.profile
   . ~/.bashrc
-  # NVM_DIR="$HOME/.nvm"
-  # [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-  # [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
   nvm install 8.16.0
   echo "export PATH=$PATH:/home/ubuntu/.nvm/versions/node/v8.16.0/bin" >> /home/ubuntu/.profile
   . ~/.profile

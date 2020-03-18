@@ -19,47 +19,47 @@ const config = require("./config.json")
 const client = "~/tezos/tezos-client --addr " + config.ip + " --port 18730"
 
 function execShellCommand(cmd) {
-   const exec = require('child_process').exec;
-   return new Promise((resolve, reject) => {
-       exec(cmd, (error, stdout, stderr) => {
-           if (error) {
-               console.warn(error);
-           }
-           resolve(stdout? stdout : stderr);
-       });
-   });
+    const exec = require('child_process').exec;
+    return new Promise((resolve, reject) => {
+        exec(cmd, (error, stdout, stderr) => {
+            if (error) {
+                console.warn(error);
+            }
+            resolve(stdout ? stdout : stderr);
+        });
+    });
 }
 
 
 class tezos {
 
-  async init() {
-    return Promise.resolve(1);
-  }
+    async init() {
+        return Promise.resolve(1);
+    }
 
-  async writeData(value, from, to) {
+    async writeData(value, from, to) {
 
-      let result = await execShellCommand(client + " transfer " + value + " from " + from + " to " + to).catch(err => {
-          console.log("An error occurred");
-          return Promise.reject("Error");
-      });
-      console.log("Sent transaction with response " + result);
-      return Promise.resolve();
-  }
+        let result = await execShellCommand(client + " transfer " + value + " from " + from + " to " + to).catch(err => {
+            console.log("An error occurred");
+            return Promise.reject("Error");
+        });
+        console.log("Sent transaction with response " + result);
+        return Promise.resolve();
+    }
 
-  async readData(account) {
+    async readData(account) {
 
-    let value = await execShellCommand(client + " get balance for " + account).catch(err => {
-      console.log("An error occurred");
-      return Promise.reject("Error");
-    });
-    console.log("Read value " + value);
-    return Promise.resolve(value);
-  }
+        let value = await execShellCommand(client + " get balance for " + account).catch(err => {
+            console.log("An error occurred");
+            return Promise.reject("Error");
+        });
+        console.log("Read value " + value);
+        return Promise.resolve(value);
+    }
 
-  async close() {
-    return Promise.resolve(1);
-  }
+    async close() {
+        return Promise.resolve(1);
+    }
 }
 
 module.exports = tezos;

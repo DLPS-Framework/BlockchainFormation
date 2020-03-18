@@ -30,11 +30,6 @@ EOF
   sudo chown -R ubuntu /data
   sudo chown -R ubuntu /etc/systemd/system/
 
-  # Change open file limit to avoid Too many open files error
-  #sudo bash -c 'echo 100000000 > /proc/sys/fs/file-max'
-  #sudo bash -c 'fs.file-max = 100000000 >> /etc/sysctl.conf'
-  #sudo sysctl -p
-
   #Parity Service
   bash -c  "sudo printf '%s\n' '[Unit]' 'Description=Parity Ethereum client' '[Service]' 'Type=simple' 'ExecStart=/usr/bin/parity --config /data/parityNetwork/node.toml ' 'StandardOutput=file:/var/log/parity.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/parity.service"
 

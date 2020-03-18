@@ -26,7 +26,19 @@ from scp import SCPClient
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from BlockchainFormation.cost_calculator import AWSCostCalculator
 
-from BlockchainFormation.blockchain_specifics import *
+from BlockchainFormation.blockchain_specifics.client.Client import *
+from BlockchainFormation.blockchain_specifics.corda.Corda import *
+from BlockchainFormation.blockchain_specifics.couchdb.Couchdb import *
+from BlockchainFormation.blockchain_specifics.fabric.Fabric import *
+from BlockchainFormation.blockchain_specifics.empty.Empty import *
+from BlockchainFormation.blockchain_specifics.eos.Eos import *
+from BlockchainFormation.blockchain_specifics.geth.Geth import *
+from BlockchainFormation.blockchain_specifics.indy.Indy import *
+from BlockchainFormation.blockchain_specifics.leveldb.Leveldb import *
+from BlockchainFormation.blockchain_specifics.parity.Parity import *
+from BlockchainFormation.blockchain_specifics.quorum.Quorum import *
+from BlockchainFormation.blockchain_specifics.sawtooth.Sawtooth import *
+from BlockchainFormation.blockchain_specifics.tezos.Tezos import *
 
 from BlockchainFormation.lb_handler import *
 from BlockchainFormation.utils.utils import *
@@ -34,7 +46,7 @@ from BlockchainFormation.utils.utils import *
 utc = pytz.utc
 
 
-class VMHandler:
+class NodeHandler:
     """
     Class for handling startup and shutdown of aws VM instances
     """
@@ -134,22 +146,22 @@ class VMHandler:
         # if the blockchain type is fabric, we can modify the version of the docker images
         elif self.config['blockchain_type'] == 'fabric':
 
-            os.system(f"cp {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric.sh {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh")
-            os.system(f"sed -i -e 's/substitute_fabric_version/{self.config['fabric_settings']['fabric_version']}/g' {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh")
-            os.system(f"sed -i -e 's/substitute_fabric_ca_version/{self.config['fabric_settings']['fabric_ca_version']}/g' {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh")
-            os.system(f"sed -i -e 's/substitute_fabric_thirdparty_version/{self.config['fabric_settings']['thirdparty_version']}/g' {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh")
+            os.system(f"cp {dir_name}/blockchain_specifics/fabric/bootstrap_fabric.sh {dir_name}/blockchain_specifics/fabric/bootstrap_fabric_temp.sh")
+            os.system(f"sed -i -e 's/substitute_fabric_version/{self.config['fabric_settings']['fabric_version']}/g' {dir_name}/blockchain_specifics/fabric/bootstrap_fabric_temp.sh")
+            os.system(f"sed -i -e 's/substitute_fabric_ca_version/{self.config['fabric_settings']['fabric_ca_version']}/g' {dir_name}/blockchain_specifics/fabric/bootstrap_fabric_temp.sh")
+            os.system(f"sed -i -e 's/substitute_fabric_thirdparty_version/{self.config['fabric_settings']['thirdparty_version']}/g' {dir_name}/blockchain_specifics/fabric/bootstrap_fabric_temp.sh")
 
-            with open(f"{dir_name}/blockchain_specifics/Fabric/bootstrap_fabric", 'r') as content_file:
+            with open(f"{dir_name}/blockchain_specifics/fabric/bootstrap_fabric.sh", 'r') as content_file:
                 user_data_specific = content_file.read()
 
             user_data_combined = user_data_base + user_data_specific
 
-            os.system(f"rm {dir_name}/blockchain_specifics/Fabric/bootstrap_fabric_temp.sh")
+            os.system(f"rm {dir_name}/blockchain_specifics/fabric/bootstrap_fabric_temp.sh")
 
         elif self.config['blockchain_type'] == 'eos':
 
             # if we have non-standard settings, we need to compile binaries from scratch
-            if eos_check_config(self.config, self.logger):
+            if Eos.check_config(self.config, self.logger):
                 replace_command = "sudo apt-get install -y make " \
                                   "&& mkdir -p /data/eosio && cd /data/eosio " \
                                   "&& git clone --recursive https://github.com/EOSIO/eos && cd eos " \
@@ -160,16 +172,16 @@ class VMHandler:
             else:
                 replace_command = "wget https://github.com/EOSIO/eos/releases/download/v2.0.3/eosio_2.0.3-1-ubuntu-18.04_amd64.deb && sudo apt install -y ./eosio_2.0.3-1-ubuntu-18.04_amd64.deb"
 
-            os.system(f"cp {dir_name}/blockchain_specifics/Eos/bootstrap_eos.sh {dir_name}/blockchain_specifics/Eos/bootstrap_eos_temp.sh")
-            os.system(f"sed -i -e \"s#substitute_replace_command#{replace_command}#g\" {dir_name}/blockchain_specifics/Eos/bootstrap_eos_temp.sh")
-            os.system(f"sed -i -e 's/substitute_replace_commandsubstitute_replace_command/\&\&/g' {dir_name}/blockchain_specifics/Eos/bootstrap_eos_temp.sh")
+            os.system(f"cp {dir_name}/blockchain_specifics/eos/bootstrap_eos.sh {dir_name}/blockchain_specifics/Eos/bootstrap_eos_temp.sh")
+            os.system(f"sed -i -e \"s#substitute_replace_command#{replace_command}#g\" {dir_name}/blockchain_specifics/eos/bootstrap_eos_temp.sh")
+            os.system(f"sed -i -e 's/substitute_replace_commandsubstitute_replace_command/\&\&/g' {dir_name}/blockchain_specifics/eos/bootstrap_eos_temp.sh")
 
-            with open(f"{dir_name}/blockchain_specifics/Eos/bootstrap_eos_temp.sh", 'r') as content_file:
+            with open(f"{dir_name}/blockchain_specifics/eos/bootstrap_eos_temp.sh", 'r') as content_file:
                 user_data_specific = content_file.read()
 
             user_data_combined = user_data_base + user_data_specific
 
-            os.system(f"rm {dir_name}/blockchain_specifics/Eos/bootstrap_eos_temp.sh")
+            os.system(f"rm {dir_name}/blockchain_specifics/eos/bootstrap_eos_temp.sh")
 
         else:
 
@@ -245,7 +257,7 @@ class VMHandler:
                 self.config['image']['image_id'] = image["ImageId"]
 
         if self.config['blockchain_type'] == "fabric":
-            fabric_check_config(self.config, self.logger)
+            Fabric.check_config(self.config, self.logger)
 
         elif self.config['blockchain_type'] == "eos":
             # check_config is currently executed below
@@ -253,7 +265,7 @@ class VMHandler:
             pass
 
         elif self.config['blockchain_type'] == "sawtooth":
-            sawtooth_check_config(self.config, self.logger)
+            Sawtooth.check_config(self.config, self.logger)
 
         if self.config['instance_provision'] == "aws":
 
@@ -370,21 +382,21 @@ class VMHandler:
                     file.write(self.user_data)
                     file.close()
 
-                ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
+                NodeHandler.create_ssh_scp_clients(self.config)
 
                 for index in range(0, self.config['vm_count']):
                     # deleting previous indicators of success
-                    stdin, stdout, stderr = ssh_clients[index].exec_command("sudo rm -rf /var/log/user_data.log /var/log/user_data_success.log")
+                    stdin, stdout, stderr = self.ssh_clients[index].exec_command("sudo rm -rf /var/log/user_data.log /var/log/user_data_success.log")
                     self.logger.debug(stdout.readlines())
                     self.logger.debug(stderr.readlines())
 
-                    scp_clients[index].put(self.config['exp_dir'] + "/bootstrapping.sh", "/home/ubuntu")
+                    self.scp_clients[index].put(self.config['exp_dir'] + "/bootstrapping.sh", "/home/ubuntu")
 
-                    stdin, stdout, stderr = ssh_clients[index].exec_command("sudo chmod 775 /home/ubuntu/bootstrapping.sh")
+                    stdin, stdout, stderr = self.ssh_clients[index].exec_command("sudo chmod 775 /home/ubuntu/bootstrapping.sh")
                     self.logger.debug(stdout.readlines())
                     self.logger.debug(stderr.readlines())
 
-                    channel = ssh_clients[index].get_transport().open_session()
+                    channel = self.ssh_clients[index].get_transport().open_session()
                     channel.exec_command("sudo /home/ubuntu/bootstrapping.sh")
 
             else:
@@ -410,7 +422,7 @@ class VMHandler:
             # first connect ssh clients, then scp client
             self.logger.info("Waiting 60 seconds before creating ssh connection to VMs")
             time.sleep(60)
-            ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
+            self.create_ssh_scp_clients()
 
         self.logger.info("Waiting for all VMs to finish the userData setup...")
 
@@ -422,7 +434,7 @@ class VMHandler:
             normal_time = 10
 
         # Wait until user Data is finished
-        if False in wait_till_done(self.config, ssh_clients, self.config['ips'], max_time * 60, 60,
+        if False in wait_till_done(self.config, self.ssh_clients, self.config['ips'], max_time * 60, 60,
                                    "/var/log/user_data_success.log", False, normal_time * 60, self.logger):
             self.logger.error('Boot up NOT successful')
 
@@ -437,21 +449,9 @@ class VMHandler:
         else:
             self.logger.info(f"Boot up of all {self.config['blockchain_type']}-VMs was successful")
 
-            # Recreating the ssh and scp clients
-            try:
-                map(lambda x: x.close(), ssh_clients)
-            except Exception as e:
-                self.logger.exception(e)
-                self.logger.info("Some ssh_client was already closed")
-            try:
-                map(lambda x: x.close(), scp_clients)
-            except Exception as e:
-                self.logger.exception(e)
-                self.logger.info("Some scp_client was already closed")
+            self.refresh_ssh_scp_clients()
 
-            ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
-
-            self._run_specific_startup(ssh_clients, scp_clients)
+            self._run_specific_startup()
 
             if 'load_balancer_settings' in self.config and 'add_loadbalancer' in self.config['load_balancer_settings']:
                 # Load Balancer
@@ -462,54 +462,23 @@ class VMHandler:
 
             self.logger.info(
                 f"Setup of all VMs was successful, to terminate them run run.py terminate --config {self.config['exp_dir']}/config.json")
-        try:
-            map(lambda client: client.close(), ssh_clients)
-            map(lambda client: client.close(), scp_clients)
-        except:
-            self.logger.info("ssh/scp clients already closed")
+
+        self.close_ssh_scp_clients()
 
         # if yes_or_no("Do you want to shut down the whole network?"):
         # self.run_general_shutdown()
 
-    def _run_specific_startup(self, ssh_clients, scp_clients):
+    def _run_specific_startup(self):
         """starts startup for given config (geth, parity, etc....)"""
 
         # running the blockchain specific startup script
-        blockchain_type = self.config['blockchain_type']
-
-        if blockchain_type in ["ethermint", "qldb"]:
-            self.logger.warning("")
-            self.logger.warning("")
-            self.logger.warning(f"  !!! The automatic setup for {blockchain_type.upper()} is not yet working - still under active development  !!!")
-            self.logger.warning("")
-            self.logger.warning("")
-
-        try:
-            func = getattr(f"{blockchain_type}", f"{blockchain_type}_startup")
-            func(self.config, self.logger, ssh_clients, scp_clients)
-
-        except Exception as e:
-            if self.config['blockchain_type'] == 'client' or self.config['blockchain_type'] == 'indy_client':
-                client_startup(self.config, self.logger, ssh_clients, scp_clients)
-
-            else:
-                self.logger.exception(e)
-                raise Exception("Could not find the blockchain specific startup method")
+        self.startup_network()
 
         with open(f"{self.config['exp_dir']}/config.json", 'w') as outfile:
             json.dump(self.config, outfile, default=datetimeconverter, indent=4)
 
         # close ssh and scp channels
-        try:
-            map(lambda x: x.close(), ssh_clients)
-        except Exception as e:
-            self.logger.exception(e)
-            self.logger.info("Some ssh_client was already closed")
-        try:
-            map(lambda x: x.close(), scp_clients)
-        except Exception as e:
-            self.logger.exception(e)
-            self.logger.info("Some scp_client was already closed")
+        self.close_ssh_scp_clients()
 
     def run_general_shutdown(self):
         """
@@ -518,12 +487,12 @@ class VMHandler:
         """
 
         # create ssh and scp channels
-        ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
+        NodeHandler.create_ssh_scp_clients(self)
 
         for index, ip in enumerate(self.config['ips']):
             # get userData from all instances
             try:
-                scp_clients[index].get("/var/log/user_data.log",
+                self.scp_clients[index].get("/var/log/user_data.log",
                                        f"{self.config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
             except:
                 self.logger.info(f"User Data of {ip} cannot be pulled")
@@ -540,7 +509,7 @@ class VMHandler:
             if any(instance.state['Name'] == "stopped" for instance in ec2_instances):
                 self.logger.info(f"At least on of the instances was already stopped, hence no logs can be pulled from the machines, terminating them in the next step")
 
-        self._run_specific_shutdown(ssh_clients, scp_clients)
+        self._run_specific_shutdown()
 
         if self.config['instance_provision'] == "aws":
 
@@ -561,31 +530,14 @@ class VMHandler:
                 instance.terminate()
 
         # close ssh and scp channels
-        try:
-            map(lambda x: x.close(), ssh_clients)
-        except Exception as e:
-            self.logger.exception(e)
-            self.logger.info("Some ssh_client was already closed")
-        try:
-            map(lambda x: x.close(), scp_clients)
-        except Exception as e:
-            self.logger.exception(e)
-            self.logger.info("Some scp_client was already closed")
-
+        self.close_ssh_scp_clients()
         self.logger.info("All instances terminated -  script is finished")
 
-    def _run_specific_shutdown(self, ssh_clients, scp_clients):
+    def _run_specific_shutdown(self):
         """Runs the specific shutdown scripts depending on blockchain_type"""
 
         # running the blockchain specific startup script
-        blockchain_type = self.config['blockchain_type']
-        try:
-            func = getattr(f"{blockchain_type}", f"{blockchain_type}_shutdown")
-            func(self.config, self.logger, ssh_clients, scp_clients)
-
-        except Exception as e:
-
-            self.logger.exception(e)
+        self.shutdown_network()
 
     def get_config_path(self):
         return f"{self.config['exp_dir']}/config.json"
@@ -604,8 +556,8 @@ class VMHandler:
         with open(f"{self.config['exp_dir']}/config.json", 'w') as outfile:
             json.dump(self.config, outfile, default=datetimeconverter, indent=4)
 
-    @staticmethod
-    def create_ssh_scp_clients(config, logger=None):
+
+    def create_ssh_scp_clients(self):
         """
         Creates ssh/scp connection to VMs
         :param config:
@@ -614,26 +566,26 @@ class VMHandler:
         """
         ssh_clients = []
         scp_clients = []
-        ssh_key_priv = paramiko.RSAKey.from_private_key_file(config['priv_key_path'])
+        ssh_key_priv = paramiko.RSAKey.from_private_key_file(self.config['priv_key_path'])
 
-        if logger is not None:
+        if self.logger is not None:
             # logger.debug(f"Trying to connect the ssh clients")
             pass
 
-        for index, ip in enumerate(config['ips']):
-            if config['public_ip']:
+        for index, ip in enumerate(self.config['ips']):
+            if self.config['public_ip']:
                 # use public ip if exists, else it wont work
-                ip = config['pub_ips'][index]
+                ip = self.config['pub_ips'][index]
             ssh_clients.append(paramiko.SSHClient())
             ssh_clients[index].set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
             while True:
                 try:
-                    ssh_clients[index].connect(hostname=ip, username=config['user'], pkey=ssh_key_priv, timeout=86400, banner_timeout=100, auth_timeout=30)
+                    ssh_clients[index].connect(hostname=ip, username=self.config['user'], pkey=ssh_key_priv, timeout=86400, banner_timeout=100, auth_timeout=30)
 
                 except Exception as e:
-                    if logger is not None:
-                        logger.error(f"{e} on IP {ip}")
+                    if self.logger is not None:
+                        self.logger.error(f"{e} on IP {ip}")
                     else:
                         print(f"{e} on IP {ip}")
                     try:
@@ -642,8 +594,8 @@ class VMHandler:
                         ssh_clients[index].set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
                     except Exception as e:
-                        if logger is not None:
-                            logger.error(f"{e} on IP {ip}")
+                        if self.logger is not None:
+                            self.logger.error(f"{e} on IP {ip}")
                         else:
                             print(f"{e} on IP {ip}")
 
@@ -653,8 +605,74 @@ class VMHandler:
             # SCPCLient takes a paramiko transport as an argument
             scp_clients.append(SCPClient(ssh_clients[index].get_transport(), socket_timeout=86400))
 
-        if logger is not None:
+        if self.logger is not None:
             # logger.debug(f"All scp/ssh clients got created and connected")
             pass
 
-        return ssh_clients, scp_clients
+        self.ssh_clients = ssh_clients
+        self.scp_clients = scp_clients
+
+    def refresh_ssh_scp_clients(self):
+
+        # Recreating the ssh and scp clients
+        self.close_ssh_scp_clients()
+        self.create_ssh_scp_clients()
+
+    def close_ssh_scp_clients(self):
+
+        try:
+            map(lambda client: client.close(), self.ssh_clients)
+            map(lambda client: client.close(), self.scp_clients)
+        except:
+            self.logger.info("ssh/scp clients already closed")
+
+    def shutdown_network(self):
+
+        blockchain_type = self.config['blockchain_type']
+
+        try:
+            func = getattr(globals()[f"{blockchain_type.capitalize()}"], "shutdown")
+            func(self)
+
+        except Exception as e:
+
+            self.logger.exception(e)
+            raise Exception("")
+
+
+    def startup_network(self):
+
+        blockchain_type = self.config['blockchain_type']
+
+        if blockchain_type in ["ethermint", "qldb", "tezos"]:
+            self.logger.warning("")
+            self.logger.warning("")
+            self.logger.warning(f"  !!! The automatic setup for {blockchain_type.upper()} is not yet working - still under active development  !!!")
+            self.logger.warning("")
+            self.logger.warning("")
+
+        try:
+            func = getattr(globals()[f"{blockchain_type.capitalize()}"], "startup")
+            func(self)
+
+        except Exception as e:
+            if self.config['blockchain_type'] == 'client' or self.config['blockchain_type'] == 'indy_client':
+                Client.startup()
+
+            else:
+                self.logger.exception(e)
+                raise Exception("")
+
+
+    def restart_network(self):
+
+        blockchain_type = self.config['blockchain_type']
+
+        try:
+            func = getattr(globals()[f"{blockchain_type.capitalize()}"], "restart")
+            func(self)
+
+        except Exception as e:
+
+            self.logger.exception(e)
+            raise Exception("")

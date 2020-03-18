@@ -52,6 +52,6 @@
     "txpool.globalslots": 4096,
     "txpool.accountqueue": 500,
     "txpool.globalqueue": 10000,
-    "txpool.lifetime": "0h0m30s",
+    "txpool.lifetime": "0h0m30s"
   }
 }

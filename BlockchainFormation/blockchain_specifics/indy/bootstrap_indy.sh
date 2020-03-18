@@ -36,11 +36,8 @@
   sudo apt-get install -y python3.5 python3-pip python3.5-dev
   sudo apt-get install -y libindy libindy-crypto=0.4.5
 
-  # git clone https://github.com/hyperledger/indy-plenum
   git clone https://github.com/hyperledger/indy-node
   (cd indy-node && sudo pip3 install --upgrade pip && sudo pip3 install -e .[tests] && sudo pip3 install flake8 || echo "\n\n=========\nError in indy-node installation\n========\n\n")
-  # (cd indy-plenum && sudo pip3 install boto3 && sudo pip3 install asyncio && sudo pip3 install ansible && sudo pip3 install -e .[tests] || echo "\n\n=========\nError in indy-plenum installation\n========\n\n")
-  # (cd indy-sdk/samples/python/src && sudo pip3 install -e .[tests]) || echo "\n\n=========\nError in indy-sdk installation\n========\n\n")
 
   sudo mkdir /etc/indy /var/log/indy /data/indy /data/indy/backup /data/indy/plugins
   sudo chown -R ubuntu:ubuntu /var/log/indy/ /data/indy/ /etc/indy/
@@ -99,10 +96,6 @@ PLUGINS_DIR = '/data/indy/plugins'
 # Directory to store node info.
 NODE_INFO_DIR = '/data/indy'
 " >> /etc/indy/indy_config.py
-
-  # preventing the indy-node process from reaching of open file descriptors limit caused by clients connections
-  #	preventing the indy-node process from large memory usage as ZeroMQ creates the separate queue for each TCP connection
-  # sudo iptables -I INPUT -p tcp --syn --dport 9702 -m connlimit --connlimit-above 500 --connlimit-mask 0 -j REJECT --reject-with tcp-reset
 
   # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log

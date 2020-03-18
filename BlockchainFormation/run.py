@@ -20,7 +20,7 @@ import os
 import sys
 
 from BlockchainFormation.utils.utils import yes_or_no
-from BlockchainFormation.vm_handler import VMHandler
+from BlockchainFormation.node_handler import NodeHandler
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -107,15 +107,15 @@ if __name__ == '__main__':
             logger.info("No config file specified - exiting")
             raise Exception("Missing path to config file")
 
-        vm_handler = VMHandler(config)
+        node_handler = NodeHandler(config)
         try:
-            vm_handler.run_general_startup()
+            node_handler.run_general_startup()
         except (Exception, KeyboardInterrupt) as e:
             logger.exception(e)
             if yes_or_no("Do you want to shut down the whole network?"):
-                vm_handler.run_general_shutdown()
+                node_handler.run_general_shutdown()
 
     elif namespace.goal == 'termination':
         config = ArgParser.load_config(vars(namespace))
-        vm_handler = VMHandler(config)
-        vm_handler.run_general_shutdown()
+        node_handler = NodeHandler(config)
+        node_handler.run_general_shutdown()

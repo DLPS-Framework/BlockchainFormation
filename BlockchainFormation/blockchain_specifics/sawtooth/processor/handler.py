@@ -13,7 +13,6 @@
 #  limitations under the License.
 
 
-
 import hashlib
 import logging
 
@@ -25,6 +24,7 @@ from state import BenchmarkState
 LOGGER = logging.getLogger(__name__)
 
 namespace = hashlib.sha512("benchcontract".encode("utf-8")).hexdigest()[0:6]
+
 
 def _make_benchcontract_address(name):
     """
@@ -39,6 +39,7 @@ def _make_benchcontract_address(name):
     print("name: {}".format(name))
     print("namespace: {}".format(namespace))
     return namespace + hashlib.sha512(name.encode("utf-8")).hexdigest()[0:64]
+
 
 class BenchmarkHandler(TransactionHandler):
     """
@@ -149,7 +150,6 @@ class BenchmarkHandler(TransactionHandler):
         print("Result of multiplication is {}".format(sum))
         return sum
 
-
     def doNothing(self, id, context):
         """
         Does actually nothing just to test the connection without any contract overhead
@@ -168,7 +168,6 @@ class BenchmarkHandler(TransactionHandler):
         print("delta: {}".format(delta))
 
         for i in range(start, start + len):
-
             key = "key_{}".format(i)
             address = _make_benchcontract_address(key)
             print("address: {}".format(address))
@@ -217,7 +216,6 @@ class BenchmarkHandler(TransactionHandler):
 
         print("total sum: {}".format(sum))
 
-
     # The apply function performs the blockchain related tasks of our application
     def apply(self, transaction, context):
         print("Running Apply")
@@ -229,7 +227,6 @@ class BenchmarkHandler(TransactionHandler):
         # In payload we store all the information sent to the tp from the client
         payload = cbor.loads(transaction.payload)
         print("read payload {}".format(payload))
-
 
         # To perform changes on the state we need the current state of the tp
         print("Obtaining current state")
