@@ -31,6 +31,7 @@ from sawtooth_sdk.processor.exceptions import InternalError
 # Generate the namespace for our transaction processor: 'benchmark' -> {9088e8}
 namespace = hashlib.sha512('benchcontract'.encode("utf-8")).hexdigest()[0:6]
 
+
 def _make_address(name):
     '''
     # Here we generate the addresses used to store and retreive data to and from the blockchain
@@ -41,6 +42,7 @@ def _make_address(name):
     :return: address [String] hex encoded hash of namespace and name
     '''
     return namespace + hashlib.sha512(name.encode('utf-8')).hexdigest()[:64]
+
 
 class BenchmarkState:
     TIMEOUT = 3
@@ -124,4 +126,4 @@ class BenchmarkState:
             raise InternalError("Failed to deserialize data")
 
     def _serialize(self, value):
-       return str(value).encode()
+        return str(value).encode()

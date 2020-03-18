@@ -109,9 +109,7 @@
   mkdir /data/qdata
   mkdir /data/qdata/tm
 
-  # (cd /data/tessera && wget https://oss.sonatype.org/content/groups/public/com/jpmorgan/quorum/tessera-app/0.9.2/tessera-app-0.9.2-app.jar)
   (cd /data/tessera && wget https://oss.sonatype.org/service/local/repositories/releases/content/com/jpmorgan/quorum/tessera-app/0.10.0/tessera-app-0.10.0-app.jar)
-  # java -jar /data/tessera/tessera-app-0.9.2-app.jar -keygen -filename /data/qdata/tm/tm < /dev/null
   java -jar /data/tessera/tessera-app-0.10.0-app.jar -keygen -filename /data/qdata/tm/tm < /dev/null
 
   # Preparing sceleton tessera config

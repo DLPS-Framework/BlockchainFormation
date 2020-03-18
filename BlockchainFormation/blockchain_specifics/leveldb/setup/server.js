@@ -22,7 +22,7 @@ const config = require('./config.json');
 
 async function writeData(key, value) {
 
-    let result = await levelDB.writeData(key, value).catch (err => {
+    let result = await levelDB.writeData(key, value).catch(err => {
         console.log(err);
         throw("Error");
     });
@@ -31,7 +31,7 @@ async function writeData(key, value) {
 
 async function readData(key) {
 
-    let response = await levelDB.readData(key).catch (err => {
+    let response = await levelDB.readData(key).catch(err => {
         console.log(err);
         throw("Error");
     });
@@ -114,7 +114,8 @@ server.on("request", async (req, res) => {
                 res.writeHead(400, "An error occurred");
                 res.end("Error");
 
-            };
+            }
+            ;
         });
     } catch (err) {
 

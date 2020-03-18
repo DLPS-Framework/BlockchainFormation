@@ -22,7 +22,7 @@ const config = require('./config.json');
 
 async function writeData(value, from, to) {
 
-    await tezos_client.writeData(value, from, to).catch (err => {
+    await tezos_client.writeData(value, from, to).catch(err => {
         console.log(err);
         throw("Error");
     });
@@ -31,7 +31,7 @@ async function writeData(value, from, to) {
 
 async function readData(account) {
 
-    let response = await tezos_client.readData(account).catch (err => {
+    let response = await tezos_client.readData(account).catch(err => {
         console.log(err);
         throw("Error");
     });
@@ -115,7 +115,8 @@ server.on("request", async (req, res) => {
                 res.writeHead(400, "An error occurred");
                 res.end("Error");
 
-            };
+            }
+            ;
         });
     } catch (err) {
 

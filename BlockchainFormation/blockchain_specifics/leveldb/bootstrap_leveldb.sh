@@ -30,10 +30,6 @@
   sudo apt-get update
   sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 
-  # Testing the installation
-  docker --version
-  sudo docker run hello-world
-
   # Installing docker-compose
   sudo curl -L "https://github.com/docker/compose/releases/download/1.24.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
   sudo chmod +x /usr/local/bin/docker-compose
@@ -43,8 +39,6 @@
   # Eventually user permissions need to be adjusted... rebooting required!
   sudo usermod -aG docker ubuntu
   newgrp docker
-  # Testing whether docker runs without user permissions
-  docker run hello-world
 
   # Installing LevelDB for Ubuntu
   wget http://archive.ubuntu.com/ubuntu/pool/main/l/leveldb/libleveldb-dev_1.20-2_amd64.deb
@@ -64,7 +58,6 @@
   . ~/.bashrc
   echo "node version: $(node -v)"
   echo "npm version: $(npm -v)"
-  # for installing truffle/contract
   echo "nvm version: $(nvm version)"
   sudo apt update
 
