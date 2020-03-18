@@ -13,13 +13,14 @@
 #  limitations under the License.
 
 
-
-import logging
 import json
 import random
 import string
+
 from BlockchainFormation.utils.utils import *
-#TODO How to accurately calculate load balancer costs
+
+
+# TODO How to accurately calculate load balancer costs
 
 
 class LBHandler:
@@ -34,8 +35,8 @@ class LBHandler:
         """
 
         self.config = config
-
         self.session = session
+
         if not self.logger.handlers:
             self.logger = logging.getLogger(__name__)
             ch = logging.StreamHandler()
@@ -69,17 +70,16 @@ class LBHandler:
             with open(f"{self.config['exp_dir']}/config.json", 'w') as outfile:
                 json.dump(self.config, outfile, indent=4, default=datetimeconverter)
 
-
     def create_lb(self):
         """
         Creates the Load Balancer itself
         :return:
         """
 
-        #TODO make it work for public (Scheme='internet-facing')
-        #[Application Load Balancers] You must specify subnets from at least two Availability Zones.
+        # TODO make it work for public (Scheme='internet-facing')
+        # [Application Load Balancers] You must specify subnets from at least two Availability Zones.
         # You cannot specify Elastic IP addresses for your subnets.
-        #https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.create_load_balancer
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.create_load_balancer
         self.logger.info("Creating load balancer now")
         lb_response = self.lb_client.create_load_balancer(
             Name=f"LB-{self.config['blockchain_type']}-{self.config['timestamp']}",
@@ -107,27 +107,26 @@ class LBHandler:
         self.logger.info(f"DNSName: {self.config['load_balancer_settings']['DNSName']}")
         self.logger.info(f"LoadBalancerArn: {self.config['load_balancer_settings']['LoadBalancerArn']}")
 
-
     def create_target_group(self):
         """
         Creates Target Group
         :return:
         """
         self.logger.info("Creating target group now")
-        #https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.create_target_group
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.create_target_group
         tg_response = self.lb_client.create_target_group(
             Name=f"TG-{self.config['blockchain_type']}-{self.config['timestamp']}",
             Protocol='HTTP',
             Port=self.config['load_balancer_settings']['lb_port'],
             VpcId=self.config['vpc_ids'][0],
             HealthCheckProtocol='HTTP',
-            #HealthCheckPort=str(self.config['load_balancer_settings']['lb_port']),
+            # HealthCheckPort=str(self.config['load_balancer_settings']['lb_port']),
             HealthCheckEnabled=True,
             HealthCheckPath='/api/health' if self.config['blockchain_type'] == 'parity' else '/',
-            #HealthCheckIntervalSeconds=123,
-            #HealthCheckTimeoutSeconds=123,
-            #HealthyThresholdCount=123,
-            #UnhealthyThresholdCount=123,
+            # HealthCheckIntervalSeconds=123,
+            # HealthCheckTimeoutSeconds=123,
+            # HealthyThresholdCount=123,
+            # UnhealthyThresholdCount=123,
             Matcher={
                 'HttpCode': '200'
             },
@@ -139,14 +138,13 @@ class LBHandler:
 
         self.logger.info(f"TargetGroupArn: {self.config['load_balancer_settings']['TargetGroupArn']}")
 
-
     def create_listener(self):
         """
         Creates listener
         :return:
         """
         self.logger.info("Creating listener now")
-        #https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.create_listener
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.create_listener
         l_response = self.lb_client.create_listener(
             LoadBalancerArn=self.config['load_balancer_settings']['LoadBalancerArn'],
             Protocol='HTTP',
@@ -155,7 +153,7 @@ class LBHandler:
                 {
                     'Type': 'forward',
                     'TargetGroupArn': self.config['load_balancer_settings']['TargetGroupArn'],
-                    #'Order': 123,
+                    # 'Order': 123,
                 },
             ]
         )
@@ -164,27 +162,25 @@ class LBHandler:
 
         self.logger.info(f"ListenerArn: {self.config['load_balancer_settings']['ListenerArn']}")
 
-
     def register_targets(self):
         """Register target for target group"""
         self.logger.info("Registering targets now")
-        #https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.register_targets
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.register_targets
         rt_response = self.lb_client.register_targets(
             TargetGroupArn=self.config['load_balancer_settings']['TargetGroupArn'],
             Targets=[{'Id': id, 'Port': self.config['load_balancer_settings']['lb_port']} for id in self.config['instance_ids']]
         )
 
-        #self.logger.debug(rt_response)
-
+        # self.logger.debug(rt_response)
 
     def create_dns_mapping(self):
         """Map LB DNS name to route 53 dns record"""
         self.logger.info("Trying to create route53 record now")
         route53_client = self.session.client('route53', region_name=self.config['aws_region'])
-        #TODO: Make dns name work for multiple profiles, not just experimental
+        # TODO: Make dns name work for multiple profiles, not just experimental
 
-        route53_dns_name = self.config['blockchain_type'] + "exp" + random.choice(string.ascii_letters).lower() + random.choice(string.ascii_letters).lower() +self.config['load_balancer_settings']['route53_domain_name']
-        #https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/route53.html#Route53.Client.change_resource_record_sets
+        route53_dns_name = self.config['blockchain_type'] + "exp" + random.choice(string.ascii_letters).lower() + random.choice(string.ascii_letters).lower() + self.config['load_balancer_settings']['route53_domain_name']
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/route53.html#Route53.Client.change_resource_record_sets
         response = route53_client.change_resource_record_sets(
             HostedZoneId=self.config['load_balancer_settings']['lb_hosted_zone_id'],
             ChangeBatch={
@@ -193,46 +189,13 @@ class LBHandler:
                     {
                         'Action': 'CREATE',
                         'ResourceRecordSet': {
-                            'Name': route53_dns_name , #random number to avoid the same dns names (better idea someone?)
-                            'Type':  'A',
+                            'Name': route53_dns_name,  # random number to avoid the same dns names (better idea someone?)
+                            'Type': 'A',
                             # 'ResourceRecords': [
                             #     {
                             #         'Value': 'string'
                             #     },
                             # ],
-                            'AliasTarget': {
-                                'HostedZoneId': self.config['load_balancer_settings']['CanonicalHostedZoneId'],
-                                'DNSName': "dualstack."+self.config['load_balancer_settings']['DNSName'],
-                                'EvaluateTargetHealth': False
-                            },
-                        }
-                    },
-                ]
-            }
-        )
-
-        self.config['load_balancer_settings']['route53_dns'] = route53_dns_name
-        self.logger.info(f"Route53 dns address which you can hit with web3 etc.: {self.config['load_balancer_settings']['route53_dns']}")
-
-
-    def delete_dns_mapping(self):
-        """delete route 53 record"""
-
-        route53_client = self.session.client('route53', region_name=self.config['aws_region'])
-
-        #hosted_zone_id: zone id for creating new route 53 record
-        #CanonicalHostedZoneId: zone id of created load balancer
-
-        response = route53_client.change_resource_record_sets(
-            HostedZoneId=self.config['load_balancer_settings']['lb_hosted_zone_id'],
-            ChangeBatch={
-                'Comment': 'string',
-                'Changes': [
-                    {
-                        'Action': 'DELETE',
-                        'ResourceRecordSet': {
-                            'Name': self.config['load_balancer_settings']['route53_dns'], #random number to avoid the same dns names (better idea someone?)
-                            'Type':  'A',
                             'AliasTarget': {
                                 'HostedZoneId': self.config['load_balancer_settings']['CanonicalHostedZoneId'],
                                 'DNSName': "dualstack." + self.config['load_balancer_settings']['DNSName'],
@@ -244,31 +207,59 @@ class LBHandler:
             }
         )
 
+        self.config['load_balancer_settings']['route53_dns'] = route53_dns_name
+        self.logger.info(f"Route53 dns address which you can hit with web3 etc.: {self.config['load_balancer_settings']['route53_dns']}")
+
+    def delete_dns_mapping(self):
+        """delete route 53 record"""
+
+        route53_client = self.session.client('route53', region_name=self.config['aws_region'])
+
+        # hosted_zone_id: zone id for creating new route 53 record
+        # CanonicalHostedZoneId: zone id of created load balancer
+
+        response = route53_client.change_resource_record_sets(
+            HostedZoneId=self.config['load_balancer_settings']['lb_hosted_zone_id'],
+            ChangeBatch={
+                'Comment': 'string',
+                'Changes': [
+                    {
+                        'Action': 'DELETE',
+                        'ResourceRecordSet': {
+                            'Name': self.config['load_balancer_settings']['route53_dns'],  # random number to avoid the same dns names (better idea someone?)
+                            'Type': 'A',
+                            'AliasTarget': {
+                                'HostedZoneId': self.config['load_balancer_settings']['CanonicalHostedZoneId'],
+                                'DNSName': "dualstack." + self.config['load_balancer_settings']['DNSName'],
+                                'EvaluateTargetHealth': False
+                            },
+                        }
+                    },
+                ]
+            }
+        )
 
     def shutdown_lb(self):
         """Shutdown load balancer and target group"""
 
         self.logger.info("Load Balancer costs are not calculated at the moment!!!")
         self.logger.info("Shutdown listener now")
-        #https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.delete_listener
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.delete_listener
         response = self.lb_client.delete_listener(
-             ListenerArn=self.config['load_balancer_settings']['ListenerArn']
-         )
-
+            ListenerArn=self.config['load_balancer_settings']['ListenerArn']
+        )
 
         self.logger.info("Shutdown target group")
-        #https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.delete_target_group
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.delete_target_group
         dtg_response = self.lb_client.delete_target_group(
             TargetGroupArn=self.config['load_balancer_settings']['TargetGroupArn']
         )
 
         self.logger.info("Shutdown load balancer now")
-        #https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.delete_load_balancer
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.delete_load_balancer
         dlb_response = self.lb_client.delete_load_balancer(
             LoadBalancerArn=self.config['load_balancer_settings']['LoadBalancerArn']
         )
 
         self.logger.info("Deleting route53 record now")
         self.delete_dns_mapping()
-
-

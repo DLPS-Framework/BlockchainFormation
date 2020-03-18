@@ -14,17 +14,18 @@
 
 
 import datetime
+import logging
 import time
+
 import numpy as np
 import paramiko
-import logging
+
 
 # File containing helper functions
 
 
 def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, typical_time, logger,
-                   func_part_one = "tail -n 1", func_part_two=" "):
-
+                   func_part_one="tail -n 1", func_part_two=" "):
     """
     Waits until a job is done on all of the target VMs
     :param ssh_clients: ssh_clients for VMs on which something must be completed
@@ -50,7 +51,7 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
         time.sleep(delta)
         timer += delta
         logger.debug(f" --> Waited {timer} seconds so far, {total_time - timer} seconds left before abort"
-                     f"(it usually takes less than {np.ceil(typical_time/60)} minutes)")
+                     f"(it usually takes less than {np.ceil(typical_time / 60)} minutes)")
 
         for index, ip in enumerate(ips):
             if (status_flags[index] == False):
@@ -128,7 +129,6 @@ def datetimeconverter(o):
 
 
 def yes_or_no(question):
-
     reply = str(input(question + ' (y/n): ')).lower().strip()
     if reply[0] == 'y':
         return 1
@@ -139,13 +139,15 @@ def yes_or_no(question):
 
 
 def wait_and_log(stdout, stderr):
-
     logger = logging.getLogger(__name__)
     try:
-        stdout = stdout.readlines()
-        stderr = stderr.readlines()
-        if stderr != ["\n"]:
-            logger.debug("".join(stdout))
-            logger.debug("".join(stderr))
+        out = stdout.readlines()
+        err = stderr.readlines()
+
+        logger.info(err)
+
+        if err != ["\n"]:
+            logger.debug("".join(out))
+            logger.debug("".join(err))
     except Exception as e:
         logger.exception(e)

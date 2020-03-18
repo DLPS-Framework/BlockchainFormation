@@ -1,0 +1,23 @@
+{
+  "instance_provision": "own",
+  "vm_count": 4,
+  "user": "ubuntu",
+  "key_name": "my_key",
+  "priv_key_path": "/home/user/.aws/key.pem",
+  "exp_dir": "/home/user/PycharmProjects/BlockchainFormation/BlockchainFormation",
+  "public_ip": true,
+  "pub_ips": ["10.11.12.13", "20.21.22.23", "30.31.32.33", "40.41.42.43"],
+  "priv_ips": ["192.168.10.11", "192.168.12.13", "192.168.14.15", "192.168.16.17"],
+  "ips": ["10.11.12.13", "20.21.22.23", "30.31.32.33", "40.41.42.43"],
+  "blockchain_type": "parity",
+  "parity_settings":
+  {
+    "step_duration": 5,
+    "balance": "0x200000000000000000000000000000000000000000000000000000000000000",
+    "gaslimit": "0x2fefd8",
+    "num_acc": null
+  },
+    "load_balancer_settings": {
+      "add_loadbalancer": false
+  }
+}

@@ -31,9 +31,9 @@ requires = [
 
 setuptools.setup(
     name="BlockchainFormation",
-    version="0.0.1",
+    version="1.0.0",
     author="ChainLab",
-    description="Framework to set up DLTs on AWS EC2",
+    description="Framework to set up various DLTs",
     #long_description=open('README.MD').read(),
     license="Apache License 2.0",
     install_requires=requires,

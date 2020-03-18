@@ -160,7 +160,7 @@ dmypy.json
 # Pycharm
 .idea/
 
+# Experiment folders
 experiments/*
 BlockchainFormation/experiments/*
-BlockchainFormation/example_config_files/bmw_configs
-.gitignore
+BlockchainFormation/example_config_files/bmw_configs/*

@@ -13,11 +13,11 @@
 #  limitations under the License.
 
 
-
-import re
 import json
+import re
+
 from pkg_resources import resource_filename
-import logging
+
 from BlockchainFormation.utils.utils import *
 
 
@@ -26,6 +26,7 @@ class AWSCostCalculator:
     Class responsible for calculating the aws costs caused by one or more aws instances during their uptime,
      including attached ebs storage.
     """
+
     # TODO: Check if Calculation is correct (30 days vs. 31 days question)
     def __init__(self, session):
 
@@ -38,7 +39,7 @@ class AWSCostCalculator:
             # fh.setFormatter(formatter)
             ch.setFormatter(formatter)
             self.logger.addHandler(ch)
-        
+
         self.pricing_client = session.client('pricing', region_name='us-east-1')
 
         self.session = session
@@ -95,7 +96,7 @@ class AWSCostCalculator:
 
         self._extract_ebs_storage_from_blockdevicemapping(self.config['storage_settings'])
         self._extract_ebs_storage_from_blockdevicemapping(root_storage_mapping)
-        #self.logger.info(self.storage_dict)
+        # self.logger.info(self.storage_dict)
         # Use AWS Pricing API at eu-central-1
         # 'eu-central-1' not working -> Pricing the same ? 
 
@@ -128,8 +129,8 @@ class AWSCostCalculator:
         total_instance_cost_until_stop = sum(map(lambda x: x * instance_price_per_hour, time_diff_in_hours))
         total_storage_cost_until_stop = sum(map(lambda x: x * storage_price_per_hour, time_diff_in_hours))
 
-        self.logger.info(f"The total instance cost of {self.config['vm_count']} {self.config['instance_type']} instances running for averagely {np.round(np.mean(time_diff_in_hours),4)} hours was: {np.round(total_instance_cost_until_stop, 4)} USD.")
-        self.logger.info(f"The total storage  cost of {self.config['vm_count']} {self.storage_dict} storage units running for averagely {np.round(np.mean(time_diff_in_hours),4)} hours was: {np.round(total_storage_cost_until_stop, 4)} USD.")
+        self.logger.info(f"The total instance cost of {self.config['vm_count']} {self.config['instance_type']} instances running for averagely {np.round(np.mean(time_diff_in_hours), 4)} hours was: {np.round(total_instance_cost_until_stop, 4)} USD.")
+        self.logger.info(f"The total storage  cost of {self.config['vm_count']} {self.storage_dict} storage units running for averagely {np.round(np.mean(time_diff_in_hours), 4)} hours was: {np.round(total_storage_cost_until_stop, 4)} USD.")
         total_cost_until_stop = total_instance_cost_until_stop + total_storage_cost_until_stop
         self.logger.info(f"Total Cost: {np.round(total_cost_until_stop, 4)} USD")
 
@@ -158,11 +159,11 @@ class AWSCostCalculator:
         :return:
         """
         data = self.pricing_client.get_products(ServiceCode='AmazonEC2',
-                                           Filters=[{"Field": "tenancy", "Value": "shared", "Type": "TERM_MATCH"},
-                                                    {"Field": "operatingSystem", "Value": osys, "Type": "TERM_MATCH"},
-                                                    {"Field": "preInstalledSw", "Value": "NA", "Type": "TERM_MATCH"},
-                                                    {"Field": "instanceType", "Value": instance, "Type": "TERM_MATCH"},
-                                                    {"Field": "location", "Value": region, "Type": "TERM_MATCH"}])
+                                                Filters=[{"Field": "tenancy", "Value": "shared", "Type": "TERM_MATCH"},
+                                                         {"Field": "operatingSystem", "Value": osys, "Type": "TERM_MATCH"},
+                                                         {"Field": "preInstalledSw", "Value": "NA", "Type": "TERM_MATCH"},
+                                                         {"Field": "instanceType", "Value": instance, "Type": "TERM_MATCH"},
+                                                         {"Field": "location", "Value": region, "Type": "TERM_MATCH"}])
 
         od = json.loads(data['PriceList'][0])['terms']['OnDemand']
         id1 = list(od)[0]
@@ -184,10 +185,10 @@ class AWSCostCalculator:
             'sc1': 'Cold HDD'
         }
         data = self.pricing_client.get_products(ServiceCode='AmazonEC2',
-                                           Filters=[
-                                               {'Type': 'TERM_MATCH', 'Field': 'volumeType',
-                                                'Value': ebs_name_map[volume_type]},
-                                               {'Type': 'TERM_MATCH', 'Field': 'location', 'Value': region}])
+                                                Filters=[
+                                                    {'Type': 'TERM_MATCH', 'Field': 'volumeType',
+                                                     'Value': ebs_name_map[volume_type]},
+                                                    {'Type': 'TERM_MATCH', 'Field': 'location', 'Value': region}])
         od = json.loads(data['PriceList'][0])['terms']['OnDemand']
         id1 = list(od)[0]
         id2 = list(od[id1]['priceDimensions'])[0]

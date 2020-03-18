@@ -13,4 +13,28 @@
 #  limitations under the License.
 
 
-name = "BlockchainFormation"
+def empty_shutdown(config, logger, ssh_clients, scp_clients):
+    """
+    runs the emtpy specific shutdown operations (e.g. pulling the associated logs from the VMs)
+    :return:
+    """
+
+    pass
+
+
+def empty_startup(config, logger, ssh_clients, scp_clients):
+    """
+    Runs the empty specific startup script
+    :return:
+    """
+
+    pass
+
+
+def empty_restart(config, logger, ssh_clients, scp_clients):
+    """
+    Runs the empty specific restart script
+    :return:
+    """
+
+    pass

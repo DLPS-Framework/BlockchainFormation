@@ -13,4 +13,31 @@
 #  limitations under the License.
 
 
-name = "BlockchainFormation"
+import os
+
+
+def ethermint_shutdown(config, logger, ssh_clients, scp_clients):
+    """
+    runs the ethermint specific shutdown operations (e.g. pulling the associated logs from the VMs)
+    :return:
+    """
+
+    pass
+
+
+def ethermint_startup(config, logger, ssh_clients, scp_clients):
+    """
+    Runs the ethermint specific startup script
+    :return:
+    """
+
+    dir_name = os.path.dirname(os.path.realpath(__file__))
+
+
+def ethermint_restart(config, logger, ssh_clients, scp_clients):
+    """
+    Runs the ethermint specific restart script
+    :return:
+    """
+
+    pass

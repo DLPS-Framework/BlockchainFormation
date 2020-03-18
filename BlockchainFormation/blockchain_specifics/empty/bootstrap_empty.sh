@@ -1,3 +1,5 @@
+#!/bin/bash -xe
+
 #  Copyright 2020 ChainLab
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,4 +15,11 @@
 #  limitations under the License.
 
 
-name = "BlockchainFormation"
+  # Getting updates (and upgrades)
+  sudo apt-get update
+  sudo apt-get -y upgrade || echo "Upgrading failed" >> /home/ubuntu/upgrade_fail2.log
+
+  # =======  Create success indicator at end of this script ==========
+  sudo touch /var/log/user_data_success.log
+
+EOF

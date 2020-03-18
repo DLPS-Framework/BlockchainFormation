@@ -2,57 +2,48 @@
 
 ## General Information
 
-The purpose of this script is to automate the process of deploying blockchain solutions on AWS.
-This process includes starting ```x``` EC2 instances, installing necessary packages and configuring the virtual machines.
-The provided VMs then can be used for example to evaluate the performance of a given blockchain solution, 
-or to further customize an implementation for a use case.
-If the network is not needed anymore, the script provides a function to shutdown all started VMs after pulling log files.
+The purpose of this package is to automate the process of deploying blockchain solutions. It is currently supported on AWS or on fresh, own ubuntu 18.04 VMs.
+Everything happens via ssh and scp (wrapped in python), orchestrated from the computer where this package is installed.
+
+In the beginning, one has to specify the configuration of the blockchain network, e.g. number of nodes, blocksize, ..., by means of a config file.
+In case of AWS setup, AWS settings have to be included, based on which ```vm_count``` EC2 instances will automatically be started. Afterwards, necessary software packages will be installed on each VM, 
+and a blockchain network with the specified configuration will be automatically be orchestrated on the virtual machines, organized centrally from the computer where the package *BlockchainFormation* is used.
+
+Currently, the following blockchains are supported:
+* Corda (beta)
+* Eos (beta)
+* Hyperledger Fabric (very sophisticated)
+* Ethereum with Geth and Parity client (very sophisticated)
+* Hyperledger Indy (sophisticated)
+* Quorum with RAFT and IBFT consensus (very sophisticated)
+* Hyperledger Sawtooth (very sophisticated)
+* Tezos (beta)
+
+In order to have some baseline, we also integrated
+* CouchDB (beta)
+* LevelDB (alpha)
+
+The provided VMs then can be used for different objectives, e.g., to deploy custom smart contracts and connect with clients (see package *ClientFormation*) and then do some benchmarking (see package *ChainLab*), i.e., 
+to evaluate the performance of a given blockchain solution, 
+Another possibility is to further customize an implementation for a specific use case.
+
+If the network is not needed anymore and the VMs have been started via AWS, the script provides a function to shutdown all started VMs after pulling log files.
 The shutdown script also calculates the AWS costs caused by the uptime of the virtual machines using the AWS pricing API.
 
- *NOTE THAT THE CREATED BLOCKCHAIN NODES ARE NOT CONFIGURED WITH HIGH SECURITY SETTINGS* 
+ *!!! NOTE THAT THE CREATED BLOCKCHAIN NODES ARE NOT CONFIGURED WITH **ANY** SECURITY SETTINGS* !!!
+ 
+ In particular, while prototyping based on the scripts in this repository is fine, all setups should **never** be used in production.  
 ## How to run it
-This script can either be started by using the argpass CLI or by installing the pip package (see end of this README)
+The functionalities can either be started by using the argpass CLI (```run.py```) or by installing the pip package (see end of this README)
+The argpass CLI be provided with a config file:
 
-```run.py``` provides an argpass CLI for starting and terminating VMs. 
-
-* Start a private Geth Network with PoA consensus: 
-
-```
-python run.py start geth --vm_count 4 --instance_type t2.micro --priv_key_path ~/.ssh/blockchain --tag_name blockchain_philipp 
---subnet_id subnet-123 --security_group_id sg-123 --aws_credentials ~/.aws/credentials --aws_config ~/.aws/config 
---profile block_exp --key_name blockchain  --VolumeSize 32 --chainid 11
-```
-__This is an example for a run command, values need to be adjusted for your config__
-
-* Start a Base Network where __NO__ blockchain frameworks will be installed, just x VMs with the base installations (e.g. proxy)
-
-```
-python run.py start base --vm_count 4 --instance_type t2.micro --priv_key_path ~/.ssh/blockchain --tag_name test_networtk 
---subnet_id subnet-123 --security_group_id sg-132 --aws_credentials ~/.aws/credentials --aws_config ~/.aws/config 
---profile block_exp --key_name blockchain  --VolumeSize 32
-```
-__This is an example for a run command, values need to be adjusted for your config__
-
-
-Explanation of flags can be obtained by typing e.g.:
-```
-python run.py start geth --help
-python run.py start base --help
-...
-```
-
-__Note that you need to enter the password for your proxy user after starting the script__
-
-
-*If you do not want to create the large CLI every time you can also  start a network with a given config file:*
+* Start a network
 ```
 python run.py start --config "path to config file" 
 ```
-Example config files are provided in ```/example_config_files/base_config.json```
+Example config files are provided in ```/example_config_files/aws_configs``` (with aws) and ```/example_config_files/own_configs``` (with given VMs). 
 
-*WARNING:* Config files and CLI arguments cannot be combined at the moment, so either use the config file to pass arguments or pass all arguments via argpass commands.
-
-* Terminate a VM Network:
+* Terminate a network:
 
 ```
 python run.py terminate --config "path to config file" 
@@ -61,27 +52,32 @@ python run.py terminate --config "path to config file"
 where the config file will be located in the experiment's directory. The path to this directory will also be displayed in the logs during the blockchain startup.
 
 ## How to add another blockchain?
-To add another blockchain 4, the following steps are required:
-* specific user data script in ```/UserDataScripts```
-* add specific startup function in ```vm_handler.py```
-* add specific shutdown function in ```vm_handler.py```
-* adjustments of argpass CLI and config in ```run.py```
-* specific startup/shutdown functionality in e.g. ```/blockchain_specifics/Geth.py```
-* (recommended) restart function in e.g. ```/blockchain_specifics/Geth.py```
-* add the created directories to [MANIFEST.in](MANIFEST.in)
+To add another blockchain, the following steps are required:
+* create a directory ```/blockchain_specifics/Blockchain``` containing
+  + a Bash script for the basic installations, i.e. ```/blockchain_specifics/blockckain/bootstrap_blockchain.sh```
+  + a Python file with a specific startup, shutdown (, and restart) functionality, i.e. ```/blockchain_specifics/blockchain/blockchain.py```.  
+  Within the startup functionality, the following keys should be added to the config file if the blockchain is meant to be benchmarked later on:
+    - 'node_indices': which of the VMs should be considered as nodes? There might be VMs which are rather of auxiliary type, e.g., Notaries in Corda or CAs in Hyperleder Fabric
+    - 'groups': a partitioning of the nodes e.g. by geographical distribution, for setting delays or package losses later on (perfect connection within a group, worse connection to members of the other groups) 
+* add an example config file in ```example_config_files```
+* integrate the specific startup and shutdown function in ```vm_handler.py```
+* add the created directories to [MANIFEST.in](MANIFEST.in) (pay attention that sometimes recursive inclusion might be needed)
 
 
 ## Future Steps
-* Add Windows support
-* Add option to attach no storage at all
+* Keep everything up to date as blockchains evolve
+* Add option to attach no storage at all # TODO??? @Philipp?
 * Make existing setups even more customizable
-* Add logrotate to UserData setup scripts
+* Add logrotate to UserData setup scripts # TODO??? @Philipp
 *  Support more blockchains
-    * Corda
     * Ethermint
     * Libra
-    * Tezos
-
+* Integrate Azure or further cloud computing services
+* In-depth explanation of all the blockchain-specific configurations in the configs
+* Find a nicer way to modify bootstrap_scripts based on the config file
++ Sophisticated checking of the values specified in config files
+* Implement other user names than ```ubuntu```, and other file names than ```data```
+* Add Windows support?
     
 ## Complete list of needed Python packages (apart from standard packages)
      
@@ -99,7 +95,7 @@ If this was successful you can install the package with pip. The following is a 
 
 
 ```
-/anaconda3/envs/aws_automisation/bin/pip install dist/BlockchainFormation-0.0.1.tar.gz 
+/anaconda3/envs/aws_automisation/bin/pip install dist/BlockchainFormation-1.0.0.tar.gz 
 
 ```
 

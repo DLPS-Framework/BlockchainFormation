@@ -13,32 +13,20 @@
 #  limitations under the License.
 
 
-
-import sys, os
-import boto3
 import getpass
+import os
+import paramiko
+import sys
+
+import boto3
 import pytz
 from dateutil import parser
-import paramiko
 from scp import SCPClient
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from BlockchainFormation.cost_calculator import AWSCostCalculator
 
-from BlockchainFormation.blockchain_specifics.Client.Client import *
-from BlockchainFormation.blockchain_specifics.Corda.Corda import *
-from BlockchainFormation.blockchain_specifics.CouchDB.CouchDB import *
-from BlockchainFormation.blockchain_specifics.Fabric.Fabric import *
-from BlockchainFormation.blockchain_specifics.Empty.Empty import *
-from BlockchainFormation.blockchain_specifics.Eos.Eos import *
-from BlockchainFormation.blockchain_specifics.Geth.Geth import *
-from BlockchainFormation.blockchain_specifics.Indy.Indy import *
-from BlockchainFormation.blockchain_specifics.LevelDB.LevelDB import *
-from BlockchainFormation.blockchain_specifics.Parity.Parity import *
-from BlockchainFormation.blockchain_specifics.Quorum.Quorum import *
-from BlockchainFormation.blockchain_specifics.Sawtooth.Sawtooth import *
-from BlockchainFormation.blockchain_specifics.Tezos.Tezos import *
-
+from BlockchainFormation.blockchain_specifics import *
 
 from BlockchainFormation.lb_handler import *
 from BlockchainFormation.utils.utils import *
@@ -64,32 +52,40 @@ class VMHandler:
             self.logger.addHandler(ch)
 
         self.config = config
-
-        # no proxy if no proxy user
-        if self.config['proxy'] is not None and "HTTP_PROXY" not in os.environ:
-
-            if self.config['proxy']['proxy_user'] is not None:
-                password = getpass.getpass(prompt=f"Enter proxy password for {self.config['proxy']['proxy_user']}:")
-                os.environ["HTTPS_PROXY"] = f"http://{self.config['proxy']['proxy_user']}:{password}@{self.config['proxy']['http_proxy']}"
-                os.environ["HTTP_PROXY"] = f"http://{self.config['proxy']['proxy_user']}:{password}@{self.config['proxy']['https_proxy']}"
-            else:
-                os.environ["HTTPS_PROXY"] = f"http://{self.config['proxy']['https_proxy']}"
-                os.environ["HTTP_PROXY"] = f"http://{self.config['proxy']['http_proxy']}"
-
-            os.environ["NO_PROXY"] = self.config['proxy']['no_proxy']
-
-        else:
-            self.logger.info("No proxy set since proxy user is None or proxy already set")
-
-        # This is needed that boto3 knows where to find the aws config and credentials
-        os.environ["AWS_SHARED_CREDENTIALS_FILE"] = self.config['aws_credentials']
-        os.environ["AWS_CONFIG_FILE"] = self.config['aws_config']
-
         self.user_data = self.create_user_data()
-        self.session = boto3.Session(profile_name=self.config['profile'])
-        self.ec2_instances = None
-        self.aws_calculator = AWSCostCalculator(self.session)
 
+        if self.config['instance_provision'] == 'aws':
+            self.logger.info("Automatic startup in AWS selected")
+        elif self.config['instance_provision'] == 'none':
+            self.logger.info("Automatic startup on user-proxided instances seleced")
+        else:
+            self.logger.info("Invalid option")
+            raise Exception("No valid option for cloud specified")
+
+        if self.config['instance_provision'] == 'aws':
+            # no proxy if no proxy user
+            if self.config['proxy'] is not None and "HTTP_PROXY" not in os.environ:
+
+                if self.config['proxy']['proxy_user'] is not None:
+                    password = getpass.getpass(prompt=f"Enter proxy password for {self.config['proxy']['proxy_user']}:")
+                    os.environ["HTTPS_PROXY"] = f"http://{self.config['proxy']['proxy_user']}:{password}@{self.config['proxy']['http_proxy']}"
+                    os.environ["HTTP_PROXY"] = f"http://{self.config['proxy']['proxy_user']}:{password}@{self.config['proxy']['https_proxy']}"
+                else:
+                    os.environ["HTTPS_PROXY"] = f"http://{self.config['proxy']['https_proxy']}"
+                    os.environ["HTTP_PROXY"] = f"http://{self.config['proxy']['http_proxy']}"
+
+                os.environ["NO_PROXY"] = self.config['proxy']['no_proxy']
+
+            else:
+                self.logger.info("No proxy set since proxy user is None or proxy already set")
+
+            # This is needed that boto3 knows where to find the aws config and credentials
+            os.environ["AWS_SHARED_CREDENTIALS_FILE"] = self.config['aws_credentials']
+            os.environ["AWS_CONFIG_FILE"] = self.config['aws_config']
+
+            self.session = boto3.Session(profile_name=self.config['profile'])
+            self.ec2_instances = None
+            self.aws_calculator = AWSCostCalculator(self.session)
 
     def create_user_data(self):
         """creates the user data script depending on experiment type. The user data is built out of base script and
@@ -97,12 +93,20 @@ class VMHandler:
 
         dir_name = os.path.dirname(os.path.realpath(__file__))
 
-        with open(f"{dir_name}/UserDataScripts/EC2_instance_bootstrap_base.sh", 'r') as content_file:
-            user_data_base = content_file.read()
+        user_data_base = ""
+
+        if self.config['instance_provision'] == "aws":
+
+            with open(f"{dir_name}/UserDataScripts/bootstrap_base_aws.sh", 'r') as content_file:
+                user_data_base = content_file.read()
+
+        elif self.config['instance_provision'] == "own":
+
+            with open(f"{dir_name}/UserDataScripts/bootstrap_base_own.sh", 'r') as content_file:
+                user_data_base = content_file.read()
 
         # If VM is hosted in public the VMs do not need the internal proxy settings
-        if not self.config['public_ip']:
-
+        if (self.config['instance_provision'] == 'aws') and (not self.config['public_ip']):
             # Is this the best solution to set proxy dynamically?
             proxy_user_data = f"  HTTP_PROXY={self.config['aws_proxy_settings']['aws_http_proxy']}\n" \
                               f"  HTTPS_PROXY={self.config['aws_proxy_settings']['aws_https_proxy']}\n" \
@@ -135,28 +139,60 @@ class VMHandler:
             os.system(f"sed -i -e 's/substitute_fabric_ca_version/{self.config['fabric_settings']['fabric_ca_version']}/g' {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh")
             os.system(f"sed -i -e 's/substitute_fabric_thirdparty_version/{self.config['fabric_settings']['thirdparty_version']}/g' {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh")
 
-            with open(f"{dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh", 'r') as content_file:
+            with open(f"{dir_name}/blockchain_specifics/Fabric/bootstrap_fabric", 'r') as content_file:
                 user_data_specific = content_file.read()
 
             user_data_combined = user_data_base + user_data_specific
 
-            os.system(f"rm {dir_name}/UserDataScripts/EC2_instance_bootstrap_fabric_temp.sh")
+            os.system(f"rm {dir_name}/blockchain_specifics/Fabric/bootstrap_fabric_temp.sh")
+
+        elif self.config['blockchain_type'] == 'eos':
+
+            # if we have non-standard settings, we need to compile binaries from scratch
+            if eos_check_config(self.config, self.logger):
+                replace_command = "sudo apt-get install -y make " \
+                                  "&& mkdir -p /data/eosio && cd /data/eosio " \
+                                  "&& git clone --recursive https://github.com/EOSIO/eos && cd eos " \
+                                  "&& git pull --recurse-submodules && git submodule update --init --recursive " \
+                                  "&& cd /data/eosio/eos && yes | ./scripts/eosio_build.sh " \
+                                  "&& cd /data/eosio/eos/build && sudo make install && sudo mv bin/* /usr/local/bin " \
+                                  f"&& sed -i -e 's/block_interval_ms = 500/block_interval_ms = {self.config['eos_settings']['block_interval_ms']}/g' /data/eosio/eos/libraries/chain/include/eosio/chain/config.hpp"
+            else:
+                replace_command = "wget https://github.com/EOSIO/eos/releases/download/v2.0.3/eosio_2.0.3-1-ubuntu-18.04_amd64.deb && sudo apt install -y ./eosio_2.0.3-1-ubuntu-18.04_amd64.deb"
+
+            os.system(f"cp {dir_name}/blockchain_specifics/Eos/bootstrap_eos.sh {dir_name}/blockchain_specifics/Eos/bootstrap_eos_temp.sh")
+            os.system(f"sed -i -e \"s#substitute_replace_command#{replace_command}#g\" {dir_name}/blockchain_specifics/Eos/bootstrap_eos_temp.sh")
+            os.system(f"sed -i -e 's/substitute_replace_commandsubstitute_replace_command/\&\&/g' {dir_name}/blockchain_specifics/Eos/bootstrap_eos_temp.sh")
+
+            with open(f"{dir_name}/blockchain_specifics/Eos/bootstrap_eos_temp.sh", 'r') as content_file:
+                user_data_specific = content_file.read()
+
+            user_data_combined = user_data_base + user_data_specific
+
+            os.system(f"rm {dir_name}/blockchain_specifics/Eos/bootstrap_eos_temp.sh")
 
         else:
 
-            with open(f"{dir_name}/UserDataScripts/EC2_instance_bootstrap_{self.config['blockchain_type']}.sh", 'r') as content_file:
+            with open(f"{dir_name}/blockchain_specifics/{self.config['blockchain_type']}/bootstrap_{self.config['blockchain_type']}.sh", 'r') as content_file:
                 user_data_specific = content_file.read()
 
             user_data_combined = user_data_base + user_data_specific
 
         return user_data_combined
 
-
     def run_general_startup(self):
         """
         General startup script needed for all blockchain frameworks. After general part is finished, the specific startup script are kicked off
         :return:
         """
+
+        if self.config['instance_provision'] == "aws":
+            self.logger.info("Launching the required instances in aws")
+
+        elif self.config['instance_provision'] == "own":
+            self.logger.info(f"Using existing instances on ips {self.config['ips']}")
+            self.logger.info(f"Note that the user currently needs to run Ubuntu 18.04, the user name for ssh'ing must be 'ubuntu'"
+                             f", and the instances require a directory /data/ with permissions set for ubuntu and at least 8 GB of storage")
 
         def search_newest_image(list_of_images):
             """
@@ -175,153 +211,187 @@ class VMHandler:
 
             return latest
 
-        # If no specific image ID is given search for the newest ubuntu 18 image
-        if self.config['image']['image_id'] is None:
-            ec2 = self.session.client('ec2', region_name=self.config['aws_region'])
+        if self.config['instance_provision'] == 'aws':
 
-            # Find the latest official Ubuntu image from Canonical(owner = 099720109477)
-            amis = ec2.describe_images(
-                Filters=[
-                    {
-                        'Name': 'name',
-                        'Values': [f"{self.config['image']['os']}/images/hvm-ssd/{self.config['image']['os']}-*-{self.config['image']['version']}*-amd64-server-????????"]
-                    },
-                    {
-                        'Name': 'architecture',
-                        'Values': ['x86_64']
-                    },
-                    {
-                        'Name': 'state',
-                        'Values': ['available']
-                    },
-                    {
-                        'Name': 'root-device-type',
-                        'Values': ['ebs']
-                    }
-                ],
-                Owners=[
-                    '099720109477',
-                ]
-            )
-            image = search_newest_image(amis['Images'])
-            self.config['image']['image_id'] = image["ImageId"]
+            # If no specific image ID is given search for the newest ubuntu 18 image
+            if self.config['image']['image_id'] is None:
+                ec2 = self.session.client('ec2', region_name=self.config['aws_region'])
 
-        # catching errors
-        # self.logger.debug(f"vm_count: {self.config['vm_count']}")
+                # Find the latest official Ubuntu image from Canonical(owner = 099720109477)
+                amis = ec2.describe_images(
+                    Filters=[
+                        {
+                            'Name': 'name',
+                            'Values': [f"{self.config['image']['os']}/images/hvm-ssd/{self.config['image']['os']}-*-{self.config['image']['version']}*-amd64-server-????????"]
+                        },
+                        {
+                            'Name': 'architecture',
+                            'Values': ['x86_64']
+                        },
+                        {
+                            'Name': 'state',
+                            'Values': ['available']
+                        },
+                        {
+                            'Name': 'root-device-type',
+                            'Values': ['ebs']
+                        }
+                    ],
+                    Owners=[
+                        '099720109477',
+                    ]
+                )
+                image = search_newest_image(amis['Images'])
+                self.config['image']['image_id'] = image["ImageId"]
 
         if self.config['blockchain_type'] == "fabric":
             fabric_check_config(self.config, self.logger)
 
         elif self.config['blockchain_type'] == "eos":
-            eos_check_config(self.config, self.logger)
+            # check_config is currently executed below
+            # eos_check_config(self.config, self.logger)
+            pass
 
         elif self.config['blockchain_type'] == "sawtooth":
             sawtooth_check_config(self.config, self.logger)
 
+        if self.config['instance_provision'] == "aws":
 
-        ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
-        image = ec2.Image(self.config['image']['image_id'])
+            ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
+            image = ec2.Image(self.config['image']['image_id'])
 
-        self.logger.info("Selected Image: " + image.description)
+            self.logger.info("Selected Image: " + image.description)
 
-        session = boto3.Session(profile_name=self.config['profile'])
-        ec2 = session.resource('ec2', region_name=self.config['aws_region'])
-        self.ec2_instances = ec2.create_instances(
-            ImageId=self.config['image']['image_id'],
-            MinCount=self.config['vm_count'],
-            MaxCount=self.config['vm_count'],
-            InstanceType=self.config['instance_type'],
-            KeyName=self.config['key_name'],
-            BlockDeviceMappings=self.config['storage_settings'],
-            UserData=self.user_data,
-            TagSpecifications=[
-                {
-                    'ResourceType': "instance",
-                    'Tags': [
-                        {
-                            'Key': 'Creator',
-                            'Value': self.config['tag_name']
-                        },
-                        {
-                            'Key': 'Name',
-                            'Value': self.config['tag_name']
-                        },
-                    ]
-                },
-            ],
-            InstanceMarketOptions={
-                'MarketType': 'spot',
-                'SpotOptions': {
-                    #'MaxPrice': 'string',
-                    'SpotInstanceType': 'one-time', # | 'persistent'
-                    'BlockDurationMinutes': 240,
-                    'InstanceInterruptionBehavior': 'terminate'
-                }
+            session = boto3.Session(profile_name=self.config['profile'])
+            ec2 = session.resource('ec2', region_name=self.config['aws_region'])
+            self.ec2_instances = ec2.create_instances(
+                ImageId=self.config['image']['image_id'],
+                MinCount=self.config['vm_count'],
+                MaxCount=self.config['vm_count'],
+                InstanceType=self.config['instance_type'],
+                KeyName=self.config['key_name'],
+                BlockDeviceMappings=self.config['storage_settings'],
+                UserData=self.user_data,
+                TagSpecifications=[
+                    {
+                        'ResourceType': "instance",
+                        'Tags': [
+                            {
+                                'Key': 'Creator',
+                                'Value': self.config['tag_name']
+                            },
+                            {
+                                'Key': 'Name',
+                                'Value': self.config['tag_name']
+                            },
+                        ]
+                    },
+                ],
+                InstanceMarketOptions={
+                    'MarketType': 'spot',
+                    'SpotOptions': {
+                        # 'MaxPrice': 'string',
+                        'SpotInstanceType': 'one-time',  # | 'persistent'
+                        'BlockDurationMinutes': 240,
+                        'InstanceInterruptionBehavior': 'terminate'
+                    }
 
-            } if 'aws_spot_instances' in self.config and self.config['aws_spot_instances'] else {},
-            NetworkInterfaces=[
-                {
-                    'DeviceIndex': 0,
-                    'SubnetId': self.config['subnet_id'],
-                    'Groups': self.config['security_group_id'],
-                    'AssociatePublicIpAddress': self.config['public_ip']
-                }]
-        )
-        self.logger.info(f"Initiated the start of {self.config['vm_count']} {self.config['instance_type']} machines.")
-        ips = []
-        public_ips = []
-        vpc_ids = []
-        self.logger.info("Waiting until all VMs are up...")
-        for i in self.ec2_instances:
-            i.wait_until_running()
-            i.load()
-            ips.append(i.private_ip_address)
-            vpc_ids.append(i.vpc_id)
+                } if 'aws_spot_instances' in self.config and self.config['aws_spot_instances'] else {},
+                NetworkInterfaces=[
+                    {
+                        'DeviceIndex': 0,
+                        'SubnetId': self.config['subnet_id'],
+                        'Groups': self.config['security_group_id'],
+                        'AssociatePublicIpAddress': self.config['public_ip']
+                    }]
+            )
+            self.logger.info(f"Initiated the start of {self.config['vm_count']} {self.config['instance_type']} machines.")
+            ips = []
+            public_ips = []
+            vpc_ids = []
+            self.logger.info("Waiting until all VMs are up...")
+            for i in self.ec2_instances:
+                i.wait_until_running()
+                i.load()
+                ips.append(i.private_ip_address)
+                vpc_ids.append(i.vpc_id)
+                if self.config['public_ip']:
+                    public_ips.append(i.public_ip_address)
+
+            # add no proxy for all VM IPs
+            if self.config['proxy'] is not None:
+                # Careful that you do NOT delete old NO_PROXY settings, hence the os.environ["NO_PROXY"] + new
+                os.environ["NO_PROXY"] = os.environ["NO_PROXY"] + f",{','.join(str(ip) for ip in ips)}"
+
+            # add instance IPs and IDs to config
+            self.config['ips'] = ips
+            self.config['vpc_ids'] = vpc_ids
+            self.config['priv_ips'] = ips
             if self.config['public_ip']:
-                public_ips.append(i.public_ip_address)
+                self.config['ips'] = public_ips
+                self.config['pub_ips'] = public_ips
+            else:
+                self.config['pub_ips'] = ips
+            self.config['instance_ids'] = [instance.id for instance in self.ec2_instances]
 
-        # add no proxy for all VM IPs
-        if self.config['proxy'] is not None:
-            # Careful that you do NOT delete old NO_PROXY settings, hence the os.environ["NO_PROXY"] + new
-            os.environ["NO_PROXY"] = os.environ["NO_PROXY"] + f",{','.join(str(ip) for ip in ips)}"
+            self.logger.info(f"You can now access machines via: ssh -i \"path to {self.config['key_name']} key\" ubuntu@{self.config['ips']} (if user is ubuntu) ")
+            self.logger.info(f"e.g. ssh -i {self.config['priv_key_path']} ubuntu@{self.config['ips'][0]}")
 
-        # add instance IPs and IDs to config
-        self.config['ips'] = ips
-        self.config['vpc_ids'] = vpc_ids
-        self.config['priv_ips'] = ips
-        if self.config['public_ip']:
-            self.config['ips'] = public_ips
-            self.config['pub_ips'] = public_ips
-        else:
-            self.config['pub_ips'] = ips
-        self.config['instance_ids'] = [instance.id for instance in self.ec2_instances]
+            # Give launched instances tag with time/type of experiment/number of node
+            ts = time.time()
+            st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H-%M-%S')
+            for index, i in enumerate(self.ec2_instances):
+                exp_tag = f"exp_{st}_{self.config['blockchain_type']}_Node{index}"
+                ec2.create_tags(Resources=[
+                    i.id,
+                ],
+                    Tags=[
+                        {
+                            'Key': 'exp_tag',
+                            'Value': exp_tag
+                        },
+                    ])
 
-        self.logger.info(f"You can now access machines via: ssh -i \"path to {self.config['key_name']} key\" ubuntu@{self.config['ips']} (if user is ubuntu) ")
-        self.logger.info(f"e.g. ssh -i {self.config['priv_key_path']} ubuntu@{self.config['ips'][0]}")
+            self.launch_times = []
+            for i in self.ec2_instances:
+                # self.logger.info("Launch Time: " + str(i.launch_time))
+                # get launch time
+                self.launch_times.append(i.launch_time.replace(tzinfo=None))
 
-        # Give launched instances tag with time/type of experiment/number of node
+            # create experiment directory structure
+            self.config['launch_times'] = self.launch_times
+
+        elif self.config['instance_provision'] == "own":
+
+            if self.config['vm_count'] == len(self.config['pub_ips']) and self.config['vm_count'] == len(self.config['priv_ips']) and self.config['vm_count'] == len(self.config['ips']):
+
+                # writing the user data to a file
+                with open(f"{self.config['exp_dir']}/bootstrapping.sh", "w") as file:
+                    file.write(self.user_data)
+                    file.close()
+
+                ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
+
+                for index in range(0, self.config['vm_count']):
+                    # deleting previous indicators of success
+                    stdin, stdout, stderr = ssh_clients[index].exec_command("sudo rm -rf /var/log/user_data.log /var/log/user_data_success.log")
+                    self.logger.debug(stdout.readlines())
+                    self.logger.debug(stderr.readlines())
+
+                    scp_clients[index].put(self.config['exp_dir'] + "/bootstrapping.sh", "/home/ubuntu")
+
+                    stdin, stdout, stderr = ssh_clients[index].exec_command("sudo chmod 775 /home/ubuntu/bootstrapping.sh")
+                    self.logger.debug(stdout.readlines())
+                    self.logger.debug(stderr.readlines())
+
+                    channel = ssh_clients[index].get_transport().open_session()
+                    channel.exec_command("sudo /home/ubuntu/bootstrapping.sh")
+
+            else:
+                raise Exception("Inconsistent lengths of the ip fields compared to vm_count")
+
         ts = time.time()
         st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H-%M-%S')
-        for index, i in enumerate(self.ec2_instances):
-            exp_tag = f"exp_{st}_{self.config['blockchain_type']}_Node{index}"
-            ec2.create_tags(Resources=[
-                i.id,
-            ],
-                Tags=[
-                    {
-                        'Key': 'exp_tag',
-                        'Value': exp_tag
-                    },
-                ])
-
-        self.launch_times = []
-        for i in self.ec2_instances:
-            # self.logger.info("Launch Time: " + str(i.launch_time))
-            # get launch time
-            self.launch_times.append(i.launch_time.replace(tzinfo=None))
-
-        # create experiment directory structure
-        self.config['launch_times'] = self.launch_times
         self.config['exp_dir'] = f"{self.config['exp_dir']}/experiments/exp_{st}_{self.config['blockchain_type']}"
 
         try:
@@ -335,17 +405,25 @@ class VMHandler:
         with open(f"{self.config['exp_dir']}/config.json", 'w') as outfile:
             json.dump(self.config, outfile, default=datetimeconverter, indent=4)
 
-        # wait couple minutes until VMs are up
-        # first connect ssh clients, then scp client
-        self.logger.info("Waiting 60 seconds before creating ssh connection to VMs")
-        time.sleep(60)
-        ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
+        if self.config['instance_provision'] is not "none":
+            # wait couple minutes until VMs are up
+            # first connect ssh clients, then scp client
+            self.logger.info("Waiting 60 seconds before creating ssh connection to VMs")
+            time.sleep(60)
+            ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
 
         self.logger.info("Waiting for all VMs to finish the userData setup...")
 
+        if self.config['blockchain_type'] == "eos":
+            max_time = 120
+            normal_time = 60
+        else:
+            max_time = 30
+            normal_time = 10
+
         # Wait until user Data is finished
-        if False in wait_till_done(self.config, ssh_clients, self.config['ips'], 30*60, 60,
-                                   "/var/log/user_data_success.log", False, 10*60, self.logger):
+        if False in wait_till_done(self.config, ssh_clients, self.config['ips'], max_time * 60, 60,
+                                   "/var/log/user_data_success.log", False, normal_time * 60, self.logger):
             self.logger.error('Boot up NOT successful')
 
             if yes_or_no("Do you want to shut down the VMs?"):
@@ -391,63 +469,32 @@ class VMHandler:
             self.logger.info("ssh/scp clients already closed")
 
         # if yes_or_no("Do you want to shut down the whole network?"):
-            # self.run_general_shutdown()
-
+        # self.run_general_shutdown()
 
     def _run_specific_startup(self, ssh_clients, scp_clients):
         """starts startup for given config (geth, parity, etc....)"""
 
-        if self.config['blockchain_type'] == 'corda':
-            corda_startup(self.config, self.logger, ssh_clients, scp_clients)
+        # running the blockchain specific startup script
+        blockchain_type = self.config['blockchain_type']
 
-        elif self.config['blockchain_type'] == 'couchdb':
-            couchdb_startup(self.config, self.logger, ssh_clients, scp_clients)
+        if blockchain_type in ["ethermint", "qldb"]:
+            self.logger.warning("")
+            self.logger.warning("")
+            self.logger.warning(f"  !!! The automatic setup for {blockchain_type.upper()} is not yet working - still under active development  !!!")
+            self.logger.warning("")
+            self.logger.warning("")
 
-        elif self.config['blockchain_type'] == 'fabric':
-            fabric_startup(self.config, self.logger, ssh_clients, scp_clients)
+        try:
+            func = getattr(f"{blockchain_type}", f"{blockchain_type}_startup")
+            func(self.config, self.logger, ssh_clients, scp_clients)
 
-        elif self.config['blockchain_type'] == 'empty':
-            empty_startup(self.config, self.logger, ssh_clients, scp_clients)
+        except Exception as e:
+            if self.config['blockchain_type'] == 'client' or self.config['blockchain_type'] == 'indy_client':
+                client_startup(self.config, self.logger, ssh_clients, scp_clients)
 
-        elif self.config['blockchain_type'] == 'eos':
-            eos_startup(self.config, self.logger, ssh_clients, scp_clients)
-
-        elif self.config['blockchain_type'] == 'indy':
-            indy_startup(self.config, self.logger, ssh_clients, scp_clients)
-
-        elif self.config['blockchain_type'] == 'leveldb':
-            leveldb_startup(self.config, self.logger, ssh_clients, scp_clients)
-
-        elif self.config['blockchain_type'] == 'geth':
-            geth_startup(self.config, self.logger, ssh_clients, scp_clients)
-
-        elif self.config['blockchain_type'] == 'parity':
-            try:
-                parity_startup(self.config, self.logger, ssh_clients, scp_clients)
-
-            except ParityInstallFailed:
-                if yes_or_no("Do you want to shut down the VMs?"):
-
-                    self.logger.info(f"Running the shutdown script now")
-                    self.run_general_shutdown()
-
-                else:
-                    self.logger.info(f"VMs are not being shutdown")
-
-        if self.config['blockchain_type'] == 'client' or self.config['blockchain_type'] == 'indy_client':
-            client_startup(self.config, self.logger, ssh_clients, scp_clients)
-
-        elif self.config['blockchain_type'] == 'quorum':
-            quorum_startup(self.config, self.logger, ssh_clients, scp_clients)
-
-        elif self.config['blockchain_type'] == 'sawtooth':
-            sawtooth_startup(self.config, self.logger, ssh_clients, scp_clients)
-
-        elif self.config['blockchain_type'] == 'tezos':
-            tezos_startup(self.config, self.logger, ssh_clients, scp_clients)
-
-        else:
-            pass
+            else:
+                self.logger.exception(e)
+                raise Exception("Could not find the blockchain specific startup method")
 
         with open(f"{self.config['exp_dir']}/config.json", 'w') as outfile:
             json.dump(self.config, outfile, default=datetimeconverter, indent=4)
@@ -464,49 +511,54 @@ class VMHandler:
             self.logger.exception(e)
             self.logger.info("Some scp_client was already closed")
 
-
     def run_general_shutdown(self):
         """
          Stops and terminates all VMs and calculates causes aws costs.
         :return:
         """
-        if self.config['proxy'] is not None:
-            os.environ["NO_PROXY"] = f"{self.config['proxy']['no_proxy']},{','.join(str(ip) for ip in self.config['ips'])}"
 
-        ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
-        ec2_instances = ec2.instances.filter(InstanceIds=self.config['instance_ids'])
-        if any(instance.state['Name'] == "stopped" for instance in ec2_instances):
-            self.logger.info(f"At least on of the instances was already stopped, hence no logs can be pulled from the machines, terminating them in the next step")
+        # create ssh and scp channels
+        ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
 
-        else:
-            # create ssh and scp channels
-            ssh_clients, scp_clients = VMHandler.create_ssh_scp_clients(self.config)
+        for index, ip in enumerate(self.config['ips']):
+            # get userData from all instances
+            try:
+                scp_clients[index].get("/var/log/user_data.log",
+                                       f"{self.config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
+            except:
+                self.logger.info(f"User Data of {ip} cannot be pulled")
 
-            for index, ip in enumerate(self.config['ips']):
-                # get userData from all instances
-                try:
-                    scp_clients[index].get("/var/log/user_data.log",
-                                           f"{self.config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
-                except:
-                    self.logger.info(f"User Data of {ip} cannot be pulled")
+        if self.config['instance_provision'] == "aws":
 
-            self._run_specific_shutdown(ssh_clients, scp_clients)
+            self.logger.info("Shutting down the instances in AWS")
+
+            if self.config['proxy'] is not None:
+                os.environ["NO_PROXY"] = f"{self.config['proxy']['no_proxy']},{','.join(str(ip) for ip in self.config['ips'])}"
+
+            ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
+            ec2_instances = ec2.instances.filter(InstanceIds=self.config['instance_ids'])
+            if any(instance.state['Name'] == "stopped" for instance in ec2_instances):
+                self.logger.info(f"At least on of the instances was already stopped, hence no logs can be pulled from the machines, terminating them in the next step")
+
+        self._run_specific_shutdown(ssh_clients, scp_clients)
+
+        if self.config['instance_provision'] == "aws":
 
             for instance in ec2_instances:
                 instance.stop()
 
-        if 'load_balancer_settings' in self.config and 'add_loadbalancer' in self.config['load_balancer_settings']:
-            # Load Balancer
-            if self.config['load_balancer_settings']['add_loadbalancer']:
-                self.logger.info("Starting Load Balancer termination now")
-                lb_handler = LBHandler(self.config, self.session)
-                lb_handler.shutdown_lb()
+            if 'load_balancer_settings' in self.config and 'add_loadbalancer' in self.config['load_balancer_settings']:
+                # Load Balancer
+                if self.config['load_balancer_settings']['add_loadbalancer']:
+                    self.logger.info("Starting Load Balancer termination now")
+                    lb_handler = LBHandler(self.config, self.session)
+                    lb_handler.shutdown_lb()
 
-        # calculate aws costs
-        self.aws_calculator.calculate_uptime_costs(self.config)
+            # calculate aws costs
+            self.aws_calculator.calculate_uptime_costs(self.config)
 
-        for instance in ec2_instances:
-            instance.terminate()
+            for instance in ec2_instances:
+                instance.terminate()
 
         # close ssh and scp channels
         try:
@@ -522,27 +574,24 @@ class VMHandler:
 
         self.logger.info("All instances terminated -  script is finished")
 
-
     def _run_specific_shutdown(self, ssh_clients, scp_clients):
         """Runs the specific shutdown scripts depending on blockchain_type"""
 
-        if self.config['blockchain_type'] == 'geth':
-            geth_shutdown(self.config, self.logger, ssh_clients, scp_clients)
+        # running the blockchain specific startup script
+        blockchain_type = self.config['blockchain_type']
+        try:
+            func = getattr(f"{blockchain_type}", f"{blockchain_type}_shutdown")
+            func(self.config, self.logger, ssh_clients, scp_clients)
 
-        elif self.config['blockchain_type'] == 'parity':
-            parity_shutdown(self.config, self.logger, ssh_clients, scp_clients)
+        except Exception as e:
 
-        else:
-            pass
-
+            self.logger.exception(e)
 
     def get_config_path(self):
         return f"{self.config['exp_dir']}/config.json"
 
-
     def get_config(self):
         return self.config
-
 
     def set_target_network_conf(self, dir_name):
         """
@@ -555,11 +604,10 @@ class VMHandler:
         with open(f"{self.config['exp_dir']}/config.json", 'w') as outfile:
             json.dump(self.config, outfile, default=datetimeconverter, indent=4)
 
-
     @staticmethod
     def create_ssh_scp_clients(config, logger=None):
         """
-        Creates ssh/scp connection to aws VMs
+        Creates ssh/scp connection to VMs
         :param config:
         :param logger:
         :return: array of scp and ssh clients
@@ -601,7 +649,6 @@ class VMHandler:
 
                 else:
                     break
-            # ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd_to_execute)
 
             # SCPCLient takes a paramiko transport as an argument
             scp_clients.append(SCPClient(ssh_clients[index].get_transport(), socket_timeout=86400))
