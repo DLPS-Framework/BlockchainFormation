@@ -19,7 +19,7 @@ import os
 from BlockchainFormation.utils.utils import *
 
 
-class Tezos:
+class Tezos_Network:
 
     @staticmethod
     def shutdown(node_handler):
@@ -313,12 +313,12 @@ class Tezos:
                                  'unencrypted:edpktn2jCMEcQMzAgxzodaAKM5c2Cs5usXu4Y2JhmB8KGmAcrdko5a', 'unencrypted:edpku3P5Nb3UAJf7ueGKUvoV9rz7HxqBj24o7rVJXKirmP8T4DeEt2', 'unencrypted:edpktfex4E8x4shcFVsN6g8n5tAb5V3PNomnySVMbE4TzZgiMRAi5w',
                                  'unencrypted:edpkuxFAZoQdTh2cJsb6pZvELyG9adPiLYB5xjrnBEY58fhsod7G7z']
 
-        Tezos.write_sandbox(config)
+        Tezos_Network.write_sandbox(config)
 
         for index, _ in enumerate(config['priv_ips']):
             scp_clients[index].put(f"{config['exp_dir']}/setup/sandbox-parameters.json", "/home/ubuntu/tezos")
 
-        peers_string = Tezos.write_peers_string(config)
+        peers_string = Tezos_Network.write_peers_string(config)
         for index, _ in enumerate(config['priv_ips']):
             stdin, stdout, stderr = ssh_clients[index].exec_command(f"~/tezos/tezos-node config init --data-dir ~/test --connections {len(config['priv_ips'])} --expected-pow 0 --rpc-addr {config['priv_ips'][index]}:18730 --net-addr {config['priv_ips'][index]}:19730 {peers_string}")
             logger.debug(stdout.readlines())

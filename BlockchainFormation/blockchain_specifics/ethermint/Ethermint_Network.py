@@ -16,7 +16,7 @@
 import os
 
 
-class Ethermint:
+class Ethermint_Network:
 
     @staticmethod
     def ethermint_shutdown(node_handler):

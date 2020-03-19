@@ -18,7 +18,11 @@ import json
 from BlockchainFormation.utils.utils import *
 
 
-class Client:
+class Client_Network:
+
+    @staticmethod
+    def shutdown(node_handler):
+        pass
 
     @staticmethod
     def startup(node_handler):
@@ -38,16 +42,20 @@ class Client:
 
         if config["client_settings"]["target_network_conf"] is not None:
             # Attach client IPs to network conf
-            Client.attach_to_blockchain_conf(config, logger)
+            Client_Network.attach_to_blockchain_conf(node_handler)
 
     @staticmethod
-    def attach_to_blockchain_conf(config, logger):
+    def attach_to_blockchain_conf(node_handler):
         """
         Attach client settings to another config
         :param config:
         :param logger:
         :return:
         """
+
+        config = node_handler.config
+        logger = node_handler.logger
+
         try:
             with open(config["client_settings"]["target_network_conf"]) as json_file:
                 network_config_file = json.load(json_file)

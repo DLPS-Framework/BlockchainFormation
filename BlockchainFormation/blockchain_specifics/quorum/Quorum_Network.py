@@ -17,7 +17,7 @@ import rlp
 
 from BlockchainFormation.utils.utils import *
 
-class Quorum:
+class Quorum_Network:
 
     @staticmethod
     def shutdown(node_handler):
@@ -188,11 +188,11 @@ class Quorum:
             wait_and_log(stdout, stderr)
 
         logger.info("Starting tessera_nodes")
-        tessera_public_keys = Quorum.start_tessera(config, ssh_clients, logger)
+        tessera_public_keys = Quorum_Network.start_tessera(config, ssh_clients, logger)
         config['tessera_public_keys'] = tessera_public_keys
 
         logger.info("Starting quorum nodes")
-        Quorum.start_network(config, ssh_clients, logger)
+        Quorum_Network.start_network(config, ssh_clients, logger)
 
     @staticmethod
     def start_tessera(config, ssh_clients, logger):
@@ -252,7 +252,7 @@ class Quorum:
         for index, ip in enumerate(config['priv_ips']):
 
             if index == 0:
-                Quorum.start_node(config, ssh_clients, index, logger)
+                Quorum_Network.start_node(config, ssh_clients, index, logger)
                 time.sleep(5)
 
             else:
@@ -260,22 +260,22 @@ class Quorum:
                 if config['quorum_settings']['consensus'].upper() == "IBFT":
                     pass
                 else:
-                    Quorum.add_node(config, ssh_clients, index, logger)
+                    Quorum_Network.add_node(config, ssh_clients, index, logger)
                     time.sleep(2)
 
-                Quorum.start_node(config, ssh_clients, index, logger)
+                Quorum_Network.start_node(config, ssh_clients, index, logger)
                 time.sleep(2)
 
-        status_flags = Quorum.check_network(config, ssh_clients, logger)
+        status_flags = Quorum_Network.check_network(config, ssh_clients, logger)
 
         if False in status_flags:
             logger.info("Restart was not successful")
             try:
                 logger.info("Restarting failed VMs")
                 for node in np.where(status_flags == False):
-                    Quorum.restart_node(config, ssh_clients, node, logger)
+                    Quorum_Network.restart_node(config, ssh_clients, node, logger)
 
-                status_flags = Quorum.check_network(config, ssh_clients, logger)
+                status_flags = Quorum_Network.check_network(config, ssh_clients, logger)
 
             except Exception as e:
                 logger.exception(e)
@@ -285,7 +285,7 @@ class Quorum:
 
     @staticmethod
     def start_network(config, ssh_clients, logger):
-        status_flags = Quorum.start_network_attempt(config, ssh_clients, logger)
+        status_flags = Quorum_Network.start_network_attempt(config, ssh_clients, logger)
 
         if False in status_flags:
             logger.info("Making a complete restart since it was not successful")
@@ -295,8 +295,8 @@ class Quorum:
             logger.info(f"Retry {retries + 1} out of 3")
             retries = retries + 1
 
-            Quorum.kill_network(config, ssh_clients, logger)
-            status_flags = Quorum.start_network_attempt(config, ssh_clients, logger)
+            Quorum_Network.kill_network(config, ssh_clients, logger)
+            status_flags = Quorum_Network.start_network_attempt(config, ssh_clients, logger)
 
         if False in status_flags:
             logger.error("Quorum network did not start successfully")
@@ -308,7 +308,7 @@ class Quorum:
         logger.info("================================")
         logger.info("                                ")
 
-        Quorum.unlock_network(config, ssh_clients, logger)
+        Quorum_Network.unlock_network(config, ssh_clients, logger)
 
     @staticmethod
     def start_node(config, ssh_clients, node, logger):
@@ -409,7 +409,7 @@ class Quorum:
     def unlock_network(config, ssh_clients, logger):
         logger.info("Unlocking all accounts forever")
         for node, _ in enumerate(config['priv_ips']):
-            Quorum.unlock_node(config, ssh_clients, node, logger)
+            Quorum_Network.unlock_node(config, ssh_clients, node, logger)
 
     @staticmethod
     def check_network(config, ssh_clients, logger):
@@ -505,7 +505,7 @@ class Quorum:
 
         logger.info("Killing geth on all nodes")
         for node, _ in enumerate(config['priv_ips']):
-            Quorum.kill_node(ssh_clients, node, logger)
+            Quorum_Network.kill_node(ssh_clients, node, logger)
 
     @staticmethod
     def restart_node(config, ssh_clients, node, logger):
@@ -518,10 +518,10 @@ class Quorum:
         :return:
         """
 
-        Quorum.kill_node(ssh_clients, node, logger)
-        Quorum.start_node(config, ssh_clients, node, logger)
+        Quorum_Network.kill_node(ssh_clients, node, logger)
+        Quorum_Network.start_node(config, ssh_clients, node, logger)
         time.sleep(10)
-        Quorum.unlock_node(config, ssh_clients, node, logger)
+        Quorum_Network.unlock_node(config, ssh_clients, node, logger)
 
     @staticmethod
     def restart(node_handler):
@@ -538,5 +538,5 @@ class Quorum:
         ssh_clients = node_handler.ssh_clients
         scp_clients = node_handler.scp_clients
 
-        Quorum.kill_network(config, ssh_clients, logger)
-        Quorum.start_network(config, ssh_clients, logger)
+        Quorum_Network.kill_network(config, ssh_clients, logger)
+        Quorum_Network.start_network(config, ssh_clients, logger)

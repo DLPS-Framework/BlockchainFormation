@@ -19,7 +19,7 @@ import sys
 from BlockchainFormation.utils.utils import *
 
 
-class Leveldb:
+class Leveldb_Network:
 
     @staticmethod
     def shutdown(node_handler):

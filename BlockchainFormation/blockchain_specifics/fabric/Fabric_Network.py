@@ -21,7 +21,7 @@ import threading
 from BlockchainFormation.utils.utils import *
 
 
-class Fabric:
+class Fabric_Network:
 
     @staticmethod
     def check_config(config, logger):
@@ -72,33 +72,6 @@ class Fabric:
         ssh_clients = node_handler.ssh_clients
         scp_clients = node_handler.scp_clients
 
-        for index, _ in enumerate(ssh_clients):
-
-            try:
-                stdin, stdout, stderr = ssh_clients[index].exec_command("docker stop $(docker ps -a -q) && docker rm -f $(docker ps -a -q) && docker rmi $(docker images | grep 'my-net' | awk '{print $1}')")
-                wait_and_log(stdout, stderr)
-
-                # stdin, stdout, stderr = ssh_clients[index].exec_command("docker volume rm $(docker volume ls -q)")
-                # wait_and_log(stdout, stderr)
-
-                stdin, stdout, stderr = ssh_clients[index].exec_command("docker ps -a && docker volume ls && docker images")
-                wait_and_log(stdout, stderr)
-
-            except Exception as e:
-
-                ssh_clients[index].exec_command("sudo reboot")
-
-        logger.info("Waiting till all machines have rebooted")
-        time.sleep(10)
-
-        status_flags = wait_till_done(config, ssh_clients, config['ips'], 10 * 60, 10, "/var/log/user_data_success.log", False, 10 * 60, logger)
-
-        stdin, stdout, stderr = ssh_clients[index].exec_command("docker volume rm $(docker volume ls -q)")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
-        stdin, stdout, stderr = ssh_clients[index].exec_command("docker ps -a && docker volume ls ")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
 
     @staticmethod
     def startup(node_handler):
@@ -244,7 +217,7 @@ class Fabric:
             sys.exit("Fatal error when performing docker swarm setup")
 
         logger.info(f"Creating crypto-config.yaml and pushing it to {config['ips'][0]}")
-        Fabric.write_crypto_config(config, logger)
+        Fabric_Network.write_crypto_config(config, logger)
 
         stdin, stdout, stderr = ssh_clients[0].exec_command("rm -f /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config.yaml")
         stdout.readlines()
@@ -253,7 +226,7 @@ class Fabric:
         scp_clients[0].put(f"{config['exp_dir']}/setup/crypto-config.yaml", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config.yaml")
 
         logger.info(f"Creating configtx and pushing it to {config['ips'][0]}")
-        Fabric.write_configtx(config, logger)
+        Fabric_Network.write_configtx(config, logger)
 
         stdin, stdout, stderr = ssh_clients[0].exec_command("rm -f /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/configtx.yaml")
         wait_and_log(stdout, stderr)
@@ -304,7 +277,7 @@ class Fabric:
         # pushing the ssh-key and the chaincode on the first vm
         scp_clients[0].put(f"{config['priv_key_path']}", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem")
         scp_clients[0].put(f"{dir_name}/chaincode/benchcontract", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode", recursive=True)
-        Fabric.write_collections(config, logger)
+        Fabric_Network.write_collections(config, logger)
         scp_clients[0].put(f"{config['exp_dir']}/setup/collections.json", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode/benchcontract")
         logger.debug("Successfully pushed to index 0.")
 
@@ -315,7 +288,7 @@ class Fabric:
             indices_sources = finished_indices[0:n_targets]
             indices_targets = remaining_indices[0:n_targets]
 
-            Fabric.push_stuff(config, ssh_clients, scp_clients, indices_sources, indices_targets, logger)
+            Fabric_Network.push_stuff(config, ssh_clients, scp_clients, indices_sources, indices_targets, logger)
 
             finished_indices = indices_sources + indices_targets
             remaining_indices = remaining_indices[n_targets:]
@@ -338,10 +311,9 @@ class Fabric:
         # pool.close()
         # logger.debug(results)
 
-        Fabric.start_docker_containers(config, logger, ssh_clients, scp_clients)
+        Fabric_Network.start_docker_containers(config, logger, ssh_clients, scp_clients)
 
-        Fabric.setup_network(config, ssh_clients, scp_clients, logger, "network_setup")
-        Fabric.install_chaincode(config, ssh_clients, scp_clients, logger)
+        Fabric_Network.setup_network(config, ssh_clients, scp_clients, logger, "network_setup")
 
         logger.info("Getting logs from vms")
 
@@ -1264,12 +1236,40 @@ class Fabric:
         scp_clients = node_handler.scp_clients
 
         try:
-            Fabric.shutdown(config, logger, ssh_clients, scp_clients)
-            Fabric.start_docker_containers(config, logger, ssh_clients, scp_clients)
+
+            for index, _ in enumerate(ssh_clients):
+
+                try:
+                    stdin, stdout, stderr = ssh_clients[index].exec_command("docker stop $(docker ps -a -q) && docker rm -f $(docker ps -a -q) && docker rmi $(docker images | grep 'my-net' | awk '{print $1}')")
+                    wait_and_log(stdout, stderr)
+
+                    # stdin, stdout, stderr = ssh_clients[index].exec_command("docker volume rm $(docker volume ls -q)")
+                    # wait_and_log(stdout, stderr)
+
+                    stdin, stdout, stderr = ssh_clients[index].exec_command("docker ps -a && docker volume ls && docker images")
+                    wait_and_log(stdout, stderr)
+
+                except Exception as e:
+
+                    ssh_clients[index].exec_command("sudo reboot")
+
+            logger.info("Waiting till all machines have rebooted")
+            time.sleep(10)
+
+            status_flags = wait_till_done(config, ssh_clients, config['ips'], 10 * 60, 10, "/var/log/user_data_success.log", False, 10 * 60, logger)
+
+            stdin, stdout, stderr = ssh_clients[index].exec_command("docker volume rm $(docker volume ls -q)")
+            logger.debug(stdout.readlines())
+            logger.debug(stderr.readlines())
+            stdin, stdout, stderr = ssh_clients[index].exec_command("docker ps -a && docker volume ls ")
+            logger.debug(stdout.readlines())
+            logger.debug(stderr.readlines())
+            Fabric_Network.start_docker_containers(config, logger, ssh_clients, scp_clients)
+
         except Exception as e:
             logger.exception(e)
-            Fabric.shutdown(config, logger, ssh_clients, scp_clients)
-            Fabric.start_docker_containers(config, logger, ssh_clients, scp_clients)
+            Fabric_Network.shutdown(config, logger, ssh_clients, scp_clients)
+            Fabric_Network.start_docker_containers(config, logger, ssh_clients, scp_clients)
 
     @staticmethod
     def push_stuff(config, ssh_clients, scp_clients, indices_sources, indices_targets, logger):
@@ -1278,7 +1278,7 @@ class Fabric:
         jobs = []
         for index, index_source in enumerate(indices_sources):
             # logger.debug(f"Creating thread {index} for pushing from {index_source} to {indices_targets[index]}")
-            thread = threading.Thread(target=Fabric.push_stuff_single(config, ssh_clients, scp_clients, index_source, indices_targets[index], logger))
+            thread = threading.Thread(target=Fabric_Network.push_stuff_single(config, ssh_clients, scp_clients, index_source, indices_targets[index], logger))
             # logger.debug(f"Starting thread {index}")
             thread.start()
             jobs.append(thread)
@@ -1294,7 +1294,7 @@ class Fabric:
         jobs = []
         for index, index_source in enumerate(indices_sources):
             # logger.debug(f"Creating thread {index} for pushing from {index_source} to {indices_targets[index]}")
-            thread = threading.Thread(target=Fabric.push_chaincode_single(config, ssh_clients, scp_clients, index_source, indices_targets[index], logger))
+            thread = threading.Thread(target=Fabric_Network.push_chaincode_single(config, ssh_clients, scp_clients, index_source, indices_targets[index], logger))
             # logger.debug(f"Starting thread {index}")
             thread.start()
             jobs.append(thread)
@@ -1318,7 +1318,7 @@ class Fabric:
             f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
         wait_and_log(stdout, stderr)
 
-        Fabric.push_chaincode_single(config, ssh_clients, scp_clients, index_source, index_target, logger)
+        Fabric_Network.push_chaincode_single(config, ssh_clients, scp_clients, index_source, index_target, logger)
         # logger.debug(f"Successfully pushed to index {index_target}")
 
     @staticmethod
@@ -1337,7 +1337,7 @@ class Fabric:
         # pushing the ssh-key and the chaincode on the first vm
         scp_clients[0].put(f"{config['priv_key_path']}", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem")
         scp_clients[0].put(f"{dir_name}/chaincode/benchcontract", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode", recursive=True)
-        Fabric.write_collections(config, logger)
+        Fabric_Network.write_collections(config, logger)
         scp_clients[0].put(f"{config['exp_dir']}/setup/collections.json", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode/benchcontract")
         logger.debug("Successfully pushed to index 0.")
 
@@ -1348,7 +1348,7 @@ class Fabric:
             indices_sources = finished_indices[0:n_targets]
             indices_targets = remaining_indices[0:n_targets]
 
-            Fabric.push_chaincode(config, ssh_clients, scp_clients, indices_sources, indices_targets, logger)
+            Fabric_Network.push_chaincode(config, ssh_clients, scp_clients, indices_sources, indices_targets, logger)
 
             finished_indices = indices_sources + indices_targets
             remaining_indices = remaining_indices[n_targets:]
@@ -1364,12 +1364,18 @@ class Fabric:
 
         index_last_node = config['peer_indices'][-1]
         # Creating script and pushing it to the last node
-        logger.debug(f"Executing script on {config['ips'][index_last_node]}  which creates channel, adds peers to channel, installs and instantiates all chaincode - can take some minutes")
+
+
+        if name == "network_setup":
+            logger.debug(f"Executing script on {config['ips'][index_last_node]}  which creates channel and adds all peers to channel - can take some minutes")
+
+        elif name == "chaincode_installation":
+            logger.debug(f"Executing script on {config['ips'][index_last_node]}  which installs and instantiates all chaincode - can take some minutes")
 
         stdin, stdout, stderr = ssh_clients[index_last_node].exec_command("rm -f /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/script.sh")
         stdout.readlines()
 
-        Fabric.write_script(config, logger, name)
+        Fabric_Network.write_script(config, logger, name)
 
         # logger.debug(stdout.readlines())
         # logger.debug(stdout.readlines())
@@ -1439,5 +1445,5 @@ class Fabric:
                 raise Exception("Blockchain did not start properly - Omitting or repeating")
 
     @staticmethod
-    def install_chaincode(config, ssh_clients, scp_clients, logger):
-        Fabric.setup_network(config, ssh_clients, scp_clients, logger, "chaincode_installation")
+    def install_chaincode(node_handler):
+        Fabric_Network.setup_network(node_handler.config, node_handler.ssh_clients, node_handler.scp_clients, node_handler.logger, "chaincode_installation")

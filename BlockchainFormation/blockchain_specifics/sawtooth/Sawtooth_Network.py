@@ -18,7 +18,7 @@ import random
 from BlockchainFormation.utils.utils import *
 
 
-class Sawtooth:
+class Sawtooth_Network:
 
     @staticmethod
     def check_config(config, logger):
@@ -142,9 +142,7 @@ class Sawtooth:
             stdin, stdout, stderr = ssh_clients[index1].exec_command("sudo mv /data/cli.toml /etc/sawtooth/cli.toml")
             wait_and_log(stdout, stderr)
 
-        Sawtooth.start(config, ssh_clients, logger)
-
-        Sawtooth.install_benchcontract(config, ssh_clients, scp_clients, logger)
+        Sawtooth_Network.start(config, ssh_clients, logger)
 
     @staticmethod
     def start(config, ssh_clients, logger):
@@ -347,7 +345,7 @@ class Sawtooth:
 
         time.sleep(10)
 
-        Sawtooth.check_network(config, ssh_clients, logger)
+        Sawtooth_Network.check_network(config, ssh_clients, logger)
 
     @staticmethod
     def stop(config, ssh_clients, logger):
@@ -377,8 +375,8 @@ class Sawtooth:
         ssh_clients = node_handler.ssh_clients
         scp_clients = node_handler.scp_clients
 
-        Sawtooth.stop(config, ssh_clients, logger)
-        Sawtooth.start(config, ssh_clients, logger)
+        Sawtooth_Network.stop(config, ssh_clients, logger)
+        Sawtooth_Network.start(config, ssh_clients, logger)
 
     @staticmethod
     def start_processors(config, ssh_clients, logger):
@@ -402,8 +400,8 @@ class Sawtooth:
         ssh_clients = node_handler.ssh_clients
         scp_clients = node_handler.scp_clients
 
-        Sawtooth.upload_processors(config, scp_clients, logger)
-        Sawtooth.start_processors(config, ssh_clients, logger)
+        Sawtooth_Network.upload_processors(config, scp_clients, logger)
+        Sawtooth_Network.start_processors(config, ssh_clients, logger)
 
     @staticmethod
     def check_network(config, ssh_clients, logger):
