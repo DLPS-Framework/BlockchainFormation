@@ -9,7 +9,9 @@
     "permissions": "default"
   },
   "subnet_id": "subnet-123",
-  "security_group_id": ["123"],
+  "security_group_id": [
+    "123"
+  ],
   "proxy": null,
   "user": "ubuntu",
   "profile": "default",
@@ -36,8 +38,7 @@
     }
   ],
   "blockchain_type": "fabric",
-  "fabric_settings":
-  {
+  "fabric_settings": {
     "fabric_version": "2.0.0",
     "fabric_ca_version": "1.4.4",
     "thirdparty_version": "0.4.18",

@@ -6,19 +6,33 @@
   "priv_key_path": "/home/user/.aws/key.pem",
   "exp_dir": "/home/user/PycharmProjects/BlockchainFormation/BlockchainFormation",
   "public_ip": true,
-  "pub_ips": ["10.11.12.13", "20.21.22.23", "30.31.32.33", "40.41.42.43"],
-  "priv_ips": ["192.168.10.11", "192.168.12.13", "192.168.14.15", "192.168.16.17"],
-  "ips": ["10.11.12.13", "20.21.22.23", "30.31.32.33", "40.41.42.43"],
+  "pub_ips": [
+    "10.11.12.13",
+    "20.21.22.23",
+    "30.31.32.33",
+    "40.41.42.43"
+  ],
+  "priv_ips": [
+    "192.168.10.11",
+    "192.168.12.13",
+    "192.168.14.15",
+    "192.168.16.17"
+  ],
+  "ips": [
+    "10.11.12.13",
+    "20.21.22.23",
+    "30.31.32.33",
+    "40.41.42.43"
+  ],
   "blockchain_type": "sawtooth",
-  "sawtooth_settings":
-  {
-      "sawtooth.consensus.algorithm.name": "PoET",
-      "sawtooth.poet.initial_wait_time": 1,
-      "sawtooth.poet.target_wait_time": 1,
-      "sawtooth.publisher.max_batches_per_block": 100,
-      "sawtooth.consensus.pbft.block_publishing_delay": 1000,
-      "sawtooth.consensus.raft.heartbeat_tick": 1,
-      "sawtooth.consensus.raft.election_tick": 20,
-      "sawtooth.consensus.raft.period": 3000
+  "sawtooth_settings": {
+    "sawtooth.consensus.algorithm.name": "PoET",
+    "sawtooth.poet.initial_wait_time": 1,
+    "sawtooth.poet.target_wait_time": 1,
+    "sawtooth.publisher.max_batches_per_block": 100,
+    "sawtooth.consensus.pbft.block_publishing_delay": 1000,
+    "sawtooth.consensus.raft.heartbeat_tick": 1,
+    "sawtooth.consensus.raft.election_tick": 20,
+    "sawtooth.consensus.raft.period": 3000
   }
 }

@@ -3,18 +3,20 @@
   "vm_count": 2,
   "instance_type": "t2.micro",
   "image": {
-            "image_id": null,
-            "os": "ubuntu",
-            "version": 18,
-            "permissions": "default"
-            },
+    "image_id": null,
+    "os": "ubuntu",
+    "version": 18,
+    "permissions": "default"
+  },
   "subnet_id": "subnet-xyz",
-  "security_group_id": ["sg-xyz"],
+  "security_group_id": [
+    "sg-xyz"
+  ],
   "proxy": {
-      "proxy_user": "user",
-      "http_proxy": "test.com:8080",
-      "https_proxy": "test.com:8080",
-      "no_proxy": "localhost,127.0.0.1,.test"
+    "proxy_user": "user",
+    "http_proxy": "test.com:8080",
+    "https_proxy": "test.com:8080",
+    "no_proxy": "localhost,127.0.0.1,.test"
   },
   "user": "ubuntu",
   "profile": "my_profile",
@@ -23,35 +25,35 @@
   "aws_config": "/home/ubuntu/.aws/config",
   "aws_region": "eu-central-1",
   "aws_proxy_settings": {
-        "aws_http_proxy": "http://proxy.com:8080",
-        "aws_https_proxy": "http://proxy.com:8080",
-        "aws_no_proxy": "localhost,127.0.0.1"
-    },
+    "aws_http_proxy": "http://proxy.com:8080",
+    "aws_https_proxy": "http://proxy.com:8080",
+    "aws_no_proxy": "localhost,127.0.0.1"
+  },
   "priv_key_path": "/home/ubuntu/.ssh/ssh_priv_key",
   "public_ip": false,
   "tag_name": "example_conf_parity",
   "exp_dir": "/home/ubuntu/experiments",
-  "storage_settings":
-  [{
-    "DeviceName": "/dev/sdb",
-    "VirtualName": "string",
-    "Ebs": {
-      "DeleteOnTermination": true,
-      "VolumeSize": 32,
-      "VolumeType": "gp2",
-      "Encrypted": true,
-      "KmsKeyId": "arn:aws:kms:eu-central-1:..."
-            }
-  }],
+  "storage_settings": [
+    {
+      "DeviceName": "/dev/sdb",
+      "VirtualName": "string",
+      "Ebs": {
+        "DeleteOnTermination": true,
+        "VolumeSize": 32,
+        "VolumeType": "gp2",
+        "Encrypted": true,
+        "KmsKeyId": "arn:aws:kms:eu-central-1:..."
+      }
+    }
+  ],
   "blockchain_type": "parity",
-  "parity_settings":
-  {
+  "parity_settings": {
     "step_duration": 5,
     "balance": "0x200000000000000000000000000000000000000000000000000000000000000",
     "gaslimit": "0x2fefd8",
     "num_acc": null
   },
-    "load_balancer_settings": {
-      "add_loadbalancer": false
+  "load_balancer_settings": {
+    "add_loadbalancer": false
   }
 }

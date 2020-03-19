@@ -10,7 +10,7 @@
   },
   "subnet_id": "subnet-123123",
   "security_group_id": [
-      "sg-123123"
+    "sg-123123"
   ],
   "proxy": null,
   "user": "ubuntu",
@@ -22,7 +22,7 @@
   "aws_proxy_settings": null,
   "priv_key_path": "/path_to_key",
   "tag_name": "example_conf_sawtooth",
-    "exp_dir": "/home/user/BlockchainFormation",
+  "exp_dir": "/home/user/BlockchainFormation",
   "public_ip": true,
   "storage_settings": [
     {
@@ -37,15 +37,14 @@
     }
   ],
   "blockchain_type": "sawtooth",
-  "sawtooth_settings":
-  {
-      "sawtooth.consensus.algorithm.name": "Devmode",
-      "sawtooth.poet.initial_wait_time": 25,
-      "sawtooth.poet.target_wait_time":  5,
-      "sawtooth.publisher.max_batches_per_block": 100,
-      "sawtooth.consensus.pbft.block_publishing_delay": 1000,
-      "sawtooth.consensus.raft.heartbeat_tick": 2,
-      "sawtooth.consensus.raft.election_tick": 1,
-      "sawtooth.consensus.raft.period": 50
+  "sawtooth_settings": {
+    "sawtooth.consensus.algorithm.name": "Devmode",
+    "sawtooth.poet.initial_wait_time": 25,
+    "sawtooth.poet.target_wait_time": 5,
+    "sawtooth.publisher.max_batches_per_block": 100,
+    "sawtooth.consensus.pbft.block_publishing_delay": 1000,
+    "sawtooth.consensus.raft.heartbeat_tick": 2,
+    "sawtooth.consensus.raft.election_tick": 1,
+    "sawtooth.consensus.raft.period": 50
   }
 }

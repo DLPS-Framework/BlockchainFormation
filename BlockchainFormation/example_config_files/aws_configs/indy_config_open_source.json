@@ -9,7 +9,9 @@
     "permissions": "default"
   },
   "subnet_id": "subnet-123",
-  "security_group_id": ["123"],
+  "security_group_id": [
+    "123"
+  ],
   "proxy": null,
   "user": "ubuntu",
   "profile": "default",
