@@ -18,7 +18,7 @@ import hashlib
 from BlockchainFormation.utils.utils import *
 
 
-class Indy:
+class Indy_Network:
 
     @staticmethod
     def shutdown(node_handler):
@@ -131,5 +131,5 @@ class Indy:
         ssh_clients = node_handler.ssh_clients
         scp_clients = node_handler.scp_clients
 
-        Indy.shutdown(config, logger, ssh_clients, scp_clients)
-        Indy.startup(config, logger, ssh_clients, scp_clients)
+        Indy_Network.shutdown(config, logger, ssh_clients, scp_clients)
+        Indy_Network.startup(config, logger, ssh_clients, scp_clients)

@@ -18,7 +18,7 @@ import sys
 
 from BlockchainFormation.utils.utils import *
 
-class Eos:
+class Eos_Network:
 
     @staticmethod
     def shutdown(node_handler):

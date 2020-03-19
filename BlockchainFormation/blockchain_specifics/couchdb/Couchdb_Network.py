@@ -19,7 +19,7 @@ import sys
 from BlockchainFormation.utils.utils import *
 
 
-class Couchdb:
+class Couchdb_Network:
 
     @staticmethod
     def shutdown(node_handler):
@@ -136,7 +136,7 @@ class Couchdb:
         wait_and_log(stdout, stderr)
         scp_clients[0].put(f"{dir_name}/setup", "/home/ubuntu/couchdb/etc", recursive=True)
 
-        Couchdb.start_docker(config, logger, ssh_clients)
+        Couchdb_Network.start_docker(config, logger, ssh_clients)
 
     @staticmethod
     def start_docker(config, logger, ssh_clients):
@@ -178,5 +178,5 @@ class Couchdb:
         ssh_clients = node_handler.ssh_clients
         scp_clients = node_handler.scp_clients
 
-        Couchdb.shutdown(config, logger, ssh_clients, scp_clients)
-        Couchdb.start_docker(config, logger, ssh_clients)
+        Couchdb_Network.shutdown(config, logger, ssh_clients, scp_clients)
+        Couchdb_Network.start_docker(config, logger, ssh_clients)

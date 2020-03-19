@@ -34,10 +34,10 @@ from web3._utils.caching import (
 )
 from web3.middleware import geth_poa_middleware
 
-from BlockchainFormation.blockchain_specifics.geth.Geth import Geth
+from BlockchainFormation.blockchain_specifics.geth.Geth_Network import Geth_Network
 
 
-class Parity:
+class Parity_Network:
 
     # TODO: Make code more efficient and nicer
     # TODO: improve natural sorting stuff
@@ -47,18 +47,18 @@ class Parity:
 
     @staticmethod
     def _session_cache():
-        return lru.LRU(8, callback=Parity._remove_session)
+        return lru.LRU(8, callback=Parity_Network._remove_session)
 
     def _get_session_new(*args, **kwargs):
         cache_key = generate_cache_key((args, kwargs))
-        if cache_key not in Parity._session_cache:
-            Parity._session_cache[cache_key] = requests.Session()
+        if cache_key not in Parity_Network._session_cache:
+            Parity_Network._session_cache[cache_key] = requests.Session()
             # TODO: Adjust these parameters
             retry = Retry(connect=10, backoff_factor=0.3)
             adapter = HTTPAdapter(max_retries=retry)
-            Parity._session_cache[cache_key].mount('http://', adapter)
-            Parity._session_cache[cache_key].mount('https://', adapter)
-        return Parity._session_cache[cache_key]
+            Parity_Network._session_cache[cache_key].mount('http://', adapter)
+            Parity_Network._session_cache[cache_key].mount('https://', adapter)
+        return Parity_Network._session_cache[cache_key]
 
     web3._utils.request._get_session = _get_session_new
 
@@ -135,13 +135,13 @@ class Parity:
         os.mkdir((f"{config['exp_dir']}/parity_logs"))
 
         # generate basic spec and node.toml
-        spec_dict = Parity.generate_spec(accounts=None, config=config, signer_accounts=[])
+        spec_dict = Parity_Network.generate_spec(accounts=None, config=config, signer_accounts=[])
         with open(f"{config['exp_dir']}/setup/spec_basic.json", 'w') as outfile:
             json.dump(spec_dict, outfile, indent=4)
 
         with open(f"{config['exp_dir']}/setup/node_basic.toml", 'w') as outfile:
             # dummy signer accounts, gets replaced later anyway with real signers
-            toml.dump(Parity.generate_node_dict("0x50fc1dd12e1534704a375f3c9acb14eb5f1f3469", config), outfile)
+            toml.dump(Parity_Network.generate_node_dict("0x50fc1dd12e1534704a375f3c9acb14eb5f1f3469", config), outfile)
 
         # put spec and node on VM
         for index, _ in enumerate(config['ips']):
@@ -215,7 +215,7 @@ class Parity:
         acc_path = f"{config['exp_dir']}/setup/accounts"
         file_list = os.listdir(acc_path)
         # Sorting to get matching accounts to ip
-        file_list.sort(key=Geth.natural_keys)
+        file_list.sort(key=Geth_Network.natural_keys)
         for file in file_list:
             try:
                 file = open(os.path.join(acc_path + "/" + file), 'r')
@@ -228,14 +228,14 @@ class Parity:
         logger.info(all_accounts)
 
         # which node gets which account unlocked
-        account_mapping = Geth.get_relevant_account_mapping(all_accounts, config)
+        account_mapping = Geth_Network.get_relevant_account_mapping(all_accounts, config)
 
         logger.info(f"Relevant acc: {str(account_mapping)}")
 
         # add the keyfiles from all relevant accounts to the VMs keystores
         keystore_files = [f for f in glob.glob(acc_path + "**/*/UTC--*", recursive=True)
-                          if Parity.verify_key(f, list(set(itertools.chain(*account_mapping.values()))))]
-        keystore_files.sort(key=Geth.natural_keys)
+                          if Parity_Network.verify_key(f, list(set(itertools.chain(*account_mapping.values()))))]
+        keystore_files.sort(key=Geth_Network.natural_keys)
         logger.debug(keystore_files)
 
         i = 0
@@ -249,15 +249,15 @@ class Parity:
 
             with open(f"{config['exp_dir']}/setup/node_node_{index}.toml", 'w') as outfile:
 
-                toml.dump(Parity.generate_node_dict(signers=Web3.toChecksumAddress(account_mapping[ip][i]),
-                                                    unlock=[Web3.toChecksumAddress(x).lower() for x in account_mapping[ip]], config=config, miner=True if index in range(number_of_signers) else False), outfile)
+                toml.dump(Parity_Network.generate_node_dict(signers=Web3.toChecksumAddress(account_mapping[ip][i]),
+                                                            unlock=[Web3.toChecksumAddress(x).lower() for x in account_mapping[ip]], config=config, miner=True if index in range(number_of_signers) else False), outfile)
 
             if index in range(number_of_signers):
                 signer_accounts.append(account_mapping[ip][i])
 
         # get unique accounts from mapping
-        spec_dict = Parity.generate_spec(accounts=list(set(itertools.chain(*account_mapping.values()))), config=config,
-                                         signer_accounts=signer_accounts)
+        spec_dict = Parity_Network.generate_spec(accounts=list(set(itertools.chain(*account_mapping.values()))), config=config,
+                                                 signer_accounts=signer_accounts)
 
         with open(f"{config['exp_dir']}/setup/spec.json", 'w') as outfile:
             json.dump(spec_dict, outfile, indent=4)
@@ -540,12 +540,12 @@ class Parity:
 
         # first stop all nodes
         for index, client in enumerate(ssh_clients):
-            Parity.kill_node(config, ssh_clients, index, logger)
-            Parity.delete_pool(ssh_clients, index, logger)
+            Parity_Network.kill_node(config, ssh_clients, index, logger)
+            Parity_Network.delete_pool(ssh_clients, index, logger)
 
         # second start all nodes again
         for index, client in enumerate(ssh_clients):
-            Parity.revive_node(config, ssh_clients, index, logger)
+            Parity_Network.revive_node(config, ssh_clients, index, logger)
 
     @staticmethod
     def kill_node(config, ssh_clients, index, logger):
@@ -606,8 +606,8 @@ class Parity:
                 logger.info(f"blockNumber is {web3_client.eth.blockNumber}. Restart seems successful.")
                 return True
             else:
-                Parity.kill_node(config, ssh_clients, index, logger)
-                Parity.delete_pool(ssh_clients, index, logger)
+                Parity_Network.kill_node(config, ssh_clients, index, logger)
+                Parity_Network.delete_pool(ssh_clients, index, logger)
 
         logger.error("Restart was NOT successful")
         return False

@@ -22,7 +22,7 @@
   "aws_proxy_settings": null,
   "priv_key_path": "/home/user/.aws/key.pem",
   "tag_name": "example_conf_fabric",
-  "exp_dir": "/home/user/PycharmProjects/BlockchainFormation/BlockchainFormation",
+  "exp_dir": "/home/user/PycharmProjects/BlockchainFormation",
   "public_ip": true,
   "storage_settings": [
     {

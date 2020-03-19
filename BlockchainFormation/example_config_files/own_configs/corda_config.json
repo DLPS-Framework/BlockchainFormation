@@ -4,7 +4,7 @@
   "user": "ubuntu",
   "key_name": "my_key",
   "priv_key_path": "/home/user/.aws/key.pem",
-  "exp_dir": "/home/user/PycharmProjects/BlockchainFormation/BlockchainFormation",
+  "exp_dir": "/home/user/PycharmProjects/BlockchainFormation",
   "public_ip": true,
   "pub_ips": [
     "10.11.12.13",

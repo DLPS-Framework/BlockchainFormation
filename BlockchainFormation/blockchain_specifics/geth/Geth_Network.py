@@ -36,7 +36,7 @@ from web3._utils.caching import (
 from web3.middleware import geth_poa_middleware
 
 
-class Geth:
+class Geth_Network:
 
     # TODO: Make code more efficient and nicer
     # TODO: improve natural sorting stuff
@@ -47,18 +47,18 @@ class Geth:
 
     @staticmethod
     def _session_cache():
-        return lru.LRU(8, callback=Geth._remove_session)
+        return lru.LRU(8, callback=Geth_Network._remove_session)
 
     def _get_session_new(*args, **kwargs):
         cache_key = generate_cache_key((args, kwargs))
-        if cache_key not in Geth._session_cache:
-            Geth._session_cache[cache_key] = requests.Session()
+        if cache_key not in Geth_Network._session_cache:
+            Geth_Network._session_cache[cache_key] = requests.Session()
             # TODO: Adjust these parameters
             retry = Retry(connect=10, backoff_factor=0.3)
             adapter = HTTPAdapter(max_retries=retry)
-            Geth._session_cache[cache_key].mount('http://', adapter)
-            Geth._session_cache[cache_key].mount('https://', adapter)
-        return Geth._session_cache[cache_key]
+            Geth_Network._session_cache[cache_key].mount('http://', adapter)
+            Geth_Network._session_cache[cache_key].mount('https://', adapter)
+        return Geth_Network._session_cache[cache_key]
 
     web3._utils.request._get_session = _get_session_new
 
@@ -118,7 +118,7 @@ class Geth:
         acc_path = f"{config['exp_dir']}/setup/accounts"
         file_list = os.listdir(acc_path)
         # Sorting to get matching accounts to ip
-        file_list.sort(key=Geth.natural_keys)
+        file_list.sort(key=Geth_Network.natural_keys)
         for file in file_list:
             try:
                 file = open(os.path.join(acc_path + "/" + file), 'r')
@@ -139,7 +139,7 @@ class Geth:
         logger.info(f"There are {number_of_signers} signers")
 
         # which node gets which account unlocked
-        account_mapping = Geth.get_relevant_account_mapping(all_accounts, config)
+        account_mapping = Geth_Network.get_relevant_account_mapping(all_accounts, config)
 
         logger.info(f"Relevant acc: {str(account_mapping)}")
         i = 0
@@ -181,7 +181,7 @@ class Geth:
                 # add the keyfiles from all relevant accounts to the VMs keystores
                 keystore_files = [f for f in glob.glob(acc_path + "**/*/UTC--*", recursive=True) if
                                   re.match("(.*--.*--)(.*)", f).group(2) in list(set(itertools.chain(*account_mapping.values())))]
-                keystore_files.sort(key=Geth.natural_keys)
+                keystore_files.sort(key=Geth_Network.natural_keys)
                 logger.info(keystore_files)
                 for index_top, _ in enumerate(config['ips']):
 
@@ -217,7 +217,7 @@ class Geth:
 
         # create genesis json
         # get unique accounts from mapping
-        genesis_dict = Geth.generate_genesis(accounts=list(set(itertools.chain(*account_mapping.values()))), config=config, signer_accounts=signer_accounts)
+        genesis_dict = Geth_Network.generate_genesis(accounts=list(set(itertools.chain(*account_mapping.values()))), config=config, signer_accounts=signer_accounts)
 
         with open(f"{config['exp_dir']}/setup/genesis.json", 'w') as outfile:
             json.dump(genesis_dict, outfile, indent=4)
@@ -391,12 +391,12 @@ class Geth:
 
         # first stop all nodes
         for index, client in enumerate(ssh_clients):
-            Geth.kill_node(config, ssh_clients, index, logger)
-            Geth.delete_pool(ssh_clients, index, logger)
+            Geth_Network.kill_node(config, ssh_clients, index, logger)
+            Geth_Network.delete_pool(ssh_clients, index, logger)
 
         # second start all nodes again
         for index, client in enumerate(ssh_clients):
-            Geth.revive_node(config, ssh_clients, index, logger)
+            Geth_Network.revive_node(config, ssh_clients, index, logger)
 
         logger.debug("All nodes should now be restarted")
 
@@ -461,8 +461,8 @@ class Geth:
                 logger.info(f"TxPool Status: {web3_client.geth.txpool.status()}")
                 return True
             else:
-                Geth.kill_node(config, ssh_clients, index, logger)
-                Geth.delete_pool(ssh_clients, index, logger)
+                Geth_Network.kill_node(config, ssh_clients, index, logger)
+                Geth_Network.delete_pool(ssh_clients, index, logger)
 
         logger.error("Restart was NOT successful")
         return False
@@ -480,4 +480,4 @@ class Geth:
         :param text:
         :return:
         """
-        return [Geth.atoi(c) for c in re.split(r'(\d+)', text)]
+        return [Geth_Network.atoi(c) for c in re.split(r'(\d+)', text)]

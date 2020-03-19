@@ -76,7 +76,7 @@ To add another blockchain, the following steps are required:
 * In-depth explanation of all the blockchain-specific configurations in the configs
 * Find a nicer way to modify bootstrap_scripts based on the config file
 + Sophisticated checking of the values specified in config files
-* Implement other user names than ```ubuntu```, and other file names than ```data```
+* Support other user names than ```ubuntu```, and other directories than ```data```
 * Add Windows support?
     
 ## Complete list of needed Python packages (apart from standard packages)

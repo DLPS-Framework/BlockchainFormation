@@ -18,7 +18,11 @@ import json
 from BlockchainFormation.utils.utils import *
 
 
-class Client:
+class Client_Network:
+
+    @staticmethod
+    def shutdown(node_handler):
+        pass
 
     @staticmethod
     def startup(node_handler):
@@ -38,16 +42,20 @@ class Client:
 
         if config["client_settings"]["target_network_conf"] is not None:
             # Attach client IPs to network conf
-            Client.attach_to_blockchain_conf(config, logger)
+            Client_Network.attach_to_blockchain_conf(node_handler)
 
     @staticmethod
-    def attach_to_blockchain_conf(config, logger):
+    def attach_to_blockchain_conf(node_handler):
         """
         Attach client settings to another config
         :param config:
         :param logger:
         :return:
         """
+
+        config = node_handler.config
+        logger = node_handler.logger
+
         try:
             with open(config["client_settings"]["target_network_conf"]) as json_file:
                 network_config_file = json.load(json_file)
@@ -57,12 +65,18 @@ class Client:
         network_config_file["client settings"] = {
 
             "ips": config["ips"],
-            "vpc_ids": config["vpc_ids"],
-            "instance_ids": config["instance_ids"],
-            "launch_times": config["launch_times"],
             "exp_dir": config["exp_dir"]
 
         }
+
+        try:
+            network_config_file['launch_times'] = config['launch_times'],
+            network_config_file['vpc_ids'] = config['vpc_ids']
+            network_config_file['instance_ids'] = config['instance_ids']
+
+        except Exception as e:
+            logger.info("No vpc_ids and instance_ids available")
+
         logger.info("Attaching client config to parent network config now")
         logger.info(f"Target parent network: {config['client_settings']['target_network_conf']}")
         if config['public_ip']:

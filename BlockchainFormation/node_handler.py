@@ -26,19 +26,19 @@ from scp import SCPClient
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from BlockchainFormation.cost_calculator import AWSCostCalculator
 
-from BlockchainFormation.blockchain_specifics.client.Client import *
-from BlockchainFormation.blockchain_specifics.corda.Corda import *
-from BlockchainFormation.blockchain_specifics.couchdb.Couchdb import *
-from BlockchainFormation.blockchain_specifics.fabric.Fabric import *
-from BlockchainFormation.blockchain_specifics.empty.Empty import *
-from BlockchainFormation.blockchain_specifics.eos.Eos import *
-from BlockchainFormation.blockchain_specifics.geth.Geth import *
-from BlockchainFormation.blockchain_specifics.indy.Indy import *
-from BlockchainFormation.blockchain_specifics.leveldb.Leveldb import *
-from BlockchainFormation.blockchain_specifics.parity.Parity import *
-from BlockchainFormation.blockchain_specifics.quorum.Quorum import *
-from BlockchainFormation.blockchain_specifics.sawtooth.Sawtooth import *
-from BlockchainFormation.blockchain_specifics.tezos.Tezos import *
+from BlockchainFormation.blockchain_specifics.client.Client_Network import *
+from BlockchainFormation.blockchain_specifics.corda.Corda_Network import *
+from BlockchainFormation.blockchain_specifics.couchdb.Couchdb_Network import *
+from BlockchainFormation.blockchain_specifics.fabric.Fabric_Network import *
+from BlockchainFormation.blockchain_specifics.empty.Empty_Network import *
+from BlockchainFormation.blockchain_specifics.eos.Eos_Network import *
+from BlockchainFormation.blockchain_specifics.geth.Geth_Network import *
+from BlockchainFormation.blockchain_specifics.indy.Indy_Network import *
+from BlockchainFormation.blockchain_specifics.leveldb.Leveldb_Network import *
+from BlockchainFormation.blockchain_specifics.parity.Parity_Network import *
+from BlockchainFormation.blockchain_specifics.quorum.Quorum_Network import *
+from BlockchainFormation.blockchain_specifics.sawtooth.Sawtooth_Network import *
+from BlockchainFormation.blockchain_specifics.tezos.Tezos_Network import *
 
 from BlockchainFormation.lb_handler import *
 from BlockchainFormation.utils.utils import *
@@ -68,8 +68,8 @@ class NodeHandler:
 
         if self.config['instance_provision'] == 'aws':
             self.logger.info("Automatic startup in AWS selected")
-        elif self.config['instance_provision'] == 'none':
-            self.logger.info("Automatic startup on user-proxided instances seleced")
+        elif self.config['instance_provision'] == 'own':
+            self.logger.info("Automatic startup on user-proxided instances selected")
         else:
             self.logger.info("Invalid option")
             raise Exception("No valid option for cloud specified")
@@ -151,7 +151,7 @@ class NodeHandler:
             os.system(f"sed -i -e 's/substitute_fabric_ca_version/{self.config['fabric_settings']['fabric_ca_version']}/g' {dir_name}/blockchain_specifics/fabric/bootstrap_fabric_temp.sh")
             os.system(f"sed -i -e 's/substitute_fabric_thirdparty_version/{self.config['fabric_settings']['thirdparty_version']}/g' {dir_name}/blockchain_specifics/fabric/bootstrap_fabric_temp.sh")
 
-            with open(f"{dir_name}/blockchain_specifics/fabric/bootstrap_fabric.sh", 'r') as content_file:
+            with open(f"{dir_name}/blockchain_specifics/fabric/bootstrap_fabric_temp.sh", 'r') as content_file:
                 user_data_specific = content_file.read()
 
             user_data_combined = user_data_base + user_data_specific
@@ -161,7 +161,7 @@ class NodeHandler:
         elif self.config['blockchain_type'] == 'eos':
 
             # if we have non-standard settings, we need to compile binaries from scratch
-            if Eos.check_config(self.config, self.logger):
+            if Eos_Network.check_config(self.config, self.logger):
                 replace_command = "sudo apt-get install -y make " \
                                   "&& mkdir -p /data/eosio && cd /data/eosio " \
                                   "&& git clone --recursive https://github.com/EOSIO/eos && cd eos " \
@@ -257,7 +257,7 @@ class NodeHandler:
                 self.config['image']['image_id'] = image["ImageId"]
 
         if self.config['blockchain_type'] == "fabric":
-            Fabric.check_config(self.config, self.logger)
+            Fabric_Network.check_config(self.config, self.logger)
 
         elif self.config['blockchain_type'] == "eos":
             # check_config is currently executed below
@@ -265,7 +265,7 @@ class NodeHandler:
             pass
 
         elif self.config['blockchain_type'] == "sawtooth":
-            Sawtooth.check_config(self.config, self.logger)
+            Sawtooth_Network.check_config(self.config, self.logger)
 
         if self.config['instance_provision'] == "aws":
 
@@ -375,6 +375,7 @@ class NodeHandler:
 
         elif self.config['instance_provision'] == "own":
 
+            self.config['vm_count'] = len(self.config['pub_ips'])
             if self.config['vm_count'] == len(self.config['pub_ips']) and self.config['vm_count'] == len(self.config['priv_ips']) and self.config['vm_count'] == len(self.config['ips']):
 
                 # writing the user data to a file
@@ -382,19 +383,17 @@ class NodeHandler:
                     file.write(self.user_data)
                     file.close()
 
-                NodeHandler.create_ssh_scp_clients(self.config)
+                self.create_ssh_scp_clients()
 
                 for index in range(0, self.config['vm_count']):
                     # deleting previous indicators of success
                     stdin, stdout, stderr = self.ssh_clients[index].exec_command("sudo rm -rf /var/log/user_data.log /var/log/user_data_success.log")
-                    self.logger.debug(stdout.readlines())
-                    self.logger.debug(stderr.readlines())
+                    wait_and_log(stdout, stderr)
 
                     self.scp_clients[index].put(self.config['exp_dir'] + "/bootstrapping.sh", "/home/ubuntu")
 
                     stdin, stdout, stderr = self.ssh_clients[index].exec_command("sudo chmod 775 /home/ubuntu/bootstrapping.sh")
-                    self.logger.debug(stdout.readlines())
-                    self.logger.debug(stderr.readlines())
+                    wait_and_log(stdout, stderr)
 
                     channel = self.ssh_clients[index].get_transport().open_session()
                     channel.exec_command("sudo /home/ubuntu/bootstrapping.sh")
@@ -631,7 +630,7 @@ class NodeHandler:
         blockchain_type = self.config['blockchain_type']
 
         try:
-            func = getattr(globals()[f"{blockchain_type.capitalize()}"], "shutdown")
+            func = getattr(globals()[f"{blockchain_type.capitalize()}_Network"], "shutdown")
             func(self)
 
         except Exception as e:
@@ -652,12 +651,12 @@ class NodeHandler:
             self.logger.warning("")
 
         try:
-            func = getattr(globals()[f"{blockchain_type.capitalize()}"], "startup")
+            func = getattr(globals()[f"{blockchain_type.capitalize()}_Network"], "startup")
             func(self)
 
         except Exception as e:
             if self.config['blockchain_type'] == 'client' or self.config['blockchain_type'] == 'indy_client':
-                Client.startup()
+                Client_Network.startup()
 
             else:
                 self.logger.exception(e)

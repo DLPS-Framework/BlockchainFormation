@@ -19,7 +19,7 @@ import sys
 from BlockchainFormation.utils.utils import *
 
 
-class Corda:
+class Corda_Network:
 
     @staticmethod
     def shutdown(node_handler):
@@ -106,12 +106,12 @@ class Corda:
         # wait_and_log(stdout, stderr)
 
         # Creating node certificate and startup scripts
-        Corda.write_config_node(config, logger)
+        Corda_Network.write_config_node(config, logger)
 
         # Creating configs for the clients (Corda spring servers)
         for client, _ in enumerate(config['priv_ips']):
             if client != 0:
-                Corda.write_config_client(config, client, logger)
+                Corda_Network.write_config_client(config, client, logger)
 
         # Pushing the network config to the first node and creating all files which are relevant for Corda setup there
         logger.info(f"Pushing build.gradle to the first node on {config['ips'][0]}")
@@ -142,7 +142,7 @@ class Corda:
                 scp_clients[node].put(f"{config['exp_dir']}/setup/build_client{node}.gradle", "/data/samples/cordapp-example/clients/build.gradle")
                 logger.info(f"Pushed all relevant files to node {node} on ip {config['priv_ips'][node]}")
 
-        Corda.start_nodes(config, logger, ssh_clients)
+        Corda_Network.start_nodes(config, logger, ssh_clients)
 
     @staticmethod
     def start_nodes(config, logger, ssh_clients):
@@ -188,8 +188,8 @@ class Corda:
         ssh_clients = node_handler.ssh_clients
         scp_clients = node_handler.scp_clients
 
-        Corda.shutdown(config, logger, ssh_clients, scp_clients)
-        Corda.start_nodes(config, logger, ssh_clients, scp_clients)
+        Corda_Network.shutdown(config, logger, ssh_clients, scp_clients)
+        Corda_Network.start_nodes(config, logger, ssh_clients, scp_clients)
 
     @staticmethod
     def write_config_node(config, logger):

@@ -13,7 +13,7 @@
 #  limitations under the License.
 
 
-class Empty:
+class Empty_Network:
 
     @staticmethod
     def shutdown(node_handler):

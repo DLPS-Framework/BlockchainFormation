@@ -22,7 +22,7 @@
   "aws_proxy_settings": null,
   "priv_key_path": "/home/user/.aws/key.pem",
   "tag_name": "blclab_fabric",
-  "exp_dir": "/home/user/PycharmProjects/BlockchainFormation/BlockchainFormation",
+  "exp_dir": "/home/user/PycharmProjects/BlockchainFormation",
   "public_ip": true,
   "storage_settings": [
     {
@@ -62,6 +62,11 @@
     "absolute_max_bytes": 99,
     "preferred_max_bytes": 2048,
     "tls_enabled": 1,
-    "log_level": "DEBUG"
+    "log_level": "DEBUG",
+    "endorsement_policy": 2,
+    "private_fors": 2,
+    "collection_index": "explicit",
+    "keyspace_size": 10000,
+    "valuespace_size": 10000
   }
 }

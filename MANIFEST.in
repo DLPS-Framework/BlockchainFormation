@@ -4,11 +4,12 @@ include BlockchainFormation/blockchain_specifics/corda/*
 include BlockchainFormation/blockchain_specifics/corda/setup/*
 include BlockchainFormation/blockchain_specifics/couchdb/*
 include BlockchainFormation/blockchain_specifics/couchdb/setup/*
-include BlockchainFormation/blockchain_specifics/empty/*
 include BlockchainFormation/blockchain_specifics/fabric/chaincode/benchcontract/*
 include BlockchainFormation/blockchain_specifics/fabric/chaincode/benchcontract/META-INF/statedb/couchdb/indexes/*
 include BlockchainFormation/blockchain_specifics/fabric/setup/*
 include BlockchainFormation/blockchain_specifics/fabric/*
+include BlockchainFormation/blockchain_specifics/ethermint/*
+include BlockchainFormation/blockchain_specifics/empty/*
 include BlockchainFormation/blockchain_specifics/eos/*
 recursive-include BlockchainFormation/blockchain_specifics/eos/contracts *
 include BlockchainFormation/blockchain_specifics/indy/*
@@ -18,7 +19,7 @@ include BlockchainFormation/blockchain_specifics/sawtooth/processor/*
 include BlockchainFormation/blockchain_specifics/sawtooth/*
 include BlockchainFormation/blockchain_specifics/quorum/*
 include BlockchainFormation/blockchain_specifics/geth/*
-include BlockchainFormation/blockchain_specifics/oarity/*
+include BlockchainFormation/blockchain_specifics/parity/*
 include BlockchainFormation/blockchain_specifics/client/*
 include BlockchainFormation/blockchain_specifics/tezos/*
 include BlockchainFormation/blockchain_specifics/tezos/setup/*
