@@ -46,7 +46,7 @@ from BlockchainFormation.utils.utils import *
 utc = pytz.utc
 
 
-class NodeHandler:
+class Node_Handler:
     """
     Class for handling startup and shutdown of aws VM instances
     """
@@ -486,7 +486,7 @@ class NodeHandler:
         """
 
         # create ssh and scp channels
-        NodeHandler.create_ssh_scp_clients(self)
+        self.create_ssh_scp_clients()
 
         for index, ip in enumerate(self.config['ips']):
             # get userData from all instances
@@ -631,6 +631,20 @@ class NodeHandler:
 
         try:
             func = getattr(globals()[f"{blockchain_type.capitalize()}_Network"], "shutdown")
+            func(self)
+
+        except Exception as e:
+
+            self.logger.exception(e)
+            raise Exception("")
+
+
+    def restart_network(self):
+
+        blockchain_type = self.config['blockchain_type']
+
+        try:
+            func = getattr(globals()[f"{blockchain_type.capitalize()}_Network"], "restart")
             func(self)
 
         except Exception as e:

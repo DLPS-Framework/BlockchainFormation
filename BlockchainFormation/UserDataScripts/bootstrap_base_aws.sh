@@ -24,7 +24,7 @@ exec > >(tee /var/log/user_data.log|logger -t user-data -s 2>/dev/console) 2>&1
   export hsname=$(cat /etc/hostname)
   bash -c 'echo 127.0.0.1 localhost $hsname >> /etc/hosts'
 
-  # Do not delete the following lines, as it is needed to insert proxy; temp fix -> replace placeholder with string.replace in node_handler.py
+  # Do not delete the following lines, as it is needed to insert proxy; temp fix -> replace placeholder with string.replace in Node_Handler.py
   # PROXY_PLACEHOLDER, DO NOT DELETE!
 
 
