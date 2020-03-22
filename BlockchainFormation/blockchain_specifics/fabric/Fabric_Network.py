@@ -25,6 +25,10 @@ class Fabric_Network:
 
     @staticmethod
     def check_config(config, logger):
+
+        internal_orderer = 0
+        external_database = config['fabric_settings']['external']
+
         logger.debug(f"Checking the fabric config")
         if config['fabric_settings']['orderer_type'].upper() == "KAFKA":
             count = config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count'] \
@@ -42,11 +46,13 @@ class Fabric_Network:
             raise Exception("No valid orderer type")
 
         # if the CouchDB is separate, double the number of vms required for the peers
-        if config['fabric_settings']['database'] == "CouchDB" and config['fabric_settings']['external_database'] == 1:
+        # if config['fabric_settings']['database'] == "CouchDB" and config['fabric_settings']['external_database'] == 1:
+        if config['fabric_settings']['database'] == "CouchDB" and external_database == 1:
             count = count + config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count']
 
         # if the Orderers are not separate, decrease the number of vms required for the peers
-        if config['fabric_settings']['internal_orderer'] == 1:
+        # if config['fabric_settings']['internal_orderer'] == 1:
+        if internal_orderer == 1:
             if config['fabric_settings']['orderer_type'] != "solo" and config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count'] < config['fabric_settings']['orderer_count']:
                 raise Exception("There are more orderers than peers - cannot make the orderers internal")
             else:
@@ -82,15 +88,20 @@ class Fabric_Network:
         scp_clients = node_handler.scp_clients
         dir_name = os.path.dirname(os.path.realpath(__file__))
 
+        internal_orderer = 0
+        external_database = config['fabric_settings']['external']
+
         # the indices of the different roles
         config['orderer_indices'] = list(range(0, config['fabric_settings']['orderer_count']))
 
-        if config['fabric_settings']['internal_orderer'] == 1:
+        # if config['fabric_settings']['internal_orderer'] == 1:
+        if internal_orderer == 1:
             start_index = 0
         else:
             start_index = config['fabric_settings']['orderer_count']
 
-        if config['fabric_settings']['database'] == "CouchDB" and config['fabric_settings']['external_database'] == 1:
+        # if config['fabric_settings']['database'] == "CouchDB" and config['fabric_settings']['external_database'] == 1:
+        if config['fabric_settings']['database'] == "CouchDB" and external_database == 1:
 
             config['peer_indices'] = list(range(start_index, start_index + config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count']))
             config['db_indices'] = list(range(start_index + config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count'], start_index + 2 * config['fabric_settings']['org_count'] * config['fabric_settings']['peer_count']))
@@ -135,7 +146,8 @@ class Fabric_Network:
                 peer_indices.append(config['peer_indices'][node])
                 peer_ips.append(config['priv_ips'][config['peer_indices'][node]])
 
-                if config['fabric_settings']['database'] == "CouchDB" and config['fabric_settings']['external_database'] == 1:
+                # if config['fabric_settings']['database'] == "CouchDB" and config['fabric_settings']['external_database'] == 1:
+                if config['fabric_settings']['database'] == "CouchDB" and external_database == 1:
                     db_indices.append(config['db_indices'][node])
                     db_ips.append(config['priv_ips'][config['db_indices'][node]])
 

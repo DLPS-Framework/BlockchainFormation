@@ -682,7 +682,7 @@ class Node_Handler:
         blockchain_type = self.config['blockchain_type']
 
         try:
-            func = getattr(globals()[f"{blockchain_type.capitalize()}"], "restart")
+            func = getattr(globals()[f"{blockchain_type.capitalize()}_Network"], "restart")
             func(self)
 
         except Exception as e:
