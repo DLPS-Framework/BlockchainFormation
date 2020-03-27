@@ -171,6 +171,14 @@ class Fabric_Network:
 
             config['groups'].append(group_indices)
 
+        # all the other nodes are a single group
+        all_indices = range(0, len(config['ips']))
+        all_group_members = [i for j in config['groups'] for i in j]
+
+        for index in all_indices:
+            if index not in all_group_members:
+                config['groups'].append([index])
+
         logger.info(f"Groups: {config['groups']}")
 
 
@@ -326,6 +334,14 @@ class Fabric_Network:
         Fabric_Network.start_docker_containers(config, logger, ssh_clients, scp_clients)
 
         Fabric_Network.setup_network(config, ssh_clients, scp_clients, logger, "network_setup")
+
+        # leader_index = Fabric_Network.find_leader(config, ssh_clients, scp_clients, logger)
+        # index = Fabric_Network.shutdown_raft_leader(config, ssh_clients, scp_clients, logger)
+        # Fabric_Network.find_leader(config, ssh_clients, scp_clients, logger)
+        # Fabric_Network.restart_orderer(config, ssh_clients, scp_clients, logger, leader_index)
+
+        Fabric_Network.stopstart_leader(node_handler)
+        Fabric_Network.find_leader(config, ssh_clients, scp_clients, logger)
 
         logger.info("Getting logs from vms")
 
@@ -1132,8 +1148,15 @@ class Fabric_Network:
             # Starting the orderers
             logger.debug(f" - Starting orderer{orderer} on {config['ips'][index]}")
             channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /home/ubuntu/orderer{orderer}.log)")
-            ssh_clients[index].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + " hyperledger/fabric-tools /bin/bash\" >> /data/cli.sh)")
+
+            command = "docker run --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /home/ubuntu/orderer{orderer}.log"
+
+            channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger "
+                                 f"&& echo \"{command}\" >> /home/ubuntu/start_orderer.sh "
+                                 f"&& sudo chmod 775 /home/ubuntu/start_orderer.sh && bash /home/ubuntu/start_orderer.sh)")
+
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + " hyperledger/fabric-tools /bin/bash\" >> /data/cli.sh)")
+            wait_and_log(stdout, stderr)
 
         # starting peers and databases
         logger.info(f"Starting databases and peers")
@@ -1277,6 +1300,10 @@ class Fabric_Network:
             logger.debug(stdout.readlines())
             logger.debug(stderr.readlines())
             Fabric_Network.start_docker_containers(config, logger, ssh_clients, scp_clients)
+
+            Fabric_Network.setup_network(config, ssh_clients, scp_clients, logger, "network_setup")
+
+            Fabric_Network.install_chaincode(config, ssh_clients, scp_clients, logger)
 
         except Exception as e:
             logger.exception(e)
@@ -1459,3 +1486,123 @@ class Fabric_Network:
     @staticmethod
     def install_chaincode(node_handler):
         Fabric_Network.setup_network(node_handler.config, node_handler.ssh_clients, node_handler.scp_clients, node_handler.logger, "chaincode_installation")
+
+
+    @staticmethod
+    def find_leader(config, ssh_clients, scp_clients, logger):
+
+        leaders = []
+        blocknumbers = []
+
+        for index, node in enumerate(config['orderer_indices']):
+
+            stdin, stdout, stderr = ssh_clients[node].exec_command(f"a=3 && cat orderer{index+1}.log " + "| grep 'Start accepting requests as Raft leader' | grep mychannel | awk -F ' ' '{print $NF-$a}'")
+            out = stdout.readlines()
+            logger.info(out)
+            logger.info(stderr.readlines())
+
+            if len(out) != 0:
+                leaders.append(node)
+                blocknumbers.append(out[-1].replace('\n', ""))
+
+            if len(out) > 1:
+                logger.info(f"Multiple elections found on {node}")
+
+        logger.info(f"Leaders: {leaders}")
+        logger.info(f"Raft leaders found: {leaders} at {[config['ips'][i] for i in leaders]}")
+
+        if len(leaders) == 0:
+            logger.info("No leader found")
+            return None
+
+        elif len(leaders) == 1:
+            logger.info(f"Unique leader found: {leaders[0]} at {config['ips'][leaders[0]]}")
+            return leaders[0]
+
+        elif len(leaders) > 1:
+
+            # search for the highest entry in blocknumbers
+            logger.info(f"Blocknumbers: {blocknumbers}")
+            latest = max(blocknumbers)
+            index = np.where(leaders == latest)
+            logger.info(f"Index: {index}")
+            return leaders[index]
+
+
+    @staticmethod
+    def shutdown_raft_leader(config, ssh_clients, scp_clients, logger):
+
+        leader_index = config['orderer_indices'][Fabric_Network.find_leader(config, ssh_clients, scp_clients, logger)]
+
+        logger.info(f"Crashing leader node with index {leader_index} and ip {config['ips'][leader_index]}")
+
+        try:
+            stdin, stdout, stderr = ssh_clients[leader_index].exec_command("docker stop $(docker ps -a -q) && docker rm -f $(docker ps -a -q) && docker rmi $(docker images | grep 'my-net' | awk '{print $1}'); rm /home/ubuntu/orderer*.log && sudo rm -r ./var/lib/docker/volumes/afe902cdfb0eb2d7bb0284743e8652278753d75ef7732e3702e20687afb4013b/")
+            wait_and_log(stdout, stderr)
+
+            stdin, stdout, stderr = ssh_clients[leader_index].exec_command("docker volume rm $(docker volume ls -q)")
+            wait_and_log(stdout, stderr)
+
+            stdin, stdout, stderr = ssh_clients[leader_index].exec_command("docker ps -a && docker volume ls && docker images")
+            wait_and_log(stdout, stderr)
+
+        except Exception as e:
+
+            ssh_clients[leader_index].exec_command("sudo reboot")
+
+        logger.info("Crashed leader successfully")
+        time.sleep(10)
+
+        logger.info("Who is the new leader?")
+        new_leader = Fabric_Network.find_leader(config, ssh_clients, scp_clients, logger)
+
+        logger.info(f"The new leader is {new_leader} at ip {config['ips'][new_leader]}")
+
+        return leader_index
+
+
+    @staticmethod
+    def restart_orderer(config, ssh_clients, scp_clients, logger, index):
+
+        logger.info(f"Restarting orderer{index+1} at {config['ips'][config['orderer_indices'][index]]}")
+        channel = ssh_clients[config['orderer_indices'][index]].get_transport().open_session()
+        channel.exec_command("bash /home/ubuntu/start_orderer.sh")
+
+    @staticmethod
+    def stopstart_orderer(config, ssh_clients, scp_clients, logger, index):
+
+        time.sleep(10)
+
+        logger.info(f"Restarting orderer{index+1} at {config['ips'][config['orderer_indices'][index]]}")
+        stdin, stdout, stderr = ssh_clients[config['orderer_indices'][index].exec_command(f"docker stop orderer{index+1}.example.com")]
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+
+        time.sleep(10)
+
+        channel = ssh_clients[config['orderer_indices'][index]].get_transport().open_session()
+        channel.exec_command("bash /home/ubuntu/start_orderer.sh")
+
+    @staticmethod
+    def stopstart_leader(node_handler):
+
+        logger = node_handler.logger
+        config = node_handler.config
+        ssh_clients = node_handler.ssh_clients
+        scp_clients = node_handler.scp_clients
+
+        time.sleep(10)
+
+        leader_index = config['orderer_indices'][Fabric_Network.find_leader(config, ssh_clients, scp_clients, logger)]
+
+        logger.info(f"Restarting leader, which is currently orderer{leader_index + 1} at {config['ips'][config['orderer_indices'][leader_index]]}")
+        stdin, stdout, stderr = ssh_clients[config['orderer_indices'][leader_index]].exec_command(f"docker stop orderer{leader_index + 1}.example.com")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+
+        time.sleep(10)
+
+        channel = ssh_clients[config['orderer_indices'][leader_index]].get_transport().open_session()
+        channel.exec_command("bash /home/ubuntu/start_orderer.sh")
+
+

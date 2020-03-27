@@ -66,13 +66,19 @@ class Node_Handler:
         self.config = config
         self.user_data = self.create_user_data()
 
-        if self.config['instance_provision'] == 'aws':
-            self.logger.info("Automatic startup in AWS selected")
-        elif self.config['instance_provision'] == 'own':
-            self.logger.info("Automatic startup on user-proxided instances selected")
-        else:
-            self.logger.info("Invalid option")
-            raise Exception("No valid option for cloud specified")
+        try:
+
+            if self.config['instance_provision'] == 'aws':
+                self.logger.info("Automatic startup in AWS selected")
+            elif self.config['instance_provision'] == 'own':
+                self.logger.info("Automatic startup on user-proxided instances selected")
+            else:
+                self.logger.info("Invalid option")
+                raise Exception("No valid option for cloud specified")
+
+        except Exception as e:
+            self.logger.info("AWS config by default")
+            self.config['instance_provision'] = 'aws'
 
         if self.config['instance_provision'] == 'aws':
             # no proxy if no proxy user
@@ -107,15 +113,24 @@ class Node_Handler:
 
         user_data_base = ""
 
-        if self.config['instance_provision'] == "aws":
+        try:
+
+            if self.config['instance_provision'] == "aws":
+
+                with open(f"{dir_name}/UserDataScripts/bootstrap_base_aws.sh", 'r') as content_file:
+                    user_data_base = content_file.read()
+
+            elif self.config['instance_provision'] == "own":
+
+                with open(f"{dir_name}/UserDataScripts/bootstrap_base_own.sh", 'r') as content_file:
+                    user_data_base = content_file.read()
+
+        except Exception as e:
 
             with open(f"{dir_name}/UserDataScripts/bootstrap_base_aws.sh", 'r') as content_file:
                 user_data_base = content_file.read()
 
-        elif self.config['instance_provision'] == "own":
-
-            with open(f"{dir_name}/UserDataScripts/bootstrap_base_own.sh", 'r') as content_file:
-                user_data_base = content_file.read()
+                self.config['instance_provision'] = 'aws'
 
         # If VM is hosted in public the VMs do not need the internal proxy settings
         if (self.config['instance_provision'] == 'aws') and (not self.config['public_ip']):
@@ -198,13 +213,17 @@ class Node_Handler:
         :return:
         """
 
-        if self.config['instance_provision'] == "aws":
-            self.logger.info("Launching the required instances in aws")
+        try:
+            if self.config['instance_provision'] == "aws":
+                self.logger.info("Launching the required instances in aws")
 
-        elif self.config['instance_provision'] == "own":
-            self.logger.info(f"Using existing instances on ips {self.config['ips']}")
-            self.logger.info(f"Note that the user currently needs to run Ubuntu 18.04, the user name for ssh'ing must be 'ubuntu'"
-                             f", and the instances require a directory /data/ with permissions set for ubuntu and at least 8 GB of storage")
+            elif self.config['instance_provision'] == "own":
+                self.logger.info(f"Using existing instances on ips {self.config['ips']}")
+                self.logger.info(f"Note that the user currently needs to run Ubuntu 18.04, the user name for ssh'ing must be 'ubuntu'"
+                                 f", and the instances require a directory /data/ with permissions set for ubuntu and at least 8 GB of storage")
+
+        except Exception as e:
+            self.logger.info("AWS by default")
 
         def search_newest_image(list_of_images):
             """
