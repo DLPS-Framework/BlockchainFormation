@@ -324,8 +324,9 @@ class Tezos_Network:
             logger.debug(stdout.readlines())
             logger.debug(stderr.readlines())
 
-        channel = ssh_clients[0].get_transport().open_session()
-        channel.exec_command("~/tezos/tezos-node run --data-dir ~/test --sandbox=/home/ubuntu/genesis_pubkey.json >> ~/node.log 2>&1")
+        for index, _ in enumerate(config['priv_ips']):
+            channel = ssh_clients[index].get_transport().open_session()
+            channel.exec_command("screen -dmS node ~/tezos/tezos-node run --data-dir ~/test")
 
         time.sleep(30)
 
@@ -334,28 +335,12 @@ class Tezos_Network:
             logger.debug(stdout.readlines())
             logger.debug(stderr.readlines())
 
-            stdin, stdout, stderr = ssh_clients[index].exec_command("pidof tezos-node")
-            out = stdout.readlines()
-            logger.debug(out)
-            logger.debug(stderr.readlines())
-
-            pid = out[0].replace("\n", "")
-            stdin, stdout, stderr = ssh_clients[index].exec_command(f"kill -15 {pid} && mv ~/node.log ~/node_inject.log")
-            logger.debug(stdout.readlines())
-            logger.debug(stderr.readlines())
-
-        time.sleep(30)
-
-        for index, _ in enumerate(config['priv_ips']):
-            channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command("screen -dmS node ~/tezos/tezos-node run --data-dir ~/test")
-
-        time.sleep(30)
 
         for index, _ in enumerate(config['priv_ips']):
 
             stdin, stdout, stderr = ssh_clients[index].exec_command(
-                f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 import secret key this_node {config['private_keys'][index]} && ~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 register key this_node as delegate")
+                f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 import secret key this_node {config['private_keys'][index]}")
+            # && ~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 register key this_node as delegate")
             logger.debug(stdout.readlines())
             logger.debug(stderr.readlines())
 
@@ -363,11 +348,30 @@ class Tezos_Network:
                 time.sleep(30)
 
             channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"screen -dmS baker ~/tezos/tezos-baker-004-Pt24m4xi --addr {config['priv_ips'][index]} --port 18730 run with local node /home/ubuntu/test this_node")
+            channel.exec_command(f"screen -dmS baker ~/tezos/tezos-baker-004-Pt24m4xi --addr {config['priv_ips'][index]} --port 18730 run with local node /home/ubuntu/test")
             channel = ssh_clients[index].get_transport().open_session()
             channel.exec_command(f"screen -dmS accuser ~/tezos/tezos-accuser-004-Pt24m4xi --addr {config['priv_ips'][index]} --port 18730 run")
             channel = ssh_clients[index].get_transport().open_session()
             channel.exec_command(f"screen -dmS endorser ~/tezos/tezos-endorser-004-Pt24m4xi --addr {config['priv_ips'][index]} --port 18730 run this_node")
+
+            stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 get balance for this_node")
+            logger.debug(stdout.readlines())
+            logger.debug(stderr.readlines())
+
+            stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 transfer 10000 from this_node to {config['public_key_hashes'][1]} --fee=0.05")
+            logger.debug(stdout.readlines())
+            logger.debug(stderr.readlines())
+
+            time.sleep(5)
+
+            stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][0]} --port 18730 get balance for this_node")
+            logger.debug(stdout.readlines())
+            logger.debug(stderr.readlines())
+
+            stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][len(config['priv_ips'])]} --port 18730 get balance for {config['public_key_hashes'][1]}")
+            logger.debug(stdout.readlines())
+            logger.debug(stderr.readlines())
+
 
         for index, _ in enumerate(config['priv_ips']):
             scp_clients[index].put(f"{dir_name}/setup", "/home/ubuntu", recursive=True)
@@ -381,7 +385,7 @@ class Tezos_Network:
             raise Exception("Installation failed")
 
         for index, ip in enumerate(config['priv_ips']):
-            logger.info("fStarting the server on {ip}")
+            logger.info(f"Starting the server on {ip}")
             stdin, stdout, stderr = ssh_clients[index].exec_command("echo '{\n    \"ip\": \"" + f"{config['priv_ips'][index]}" + "\"\n}' >> ~/setup/config.json")
             logger.debug(stdout.readlines())
             logger.debug(stderr.readlines())
@@ -409,6 +413,15 @@ class Tezos_Network:
         for index, _ in enumerate(config['priv_ips']):
             sandbox_parameters["bootstrap_accounts"].append([config["public_keys"][index].replace("unencrypted:", ""), "4000000000000"])
 
+        sandbox_parameters["preserved_cycles"] = 2
+        sandbox_parameters["blocks_per_cycle"] = 8
+        sandbox_parameters["blocks_per_commitment"] = 4
+        sandbox_parameters["blocks_per_roll_snapshot"] = 4
+        sandbox_parameters["blocks_per_voting_period"] = 64
+        sandbox_parameters["time_between_blocks"] = ["1", "0"]
+        sandbox_parameters["proof_of_work_threshold"] = "-1"
+
+
         """
         sandbox_parameters["preserved_cycles"] = 2
         sandbox_parameters["blocks_per_cycle"] = 8
@@ -430,10 +443,14 @@ class Tezos_Network:
         sandbox_parameters["cost_per_byte"] = "1000"
         sandbox_parameters["hard_storage_limit_per_operation"] = "60000"
         sandbox_parameters["test_chain_duration"] = "1966080"
+        "quorum_min": 3000,
+         "quorum_max": 7000,
+         "min_proposal_quorum": 500,
+
         """
 
-        for key in config['tezos_settings']:
-            sandbox_parameters[key] = config['tezos_settings'][key]
+        # for key in config['tezos_settings']:
+            # sandbox_parameters[key] = config['tezos_settings'][key]
 
         with open(f"{config['exp_dir']}/setup/sandbox-parameters.json", 'w+') as outfile:
             json.dump(sandbox_parameters, outfile, default=datetimeconverter, indent=4)

@@ -30,7 +30,7 @@ async function test() {
 
     //getting the balance
     start = Date.now()
-    result = await tezos_client.readData("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx").catch(err => {
+    result = await tezos_client.readData("tz1SyK4X7xaarzjXoQmzjh9toWGMn9NRBv8t").catch(err => {
         console.log(err);
     });
     console.log("Balance of tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx: " + result);
@@ -41,7 +41,7 @@ async function test() {
 
     //Sending a transaction
     start = Date.now();
-    await tezos_client.writeData("100", "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx", "tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN").catch(err => {
+    await tezos_client.writeData("100", "tz1SyK4X7xaarzjXoQmzjh9toWGMn9NRBv8t", "tz1WFYojFoYHjEnMJMN3inPdcqmdacbkDm93").catch(err => {
         console.log(err);
     })
     console.log("Sent 100 from tz1 to tz2");
@@ -52,7 +52,7 @@ async function test() {
 
     //getting the new balance
     start = Date.now()
-    result = await tezos_client.readData("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx").catch(err => {
+    result = await tezos_client.readData("tz1SyK4X7xaarzjXoQmzjh9toWGMn9NRBv8t").catch(err => {
         console.log(err);
     });
     console.log("Balance of tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx: " + result);
