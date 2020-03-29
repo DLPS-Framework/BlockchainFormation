@@ -45,8 +45,8 @@
   . ~/.profile
   . ~/.bashrc
 
-  nvm install 8.16.0
-  echo "export PATH=$PATH:/home/ubuntu/.nvm/versions/node/v8.16.0/bin" >> /home/ubuntu/.profile
+  nvm install 13.12.0
+  echo "export PATH=$PATH:/home/ubuntu/.nvm/versions/node/v13.12.0/bin" >> /home/ubuntu/.profile
   . ~/.profile
   . ~/.bashrc
   echo "node version: $(node -v)"
@@ -67,8 +67,9 @@
 && sudo chmod a+x /usr/local/bin/opam \
 && git clone https://gitlab.com/tezos/tezos.git \
 && cd tezos \
-&& git checkout alphanet \
+&& git checkout carthagenet \
 && sed -i -e 's/edpkugeDwmwuwyyD3Q5enapgEYDxZLtEUFFSrvVwXASQMVEqsvTqWu/edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2/g' /home/ubuntu/tezos/src/proto_genesis/lib_protocol/data.ml \
+&& sed -i -e 's/edpktiJknwZ8rQkkZdQUBVmG8Goau6C6JBTMX1hohxMGsQAG1qfFze/edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2/g' /home/ubuntu/tezos/src/proto_genesis/lib_protocol/data.ml \
 && opam init -a \
 && opam switch create tezos ocaml-base-compiler.4.07.1 \
 && eval $(opam env) \
@@ -85,8 +86,11 @@ ADDR=\$1
 
 ACTIVATOR_SECRET="unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6"
 ~/tezos/tezos-client --addr \$ADDR --port 18730 import secret key activator \${ACTIVATOR_SECRET}
-          ~/tezos/tezos-client --addr \$ADDR --port 18730 -block genesis activate protocol Pt24m4xiPbLDhVgVfABUjirbmda3yohdN82Sp9FeuAXJ4eV9otd with fitness 1 and key activator and parameters ~/tezos/sandbox-parameters.json --timestamp \$(TZ="AAA+1" date +%%FT%%TZ)
+~/tezos/tezos-client --addr \$ADDR --port 18730 -block genesis activate protocol PsCARTHAGazKbHtnKfLzQg3kms52kSRpgnDY982a9oYsSXRLQEb with fitness 1 and key activator and parameters ~/tezos/sandbox-parameters.json --timestamp \$(TZ="AAA+1" date +%%FT%%TZ)
 ' >> ~/bootstrap.sh && sudo chmod 775 ~/bootstrap.sh
+
+cd ~
+git clone https://github.com/claudebarde/tezos-react-tutorial
 
   # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log
