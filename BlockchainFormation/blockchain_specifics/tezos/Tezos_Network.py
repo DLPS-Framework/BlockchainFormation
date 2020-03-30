@@ -33,6 +33,7 @@ class Tezos_Network:
         ssh_clients = node_handler.ssh_clients
         scp_clients = node_handler.scp_clients
 
+
     @staticmethod
     def startup(node_handler):
         """
@@ -52,37 +53,26 @@ class Tezos_Network:
 
         # Creating docker swarm
         logger.info("Preparing & starting docker swarm")
-
         stdin, stdout, stderr = ssh_clients[0].exec_command("sudo docker swarm init")
-        out = stdout.readlines()
-        # for index, _ in enumerate(out):
-        #     logger.debug(out[index].replace("\n", ""))
-
-        # logger.debug("".join(stderr.readlines()))
+        stdout.readlines()
 
         stdin, stdout, stderr = ssh_clients[0].exec_command("sudo docker swarm join-token manager")
         out = stdout.readlines()
-        # logger.debug(out)
-        # logger.debug("".join(stderr.readlines()))
         join_command = out[2].replace("    ", "").replace("\n", "")
 
         for index, _ in enumerate(config['priv_ips']):
 
             if index != 0:
                 stdin, stdout, stderr = ssh_clients[index].exec_command("sudo " + join_command)
-                out = stdout.readlines()
-                # logger.debug(out)
-                # logger.debug("".join(stderr.readlines()))
+                stdout.readlines()
 
+        # Storing the join command in the config such that clients can retrieve it to join at a later stage
         config['join_command'] = "sudo " + join_command
 
         # Name of the swarm network
         my_net = "my-net"
         stdin, stdout, stderr = ssh_clients[0].exec_command(f"sudo docker network create --subnet 10.10.0.0/16 --attachable --driver overlay {my_net}")
         out = stdout.readlines()
-        # logger.debug(out)
-        # logger.debug("".join(stderr.readlines()))
-        network = out[0].replace("\n", "")
 
         logger.info("Testing whether setup was successful")
         stdin, stdout, stderr = ssh_clients[0].exec_command("sudo docker node ls")
@@ -95,7 +85,9 @@ class Tezos_Network:
             logger.info("Docker swarm started successfully")
         else:
             logger.info("Docker swarm setup was not successful")
-            # sys.exit("Fatal error when performing docker swarm setup")
+            raise Exception("Fatal error when performing docker swarm setup")
+
+        # A hard-coded collection of keys - with these, a private network of up to 256 nodes can be deployed, extending these would be easy. Basically, the keys are derived from the seeds node0 to node255
 
         config['private_keys'] = ['unencrypted:edsk2yx55QWfXKxZsYUyUDq99V3uvvvqSZjpsWAT5oeeWse4PLewGr', 'unencrypted:edsk37Kq8cUwpP3eUeZtt9Jd3Gx4r3i1f4xG17NNH4PgKAJ5nEWTCp', 'unencrypted:edsk4Et58xNeTKa1jsTBmzX5ciyyC2UGShuLZzbJQeFpwNVvnfPuM5',
                                   'unencrypted:edsk2jZt8VbGbdRYyNknATyu2VRB9HYDyL2DphjahjpVmeUd7nbCZx', 'unencrypted:edsk3e6Htfo1MZq9LfzopRQMPrxSxtgQQfxsbVykC8duJ4U4AknRM9', 'unencrypted:edsk4Eh8K6vuMLVmTNURkzqX3RgZpSnu1T8H8v9CE32zsfWMVK1Qcw',
@@ -313,46 +305,64 @@ class Tezos_Network:
                                  'unencrypted:edpktn2jCMEcQMzAgxzodaAKM5c2Cs5usXu4Y2JhmB8KGmAcrdko5a', 'unencrypted:edpku3P5Nb3UAJf7ueGKUvoV9rz7HxqBj24o7rVJXKirmP8T4DeEt2', 'unencrypted:edpktfex4E8x4shcFVsN6g8n5tAb5V3PNomnySVMbE4TzZgiMRAi5w',
                                  'unencrypted:edpkuxFAZoQdTh2cJsb6pZvELyG9adPiLYB5xjrnBEY58fhsod7G7z']
 
+        logger.info("Writing the customized sandbox-parameters.json and putting it on the first node")
         Tezos_Network.write_sandbox(config)
-        Tezos_Network.write_accounts(config)
-        Tezos_Network.write_truffle_config(config)
-
         scp_clients[0].put(f"{config['exp_dir']}/setup/sandbox-parameters.json", "/home/ubuntu/tezos")
 
+        # Building the customized node config containing all other participants of the network
         peers_string = Tezos_Network.write_peers_string(config)
         for index, _ in enumerate(config['priv_ips']):
             stdin, stdout, stderr = ssh_clients[index].exec_command(f"~/tezos/tezos-node config init --data-dir ~/test --connections {len(config['priv_ips'])} --expected-pow 0 --rpc-addr {config['priv_ips'][index]}:18730 --net-addr {config['priv_ips'][index]}:19730 {peers_string}")
-            logger.debug(stdout.readlines())
-            logger.debug(stderr.readlines())
+            wait_and_log(stdout, stderr)
 
         for index, _ in enumerate(config['priv_ips']):
             channel = ssh_clients[index].get_transport().open_session()
             channel.exec_command("screen -L -Logfile ~/node.log -dmS node ~/tezos/tezos-node run --data-dir ~/test")
 
+        # Waiting until the nodes have connected, which means that the log "Too few connections" should have vanished
+        # This is hard to control, therefore a check is not implemented yet
+        # Maybe with ./tezos-client rpc get /network/connections
         time.sleep(30)
 
-        for index in [0]:
-            stdin, stdout, stderr = ssh_clients[index].exec_command(f"~/bootstrap.sh {config['priv_ips'][index]}")
-            logger.debug(stdout.readlines())
-            logger.debug(stderr.readlines())
+        logger.info("Result of bootstrapped before protocol injection")
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][0]} --port 18730 bootstrapped")
+        logger.info(stdout.readlines())
+        logger.info(stderr.readlines())
 
 
+        logger.info(f"Injecting the Carthagenet protocol on the first node (on ip {config['ips'][0]})")
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/bootstrap.sh {config['priv_ips'][0]}")
+        wait_and_log(stdout, stderr)
+
+        time.sleep(180)
+
+        """
+        # Waiting until all nodes are bootstrapped
+        status_flags = np.zeros(len(ssh_clients), dtype=bool)
+        while False in status_flags:
+            time.sleep(10)
+            for index, _ in enumerate(config['priv_ips']):
+                if status_flags[index] == False:
+                    stdin, stdout, stderr = ssh_clients[index].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 bootstrapped")
+                    out = stdout.readlines()[-1]
+                    if out == "Bootstrapped.\n":
+                        logger.info(f"Bootstrapped on node {index} on ip {config['priv_ips'][index]}")
+                        status_flags[index] = True
+        """
+
+        logger.info("Importing each node's secret key, called 'this_node'")
         for index, _ in enumerate(config['priv_ips']):
-
             stdin, stdout, stderr = ssh_clients[index].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 import secret key this_node {config['private_keys'][index]}")
-            logger.debug(stdout.readlines())
-            logger.debug(stderr.readlines())
+            out = stdout.readlines()
+            if "Tezos address added" in out[0]:
+                pass
+            else:
+                logger.warning(f"Something went wrong on node {index} on ip {config['ips'][index]} when importing the secret key")
+                logger.debug(stderr.readlines())
 
+
+        logger.info("Starting bakers, accusers and endorsers on all nodes")
         for index, _ in enumerate(config['priv_ips']):
-            stdin, stdout, stderr = ssh_clients[index].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 register key this_node as delegate")
-            logger.debug(stdout.readlines())
-            logger.debug(stderr.readlines())
-
-        for index, _ in enumerate(config['priv_ips']):
-
-            if index == 0:
-                time.sleep(30)
-
             channel = ssh_clients[index].get_transport().open_session()
             channel.exec_command(f"screen -L -Logfile ~/baker.log -dmS baker ~/tezos/tezos-baker-006-PsCARTHA --addr {config['priv_ips'][index]} --port 18730 run with local node /home/ubuntu/test this_node")
             channel = ssh_clients[index].get_transport().open_session()
@@ -360,26 +370,73 @@ class Tezos_Network:
             channel = ssh_clients[index].get_transport().open_session()
             channel.exec_command(f"screen -L -Logfile ~/endorser.log -dmS endorser ~/tezos/tezos-endorser-006-PsCARTHA --addr {config['priv_ips'][index]} --port 18730 run this_node")
 
-            stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 get balance for this_node")
-            logger.debug(stdout.readlines())
-            logger.debug(stderr.readlines())
 
-            stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 transfer 10000 from this_node to {config['public_key_hashes'][1]} --fee 0.05")
-            logger.debug(stdout.readlines())
-            logger.debug(stderr.readlines())
+        logger.info("Registering each node's bootstrap account as delegate")
+        for index, _ in enumerate(config['priv_ips']):
+            # channel = ssh_clients[index].get_transport().open_session()
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 register key this_node as delegate")
+            # channel.exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 register key this_node as delegate")
+            out = stdout.readlines()
+            logger.info("\n".join(out))
+            logger.info("\n".join(stderr.readlines()))
+            if out[0] == "Node is bootstrapped, ready for injecting operations.\n":
+                logger.info(f"Activated? {out[-1]}")
+                pass
+            else:
+                logger.warning(f"Something went wrong on node {index} on ip {config['ips'][index]} when registering as delegate")
+                # logger.debug(stderr.readlines())
 
+        # only for testing, can be removed in the end
+        """
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 get balance for this_node")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 transfer 10000 from this_node to {config['public_key_hashes'][1]} --fee 0.05")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+
+        time.sleep(5)
+
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][0]} --port 18730 get balance for this_node")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][-1]} --port 18730 get balance for {config['public_key_hashes'][-1]}")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
+        """
+
+        # Waiting until all bakers have forged at least one block
+        status_flags = np.zeros(len(ssh_clients), dtype=bool)
+
+        iterations = 0
+        while False in status_flags:
+            iterations = iterations + 1
             time.sleep(5)
+            for index, _ in enumerate(config['priv_ips']):
+                if status_flags[index] == False:
+                    if iterations % 100 == 0:
+                        logger.info(f"Registering node {index}'s bootstrap account as delegate again")
+                        stdin, stdout, stderr = ssh_clients[index].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 register key this_node as delegate")
+                        logger.info("\n".join(stdout.readlines()))
+                        logger.info("\n".join(stderr.readlines()))
+                    else:
+                        try:
+                            stdin, stdout, stderr = ssh_clients[index].exec_command(f"tail -n 1 ~/baker.log")
+                            out = stdout.readlines()
+                            logger.info(out)
+                            if "New baking slot found" in out[0]:
+                                logger.info(f"Baker {index} has found the first slots")
+                                status_flags[index] = True
+                        except Exception:
+                            pass
 
-            stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][0]} --port 18730 get balance for this_node")
-            logger.debug(stdout.readlines())
-            logger.debug(stderr.readlines())
-
-            stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][len(config['priv_ips']) - 1]} --port 18730 get balance for {config['public_key_hashes'][1]}")
-            logger.debug(stdout.readlines())
-            logger.debug(stderr.readlines())
-
-
+        # all this stuff will be migrated to DAppFormation
         # putting some files for the truffle/react demo
+        # Writing config files for the client
+        Tezos_Network.write_accounts(config)
+        Tezos_Network.write_truffle_config(config)
         scp_clients[0].put(f"{config['exp_dir']}/setup/accounts.js", "/home/ubuntu/tezos-react-tutorial/scripts/sandbox")
         scp_clients[0].put(f"{config['exp_dir']}/setup/truffle-config.js", "/home/ubuntu/tezos-react-tutorial")
 
