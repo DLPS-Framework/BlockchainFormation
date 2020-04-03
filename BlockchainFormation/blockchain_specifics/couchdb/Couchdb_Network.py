@@ -13,6 +13,7 @@
 #  limitations under the License.
 
 
+import json
 import os
 import sys
 
@@ -134,7 +135,20 @@ class Couchdb_Network:
 
         stdin, stdout, stderr = ssh_clients[0].exec_command("mkdir /data/CouchDB_database_dir && mkdir /home/ubuntu/couchdb && mkdir /home/ubuntu/couchdb/etc")
         wait_and_log(stdout, stderr)
-        scp_clients[0].put(f"{dir_name}/setup", "/home/ubuntu/couchdb/etc", recursive=True)
+
+        logger.info("Uploading configs and modifying vm.args accordingly")
+        for index, _ in enumerate(config['priv_ips']):
+            scp_clients[index].put(f"{dir_name}/setup/etc", "/home/ubuntu", recursive=True)
+
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"sudo sed -i -e 's/substitute_ip/{config['priv_ips'][index]}/g' /home/ubuntu/etc/vm.args")
+            logger.info(stdout.readlines())
+            logger.info(stderr.readlines())
+
+            for key in ['number_of_shards', 'number_of_replicas']:
+                stdin, stdout, stderr = ssh_clients[index].exec_command(f"sudo sed -i -e 's/{key}/{config['couchdb_settings'][key]}/g' /home/ubuntu/etc/local.d/default.ini")
+                logger.info(stdout.readlines())
+                logger.info(stderr.readlines())
+
 
         Couchdb_Network.start_docker(config, logger, ssh_clients)
 
@@ -146,18 +160,103 @@ class Couchdb_Network:
         :param logger:
         :param ssh_clients:
         """
-        channel = ssh_clients[0].get_transport().open_session()
-        channel.exec_command("docker run --rm --name mycouch -p 5984:5984 -e COUCHDB_USER= -e COUCHDB_PASSWORD= -v /data:/opt/couchdb/data -v /home/ubuntu/couchdb/etc:/opt/couchdb/etc/local.d couchdb")
 
-        time.sleep(60)
+        logger.info("Starting all docker containers with the CouchDBs")
+        link_string = ""
 
-        logger.info("Checking whether the docker container has started")
-        stdin, stdout, stderr = ssh_clients[0].exec_command("docker ps")
-        wait_and_log(stdout, stderr)
+        for index, _ in enumerate(config['priv_ips']):
+            channel = ssh_clients[index].get_transport().open_session()
+            # channel.exec_command("docker run --rm --name mycouch -p 5984:5984 -e single_node=true -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password -v /data:/opt/couchdb/data -v /home/ubuntu/couchdb/etc:/opt/couchdb/etc/local.d couchdb")
+            channel.exec_command(f"docker run --rm --network my-net --name couchdb{index} {link_string}-p 4369:4369 -p 5984:5984 -p 5986:5986 -p 9100:9100 -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password -v /data:/opt/couchdb/data -v /home/ubuntu/etc:/opt/couchdb/etc couchdb")
+            link_string = link_string + f"--link couchdb{index}:couchdb{index} "
 
-        logger.info("Testing a request on the CouchDB REST API locallly")
-        stdin, stdout, stderr = ssh_clients[0].exec_command(f"curl http://{config['priv_ips'][0]}:5984")
-        wait_and_log(stdout, stderr)
+            time.sleep(5)
+
+        logger.info("Waiting 60s until all containers have started successfully")
+        time.sleep(10)
+
+        if len(config['priv_ips']) == 1:
+            stdin, stdout, stderr = ssh_clients[0].exec_command(f"curl -X POST -H 'Content-Type: application/json' http://admin:password@{config['priv_ips'][0]}:5984/_cluster_setup -d " + "'{\"action\": \"enable_single_node\"}'")
+            logger.info(stdout.readlines())
+            logger.info(stderr.readlines())
+        else:
+            # pass
+            for index, _ in enumerate(config['priv_ips']):
+                logger.info(f"Setting cluster config on node {index}")
+                stdin, stdout, stderr = ssh_clients[index].exec_command(f"curl -X POST -H 'Content-Type: application/json' http://admin:password@{config['priv_ips'][0]}:5984/_cluster_setup -d " + "'{" + f"\"action\": \"enable_cluster\", \"bind_address\":\"{config['priv_ips'][index]}\", \"username\": \"admin\", \"password\":\"password\", \"node_count\":\"{len(config['priv_ips'])}\"" + "}'")
+                logger.info(stdout.readlines())
+                logger.info(stderr.readlines())
+
+        time.sleep(10)
+        for index, _ in enumerate(config['priv_ips']):
+            logger.info(f"Adding node {index}")
+            stdin, stdout, stderr = ssh_clients[0].exec_command(f"curl -X POST -H 'Content-Type: application/json' http://admin:password@{config['priv_ips'][0]}:5984/_cluster_setup -d " + "'{" + f"\"action\": \"enable_cluster\", \"bind_address\":\"{config['priv_ips'][index]}\", \"username\": \"admin\", \"password\":\"password\", \"port\": 5984, \"node_count\": \"{len(config['priv_ips'])}\", \"remote_node\": \"{config['priv_ips'][index]}\", \"remote_current_user\": \"admin\", \"remote_current_password\": \"password\"" + "}'")
+            logger.info(stdout.readlines())
+            logger.info(stderr.readlines())
+
+            time.sleep(5)
+
+
+        for index, _ in enumerate(config['priv_ips']):
+                stdin, stdout, stderr = ssh_clients[0].exec_command(f"curl -X POST -H 'Content-Type: application/json' http://admin:password@{config['priv_ips'][0]}:5984/_cluster_setup -d " + "'{" + f"\"action\": \"add_node\", \"host\":\"{config['priv_ips'][index]}\", \"port\": 5984, \"username\": \"admin\", \"password\":\"password\"" + "}'")
+                logger.info(stderr.readlines())
+                logger.info(stderr.readlines())
+
+        time.sleep(5)
+
+        logger.info("Finishing the cluster setup")
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"curl -X POST -H 'Content-Type: application/json' http://admin:password@{config['priv_ips'][0]}:5984/_cluster_setup -d " + "'{\"action\": \"finish_cluster\"}'")
+        logger.info(stdout.readlines())
+        logger.info(stderr.readlines())
+
+        """
+        time.sleep(5)
+        logger.info("Checking the status of the cluster")
+        for index, _ in enumerate(config['priv_ips']):
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"curl http://admin:password@{config['priv_ips'][0]}:5984/_cluster_setup")
+            out = stdout.readlines()
+            logger.info(out)
+            logger.info(stderr.readlines())
+
+            if out[0] == "{\"state\":\"cluster_finished\"}":
+                logger.info("Success")
+            else:
+                logger.info("Failure")
+        """
+
+        if len(config['priv_ips']) > 1:
+            logger.info("Checking the status of the cluster by querying all connected nodes")
+            for index, _ in enumerate(config['priv_ips']):
+                stdin, stdout, stderr = ssh_clients[index].exec_command(f"curl http://admin:password@{config['priv_ips'][index]}:5984/_membership")
+                out = stdout.readlines()
+                logger.info(out)
+                logger.info(stderr.readlines())
+
+                data = json.loads(out[0].replace('\n', ''))
+
+                if len(data['all_nodes']) == config['couchdb_settings']['number_of_replicas'] and len(data['cluster_nodes']) == config['couchdb_settings']['number_of_replicas']:
+                    pass
+                else:
+                    raise Exception("The cluster has not fully connected")
+
+        """
+        time.sleep(10)
+        for index, _ in enumerate(config['priv_ips']):
+            logger.info("Creating users database on node 0")
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"curl -X PUT http://admin:password@{config['priv_ips'][0]}:5984/_users")
+            logger.info(stdout.readlines())
+            logger.info(stderr.readlines())
+
+            logger.info("Creating replications database on node 0")
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"curl -X PUT http://admin:password@{config['priv_ips'][0]}:5984/_replicator")
+            logger.info(stdout.readlines())
+            logger.info(stderr.readlines())
+
+            logger.info("Creating replications database on node 0")
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"curl -X PUT http://admin:password@{config['priv_ips'][0]}:5984/_global_changes")
+            logger.info(stdout.readlines())
+            logger.info(stderr.readlines())
+        """
 
         logger.info("")
         logger.info("**************** !!! CouchDB setup was successful !!! *********************")
@@ -178,5 +277,5 @@ class Couchdb_Network:
         ssh_clients = node_handler.ssh_clients
         scp_clients = node_handler.scp_clients
 
-        Couchdb_Network.shutdown(config, logger, ssh_clients, scp_clients)
-        Couchdb_Network.start_docker(config, logger, ssh_clients)
+        Couchdb_Network.shutdown(node_handler)
+        Couchdb_Network.start_docker(node_handler)
