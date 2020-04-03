@@ -59,10 +59,14 @@ def wait_till_done(config, ssh_clients, ips, total_time, delta, path, message, t
                     client_sftp = ssh_clients[index].open_sftp()
                     client_sftp.stat(path)
                     if (message != False):
-                        stdin, stdout, stderr = ssh_clients[index].exec_command(f"{func_part_one} {path} {func_part_two}")
+
+                        if path == False:
+                            stdin, stdout, stderr = ssh_clients[index].exec_command(f"{func_part_one}")
+                        else:
+                            stdin, stdout, stderr = ssh_clients[index].exec_command(f"{func_part_one} {path} {func_part_two}")
 
                         # read line from stdout
-                        stdout_line = stdout.readlines()[0]
+                        stdout_line = stdout.readlines()[-1]
                         # logger.debug(f"Read {stdout_line}")
 
                         # Check if stdout equals the wanted message
