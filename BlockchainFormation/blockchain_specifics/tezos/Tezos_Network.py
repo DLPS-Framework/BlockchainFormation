@@ -369,7 +369,9 @@ class Tezos_Network:
             channel.exec_command(f"screen -L -Logfile ~/accuser.log -dmS accuser ~/tezos/tezos-accuser-006-PsCARTHA --addr {config['priv_ips'][index]} --port 18730 run")
             channel = ssh_clients[index].get_transport().open_session()
             channel.exec_command(f"screen -L -Logfile ~/endorser.log -dmS endorser ~/tezos/tezos-endorser-006-PsCARTHA --addr {config['priv_ips'][index]} --port 18730 run this_node")
+            time.sleep(10)
 
+        time.sleep
 
         logger.info("Registering each node's bootstrap account as delegate")
         for index, _ in enumerate(config['priv_ips']):
@@ -413,10 +415,10 @@ class Tezos_Network:
         iterations = 0
         while False in status_flags:
             iterations = iterations + 1
-            time.sleep(5)
+            time.sleep(30)
             for index, _ in enumerate(config['priv_ips']):
                 if status_flags[index] == False:
-                    if iterations % 100 == 0:
+                    if iterations == 10 or iterations % 50 == 0:
                         logger.info(f"Registering node {index}'s bootstrap account as delegate again")
                         stdin, stdout, stderr = ssh_clients[index].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 register key this_node as delegate")
                         logger.info("\n".join(stdout.readlines()))
@@ -429,6 +431,10 @@ class Tezos_Network:
                             if "New baking slot found" in out[0]:
                                 logger.info(f"Baker {index} has found the first slots")
                                 status_flags[index] = True
+                            elif "Connection to node lost, baker exiting" in out[0]:
+                                logger.info(f"Restarting baker on {config['ips'][index]}")
+                                channel = ssh_clients[index].get_transport().open_session()
+                                channel.exec_command(f"screen -L -Logfile ~/baker.log -dmS baker ~/tezos/tezos-baker-006-PsCARTHA --addr {config['priv_ips'][index]} --port 18730 run with local node /home/ubuntu/test this_node")
                         except Exception:
                             pass
 
@@ -496,39 +502,6 @@ class Tezos_Network:
         sandbox_parameters["blocks_per_cycle"] = 8
         sandbox_parameters["blocks_per_commitment"] = 4
         sandbox_parameters["blocks_per_roll_snapshot"] = 4
-        sandbox_parameters["blocks_per_voting_period"] = 64
-        sandbox_parameters["time_between_blocks"] = ["1", "0"]
-        sandbox_parameters["proof_of_work_threshold"] = "-1"
-
-
-        
-        sandbox_parameters["preserved_cycles"] = 2
-        sandbox_parameters["blocks_per_cycle"] = 8
-        sandbox_parameters["blocks_per_commitment"] = 4
-        sandbox_parameters["blocks_per_roll_snapshot"] = 4
-        sandbox_parameters["blocks_per_voting_period"] = 64
-        sandbox_parameters["time_between_blocks"] = ["1", "0"]
-        sandbox_parameters["proof_of_work_threshold"] = "-1"
-        sandbox_parameters["endorsers_per_block"] = min(32, int(np.floor(2/3*len(config['priv_ips']))))
-        sandbox_parameters["hard_gas_limit_per_operation"] = "1040000"
-        sandbox_parameters["hard_gas_limit_per_block"] = "10400000"
-        sandbox_parameters["tokens_per_roll"] = "8000000000"
-        sandbox_parameters["michelson_maximum_type_size"] = 1000
-        sandbox_parameters["seed_nonce_revelation_tip"] = "125000"
-        sandbox_parameters["origination_size"] = 257
-        sandbox_parameters["block_security_deposit"] = "512000000"
-        sandbox_parameters["endorsement_security_deposit"] = "64000000"
-        sandbox_parameters["endorsement_reward"] = "2000000"
-        sandbox_parameters["cost_per_byte"] = "1000"
-        sandbox_parameters["hard_storage_limit_per_operation"] = "60000"
-        sandbox_parameters["test_chain_duration"] = "1966080"
-
-        """
-
-        sandbox_parameters["preserved_cycles"] = 2
-        sandbox_parameters["blocks_per_cycle"] = 8
-        sandbox_parameters["blocks_per_commitment"] = 4
-        sandbox_parameters["blocks_per_roll_snapshot"] = 4
         sandbox_parameters["blocks_per_voting_period"] = 4
         sandbox_parameters["time_between_blocks"] = ["10", "5"]
         sandbox_parameters["endorsers_per_block"] = 2
@@ -551,9 +524,10 @@ class Tezos_Network:
         sandbox_parameters["min_proposal_quorum"] = 500
         sandbox_parameters["initial_endorsers"] = 1
         sandbox_parameters["delay_per_missing_endorsement"] = "1"
+        """
 
-        # for key in config['tezos_settings']:
-            # sandbox_parameters[key] = config['tezos_settings'][key]
+        for key in config['tezos_settings']:
+            sandbox_parameters[key] = config['tezos_settings'][key]
 
         with open(f"{config['exp_dir']}/setup/sandbox-parameters.json", 'w+') as outfile:
             json.dump(sandbox_parameters, outfile, default=datetimeconverter, indent=4)
