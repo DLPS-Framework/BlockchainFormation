@@ -59,6 +59,16 @@ async function test() {
     console.log("=======================");
     console.log("");
 
+    start = Date.now()
+    result = await leveldb.matrixMultiplication(10).catch(err => {
+        console.log("Matrix Multiplication failed");
+    });
+    console.log("Result from matrixMultiplication with n=10: " + result);
+    console.log("elapsed time: " + (Date.now() - start));
+    console.log("");
+    console.log("=======================");
+    console.log("");
+
     await leveldb.close().catch(err => {
         console.log(err);
     })

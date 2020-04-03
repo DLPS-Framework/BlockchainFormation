@@ -45,6 +45,49 @@ class levelDB {
     return Promise.resolve(value);
   }
 
+  async matrixMultiplication(n) {
+        // console.log(n)
+    async function multiplyMatrices(m1, m2) {
+        var result = [];
+        for (var i = 0; i < m1.length; i++) {
+            result[i] = [];
+            for (var j = 0; j < m2[0].length; j++) {
+                var sum = 0;
+                for (var k = 0; k < m1[0].length; k++) {
+                    sum += m1[i][k] * m2[k][j];
+                }
+                result[i][j] = sum;
+            }
+        }
+        return result;
+    }
+
+    var f = 1;
+    var m1 = [];
+    for (var i = 0; i < n; i++) {
+        //console.log(i);
+        m1[i] = [];
+        for (var j = 0; j < n; j++) {
+            m1[i][j] = f;
+            f++;
+        }
+    }
+
+    var m2 = m1;
+
+    var result = await multiplyMatrices(m1, m2).catch(err => console.log(err()));
+
+    var matrixSum = 0;
+
+    for (var i = 0; i < result.length; ++i) {
+        for (var j = 0; j < result[i].length; ++j) {
+            matrixSum += result[i][j];
+        }
+    }
+    return Promise.resolve(matrixSum.toString());
+  }
+
+
   async close() {
     return Promise.resolve(1);
   }

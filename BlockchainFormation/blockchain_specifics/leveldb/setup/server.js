@@ -39,6 +39,17 @@ async function readData(key) {
     return response;
 }
 
+async function matrixMultiplication(n) {
+
+    let response = await levelDB.matrixMultiplication(n).catch(err => {
+        console.log(err);
+        throw("Error");
+    });
+    console.log("Returning " + response);
+    return response;
+}
+
+
 
 const server = http.createServer();
 
@@ -62,7 +73,7 @@ server.on("request", async (req, res) => {
             try {
                 console.log("Data: " + JSON.stringify(JSON.parse(data)));
                 if (req.method == "POST") {
-
+                    console.log("Serving post request");
                     if (req.url == "/writeData") {
 
                         let dataJson = JSON.parse(data);
@@ -92,7 +103,20 @@ server.on("request", async (req, res) => {
                         });
                         console.log("Read " + value);
                         res.writeHead(200, "Success in readData");
-                        res.end(value)
+                        res.end(value);
+
+                    } else if (req.url == "/matrixMultiplication") {
+                        let dataJson = JSON.parse(data);
+                        let n = dataJson['n'];
+                        console.log("n: " + n);
+                        let value = await matrixMultiplication(n).catch(err => {
+                            console.log(err);
+                            res.writeHead(400, "Error in matrixMultiplication");
+                            res.end("An error occurred for matrixMultiplication");
+                        });
+                        console.log("Result " + value);
+                        res.writeHead(200, "Success in matrixMultiplication");
+                        res.end(value);
 
                     } else {
 
@@ -111,6 +135,7 @@ server.on("request", async (req, res) => {
             } catch (err) {
 
                 console.log("An error occurred");
+                console.log(err);
                 res.writeHead(400, "An error occurred");
                 res.end("Error");
 
