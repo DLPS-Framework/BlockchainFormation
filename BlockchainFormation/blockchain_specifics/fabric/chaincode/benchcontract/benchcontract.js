@@ -240,7 +240,7 @@ class BenchContract extends Contract {
         var f = 1;
         var m1 = [];
         for (var i = 0; i < n; i++) {
-            console.log(i);
+            //console.log(i);
             m1[i] = [];
             for (var j = 0; j < n; j++) {
                 m1[i][j] = f;
