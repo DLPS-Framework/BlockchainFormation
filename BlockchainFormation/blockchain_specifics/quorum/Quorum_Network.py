@@ -34,10 +34,13 @@ class Quorum_Network:
         logger.info("Getting quorum logs from the network")
         boo = True
 
-        for index, ip in enumerate(config['ips']):
-
+        try:
             os.mkdir(f"{config['exp_dir']}/quorum_logs")
             os.mkdir(f"{config['exp_dir']}/tessera_logs")
+        except Exception:
+            logger.info("Directory exists")
+
+        for index, ip in enumerate(config['ips']):
 
             try:
                 scp_clients[index].get("/home/ubuntu/node.log", f"{config['exp_dir']}/quorum_logs/quorum_log_node_{index}.log")

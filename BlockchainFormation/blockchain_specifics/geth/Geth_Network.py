@@ -36,33 +36,27 @@ from web3._utils.caching import (
 from web3.middleware import geth_poa_middleware
 
 
+def _remove_session(key, session):
+    session.close()
+
+_session_cache = lru.LRU(8, callback=_remove_session)
+
+def _get_session_new(*args, **kwargs):
+    cache_key = generate_cache_key((args, kwargs))
+    if cache_key not in _session_cache:
+        _session_cache[cache_key] = requests.Session()
+        #TODO: Adjust these parameters
+        retry = Retry(connect=10, backoff_factor=0.3)
+        adapter = HTTPAdapter(max_retries=retry)
+        _session_cache[cache_key].mount('http://', adapter)
+        _session_cache[cache_key].mount('https://', adapter)
+    return _session_cache[cache_key]
+
+web3._utils.request._get_session = _get_session_new
+
+######################################################
+
 class Geth_Network:
-
-    # TODO: Make code more efficient and nicer
-    # TODO: improve natural sorting stuff
-
-    @staticmethod
-    def _remove_session(key, session):
-        session.close()
-
-    @staticmethod
-    def _session_cache():
-        return lru.LRU(8, callback=Geth_Network._remove_session)
-
-    def _get_session_new(*args, **kwargs):
-        cache_key = generate_cache_key((args, kwargs))
-        if cache_key not in Geth_Network._session_cache:
-            Geth_Network._session_cache[cache_key] = requests.Session()
-            # TODO: Adjust these parameters
-            retry = Retry(connect=10, backoff_factor=0.3)
-            adapter = HTTPAdapter(max_retries=retry)
-            Geth_Network._session_cache[cache_key].mount('http://', adapter)
-            Geth_Network._session_cache[cache_key].mount('https://', adapter)
-        return Geth_Network._session_cache[cache_key]
-
-    web3._utils.request._get_session = _get_session_new
-
-    #############################################
 
     @staticmethod
     def shutdown(node_handler):
@@ -76,7 +70,7 @@ class Geth_Network:
         ssh_clients = node_handler.ssh_clients
         scp_clients = node_handler.scp_clients
 
-        for index, _ in enumerate(config['ips']):
+        for index, _ in enumerate(config['priv_ips']):
             # get account from all instances
             try:
                 scp_clients[index].get("/var/log/geth.log",
@@ -108,7 +102,7 @@ class Geth_Network:
         # os.mkdir((f"{path}/{self.config['exp_dir']}/enodes"))
         os.mkdir(f"{config['exp_dir']}/geth_logs")
 
-        for index, _ in enumerate(config['ips']):
+        for index, _ in enumerate(config['priv_ips']):
             scp_clients[index].get("/data/gethNetwork/account.txt",
                                    f"{config['exp_dir']}/setup/accounts/account_node_{index}.txt")
             scp_clients[index].get("/data/keystore",
@@ -132,9 +126,9 @@ class Geth_Network:
 
         # Calculate number of signers
         if 'signers' in config['geth_settings'] and config['geth_settings']['signers']:
-            number_of_signers = round(float(len(config['ips']) * config['geth_settings']['signers']))
+            number_of_signers = round(float(len(config['priv_ips']) * config['geth_settings']['signers']))
         else:
-            number_of_signers = len(config['ips'])
+            number_of_signers = len(config['priv_ips'])
 
         logger.info(f"There are {number_of_signers} signers")
 
@@ -144,7 +138,7 @@ class Geth_Network:
         logger.info(f"Relevant acc: {str(account_mapping)}")
         i = 0
         signer_accounts = []
-        for index, ip in enumerate(config['ips']):
+        for index, ip in enumerate(config['priv_ips']):
 
             # if index in range of number of signers then node is a signer
             if index in range(number_of_signers):
@@ -183,7 +177,7 @@ class Geth_Network:
                                   re.match("(.*--.*--)(.*)", f).group(2) in list(set(itertools.chain(*account_mapping.values())))]
                 keystore_files.sort(key=Geth_Network.natural_keys)
                 logger.info(keystore_files)
-                for index_top, _ in enumerate(config['ips']):
+                for index_top, _ in enumerate(config['priv_ips']):
 
                     ssh_clients[index_top].exec_command("rm /data/gethNetwork/node/keystore/*")
 
@@ -223,7 +217,7 @@ class Geth_Network:
             json.dump(genesis_dict, outfile, indent=4)
 
         # push genesis from local to remote VMs
-        for index, _ in enumerate(config['ips']):
+        for index, _ in enumerate(config['priv_ips']):
             scp_clients[index].put(f"{config['exp_dir']}/setup/genesis.json", f"~/genesis.json")
 
             # TODO: How to log the execution of the ssh commands in a good way?
@@ -247,8 +241,8 @@ class Geth_Network:
         logger.debug("Sleeping 3sec after starting service")
         time.sleep(3)
 
-        for index, ip in enumerate(config['pub_ips']):
-            web3_clients.append(Web3(Web3.HTTPProvider(f"http://{ip}:8545", request_kwargs={'timeout': 20})))
+        for index, ip in enumerate(config['priv_ips']):
+            web3_clients.append(Web3(Web3.HTTPProvider(f"http://{config['ips'][index]}:8545", request_kwargs={'timeout': 20})))
 
             enodes.append((ip, web3_clients[index].geth.admin.node_info()['enode']))
 
@@ -260,13 +254,13 @@ class Geth_Network:
         with open(f"{config['exp_dir']}/setup/static-nodes.json", 'w') as outfile:
             json.dump([enode for (ip, enode) in enodes], outfile, indent=4)
 
-        for index, _ in enumerate(config['ips']):
+        for index, _ in enumerate(config['priv_ips']):
             scp_clients[index].put(f"{config['exp_dir']}/setup/static-nodes.json", f"~/static-nodes.json")
             ssh_stdin, ssh_stdout, ssh_stderr = ssh_clients[index].exec_command(
                 "sudo mv ~/static-nodes.json /data/gethNetwork/node/static-nodes.json")
 
         # distribute collected enodes over network
-        for index, ip in enumerate(config['ips']):
+        for index, ip in enumerate(config['priv_ips']):
             # web3 = Web3(Web3.HTTPProvider(f"http://{i.private_ip_address}:8545"))
             for ip_2, enode in enodes:
                 # dont add own enode
@@ -281,7 +275,7 @@ class Geth_Network:
         scp_clients[0].get("/data/geth_version.txt", f"{config['exp_dir']}/setup/geth_version.txt")
 
         # TODO: move this to unit test section
-        for index, ip in enumerate(config['ips']):
+        for index, ip in enumerate(config['priv_ips']):
             # web3 = Web3(Web3.HTTPProvider(f"http://{i.private_ip_address}:8545"))
             logger.info("IsMining:" + str(web3_clients[index].eth.mining))
             for acc in all_accounts:
@@ -290,7 +284,7 @@ class Geth_Network:
 
         time.sleep(3)
 
-        for index, _ in enumerate(config['ips']):
+        for index, _ in enumerate(config['priv_ips']):
             try:
                 web3_clients[index].middleware_onion.inject(geth_poa_middleware, layer=0)
             except:
@@ -314,12 +308,12 @@ class Geth_Network:
         """
 
         if config[f"{config['blockchain_type']}_settings"]['num_acc'] is None:
-            return {ip: [account] for (ip, account) in zip(config['ips'], accounts)}
+            return {ip: [account] for (ip, account) in zip(config['priv_ips'], accounts)}
         else:
-            if config[f"{config['blockchain_type']}_settings"]['num_acc'] > len(config['ips']):
-                config[f"{config['blockchain_type']}_settings"]['num_acc'] = len(config['ips'])
+            if config[f"{config['blockchain_type']}_settings"]['num_acc'] > len(config['priv_ips']):
+                config[f"{config['blockchain_type']}_settings"]['num_acc'] = len(config['priv_ips'])
             rnd_accounts = np.random.choice(a=accounts, replace=False, size=config[f"{config['blockchain_type']}_settings"]['num_acc'])
-            return {ip: rnd_accounts for ip in config['ips']}
+            return {ip: rnd_accounts for ip in config['priv_ips']}
 
     @staticmethod
     def generate_genesis(accounts, config, signer_accounts):
@@ -448,11 +442,7 @@ class Geth_Network:
             # Give Geth couple of seconds to start
             time.sleep(3)
             # test if restart was successful
-            if config['public_ip']:
-                # use public ip if exists, else it wont work
-                web3_client = Web3(Web3.HTTPProvider(f"http://{config['pub_ips'][index]}:8545", request_kwargs={'timeout': 20}))
-            else:
-                web3_client = Web3(Web3.HTTPProvider(f"http://{config['ips'][index]}:8545", request_kwargs={'timeout': 20}))
+            web3_client = Web3(Web3.HTTPProvider(f"http://{config['ips'][index]}:8545", request_kwargs={'timeout': 20}))
 
             web3_client.middleware_onion.inject(geth_poa_middleware, layer=0)
 
