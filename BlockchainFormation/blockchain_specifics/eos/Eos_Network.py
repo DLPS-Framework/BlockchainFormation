@@ -140,6 +140,26 @@ class Eos_Network:
         config['priv_keys'] = priv_keys
         config['pub_keys'] = pub_keys
 
+        "Build a valid producer name - no numbers between 6 and 0 allowed"
+        producer_names = []
+
+        for index, _ in enumerate(config['priv_ips']):
+            if index == 0:
+                producer_name = "eosio"
+            else:
+                index_string = Eos_Network.number_to_base(index, 4)
+                for i in range(0, len(index_string)):
+                    index_string[i] = f"{index_string[i] + 1}"
+
+                index_string = "".join(index_string)
+
+                producer_name = f"producer{index_string}"
+            
+            producer_names.append(producer_name)
+
+        config['producer_names'] = producer_names
+        logger.info(f"Producer names: {producer_names}")
+
         for index, _ in enumerate(config['priv_ips']):
 
             logger.info("Replacing the relevant parts of the genesis block")
@@ -153,13 +173,7 @@ class Eos_Network:
             logger.debug(stderr.readlines())
 
             logger.info("Replacing the relevant producer names")
-
-            if index == 0:
-                producer_name = "eosio"
-            else:
-                producer_name = f"producer{index}"
-
-            stdin, stdout, stderr = ssh_clients[index].exec_command(f"sed -i -e 's/substitute_producer_name/{producer_name}/g' /data/bootbios/genesis/genesis_start.sh /data/bootbios/genesis/start.sh")
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"sed -i -e 's/substitute_producer_name/{producer_names[index]}/g' /data/bootbios/genesis/genesis_start.sh /data/bootbios/genesis/start.sh")
             logger.debug(stdout.readlines())
             logger.debug(stderr.readlines())
 
@@ -226,7 +240,7 @@ class Eos_Network:
         logger.debug(stdout.readlines())
         logger.debug(stderr.readlines())
 
-        stdin, stdout, stderr = ssh_clients[0].exec_command("cleos push action eosio.token create '[ \"eosio\", \"10000000000.0000 SYS\" ]' -p eosio.token@active && cleos push action eosio.token issue '[ \"eosio\", \"1000000000.0000 SYS\", \"memo\" ]' -p eosio@active")
+        stdin, stdout, stderr = ssh_clients[0].exec_command("cleos push action eosio.token create '[ \"eosio\", \"10000000000.0000 SYS\" ]' -p eosio.token@active && cleos push action eosio.token issue '[ \"eosio\", \"10000000000.0000 SYS\", \"memo\" ]' -p eosio@active")
         logger.debug(stdout.readlines())
         logger.debug(stderr.readlines())
 
@@ -268,16 +282,16 @@ class Eos_Network:
         logger.debug(stderr.readlines())
 
         for index, node in enumerate(config['node_indices']):
-            logger.info(f"Importing the private key of producer{index + 1} to the wallet on the eosio node")
+            logger.info(f"Importing the private key of {producer_names[index + 1]} to the wallet on the eosio node")
             stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos wallet import --name=mywallet --private-key={priv_keys[node]}")
             logger.debug(stdout.readlines())
             logger.debug(stderr.readlines())
 
-            stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos system newaccount eosio --transfer producer{node} {pub_keys[node]} --stake-net \"100000000.0000 SYS\" --stake-cpu \"100000000.0000 SYS\" --buy-ram-kbytes 8192")
+            stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos system newaccount eosio --transfer {producer_names[node]} {pub_keys[node]} --stake-net \"10000000.0000 SYS\" --stake-cpu \"100000000.0000 SYS\" --buy-ram-kbytes 8192")
             logger.debug(stdout.readlines())
             logger.debug(stderr.readlines())
 
-            stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos system regproducer producer{node} {pub_keys[node]}")
+            stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos system regproducer {producer_names[node]} {pub_keys[node]}")
             logger.debug(stdout.readlines())
             logger.debug(stderr.readlines())
 
@@ -286,28 +300,28 @@ class Eos_Network:
         # Staking in order to have all nodes as validators
         for index, node in enumerate(config['node_indices']):
             logger.info("Sending SYS token to the producer")
-            stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos transfer eosio producer{node} \"1000000 SYS\" \"Hallo\"")
+            stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos transfer eosio {producer_names[node]} \"1000000 SYS\" \"Hallo\"")
             logger.debug("".join(stdout.readlines()))
             logger.debug("".join(stderr.readlines()))
 
             time.sleep(2)
 
             logger.info("Getting the current balance")
-            stdin, stdout, stderr = ssh_clients[node].exec_command(f"cleos get currency balance eosio.token producer{node} SYS")
+            stdin, stdout, stderr = ssh_clients[node].exec_command(f"cleos get currency balance eosio.token {producer_names[node]} SYS")
             logger.debug("".join(stdout.readlines()))
             logger.debug("".join(stderr.readlines()))
 
             time.sleep(2)
 
             logger.info("Staking...")
-            stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos system delegatebw producer{node} producer{node} \"20 SYS\" \"20 SYS\"")
+            stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos system delegatebw {producer_names[node]} {producer_names[node]} \"20 SYS\" \"20 SYS\"")
             logger.debug("".join(stdout.readlines()))
             logger.debug("".join(stderr.readlines()))
 
             time.sleep(2)
 
             logger.info("Voting...")
-            stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos system voteproducer prods producer{node} producer{node}")
+            stdin, stdout, stderr = ssh_clients[0].exec_command(f"cleos system voteproducer prods {producer_names[node]} {producer_names[node]}")
             logger.debug("".join(stdout.readlines()))
             logger.debug("".join(stderr.readlines()))
 
@@ -342,3 +356,13 @@ class Eos_Network:
 
         else:
             return False
+
+    @staticmethod
+    def number_to_base(n, b):
+        if n == 0:
+            return [0]
+        digits = []
+        while n:
+            digits.append(int(n % b))
+            n //= b
+        return digits[::-1]
