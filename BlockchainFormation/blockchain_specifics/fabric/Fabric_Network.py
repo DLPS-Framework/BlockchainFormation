@@ -26,8 +26,18 @@ class Fabric_Network:
     @staticmethod
     def check_config(config, logger):
 
-        internal_orderer = 0
-        external_database = config['fabric_settings']['external']
+        try:
+            internal_orderer = config['fabric_settings']['internal_orderer']
+        except Exception as e:
+            internal_orderer = 0
+
+        try:
+            external_database = config['fabric_settings']['external_database']
+        except Exception as e:
+            try:
+                external_database = config['fabric_settings']['external']
+            except Exception as e:
+                logger.exception(e)
 
         logger.debug(f"Checking the fabric config")
         if config['fabric_settings']['orderer_type'].upper() == "KAFKA":
@@ -88,8 +98,18 @@ class Fabric_Network:
         scp_clients = node_handler.scp_clients
         dir_name = os.path.dirname(os.path.realpath(__file__))
 
-        internal_orderer = 0
-        external_database = config['fabric_settings']['external']
+        try:
+            internal_orderer = config['fabric_settings']['internal_orderer']
+        except Exception as e:
+            internal_orderer = 0
+
+        try:
+            external_database = config['fabric_settings']['external_database']
+        except Exception as e:
+            try:
+                external_database = config['fabric_settings']['external']
+            except Exception as e:
+                logger.exception(e)
 
         # the indices of the different roles
         config['orderer_indices'] = list(range(0, config['fabric_settings']['orderer_count']))
@@ -129,6 +149,9 @@ class Fabric_Network:
                 config['zookeeper_indices'] = []
                 config['kafka_indices'] = []
 
+        logger.info(f"Orderer indices: {config['orderer_indices']}")
+        logger.info(f"Peer indices: {config['peer_indices']}")
+
         # Putting the nodes in groups
         # currently only reasonable for raft
         config['groups'] = []
@@ -167,7 +190,7 @@ class Fabric_Network:
                 orderer_indices = []
                 orderer_ips = []
 
-            group_indices = peer_indices + db_indices + orderer_indices
+            group_indices = unique(peer_indices + db_indices + orderer_indices)
 
             config['groups'].append(group_indices)
 
@@ -292,7 +315,8 @@ class Fabric_Network:
         scp_clients[0].get("/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts", f"{config['exp_dir']}/setup", recursive=True)
 
         logger.info("Pushing crypto-config, channel-artifacts, and chaincode to all remaining other nodes")
-        indices = config['orderer_indices'] + config['peer_indices']
+        indices = unique(config['orderer_indices'] + config['peer_indices'])
+        logger.info(f"Indices: {indices}")
 
         # pushing the ssh-key and the chaincode on the first vm
         scp_clients[0].put(f"{config['priv_key_path']}", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem")
@@ -340,8 +364,8 @@ class Fabric_Network:
         # Fabric_Network.find_leader(config, ssh_clients, scp_clients, logger)
         # Fabric_Network.restart_orderer(config, ssh_clients, scp_clients, logger, leader_index)
 
-        Fabric_Network.stopstart_leader(node_handler)
-        Fabric_Network.find_leader(config, ssh_clients, scp_clients, logger)
+        # Fabric_Network.stopstart_leader(node_handler)
+        # Fabric_Network.find_leader(config, ssh_clients, scp_clients, logger)
 
         logger.info("Getting logs from vms")
 
@@ -899,7 +923,7 @@ class Fabric_Network:
         f.write("    CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org$2.example.com/peers/peer$1.org$2.example.com/tls/ca.crt\n")
         f.write("    CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org$2.example.com/users/Admin@org$2.example.com/msp\n")
 
-        if config['fabric_settings']['tls_enabled'] == 1:
+        if config['fabric_settings']['tls_enabled']:
             f.write("    # setting TLS environment variables\n")
             f.write("    CORE_PEER_TLS_ENABLED=true\n")
             f.write("    CORE_PEER_TLS_CLIENTAUTHREQUIRED=false\n")
@@ -925,7 +949,7 @@ class Fabric_Network:
             logger.info("Invalid operation")
             raise Exception("Invalid operation")
 
-        if config['fabric_settings']['tls_enabled'] == 1:
+        if config['fabric_settings']['tls_enabled']:
             # logger.debug("    --> TLS environment variables set")
             string_tls = f"--tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem"
         else:
@@ -1064,7 +1088,7 @@ class Fabric_Network:
             string_ca_ca = string_ca_ca + f" -e FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/{peer_orgs_secret_keys[org - 1]}"
     
             string_ca_tls = ""
-            if config['fabric_settings']['tls_enabled'] == 1:
+            if config['fabric_settings']['tls_enabled']:
                 # logger.debug("    --> TLS environment variables set")
                 string_ca_tls = string_ca_tls + f" -e FABRIC_CA_SERVER_TLS_ENABLED=true"
                 string_ca_tls = string_ca_tls + f" -e FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.org{org}.example.com-cert.pem"
@@ -1105,7 +1129,7 @@ class Fabric_Network:
                 string_orderer_link = string_orderer_link + f" --link orderer{orderer2}.example.com:orderer{orderer2}.example.com"
 
             string_orderer_tls = ""
-            if config['fabric_settings']['tls_enabled'] == 1:
+            if config['fabric_settings']['tls_enabled']:
                 # logger.debug("    --> TLS environment variables set")
                 string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_TLS_ENABLED=true"
                 string_orderer_tls = string_orderer_tls + f" -e ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key"
@@ -1232,7 +1256,7 @@ class Fabric_Network:
                 string_peer_core = string_peer_core + f" -e CORE_PEER_CHAINCODELISTENADDRESS=peer{peer}.org{org}.example.com:7052"
 
                 string_peer_tls = ""
-                if config['fabric_settings']['tls_enabled'] == 1:
+                if config['fabric_settings']['tls_enabled']:
                     # logger.debug("    --> TLS environment variables set")
                     string_peer_tls = string_peer_tls + f" -e CORE_PEER_TLS_ENABLED=true"
                     string_peer_tls = string_peer_tls + f" -e CORE_PEER_TLS_CLIENTAUTHREQUIRED=false"
@@ -1344,7 +1368,7 @@ class Fabric_Network:
 
     @staticmethod
     def push_stuff_single(config, ssh_clients, scp_clients, index_source, index_target, logger):
-        # logger.debug(f"Starting to push to index {index_target}")
+        logger.debug(f"Starting to push from index {index_source} to index {index_target}")
         # deleting data at the vm associated with source_index and copying it to the vm associated with the target index
         # use scp -v for verbose mode
         stdin, stdout, stderr = ssh_clients[index_source].exec_command(
@@ -1370,8 +1394,9 @@ class Fabric_Network:
     def upload_chaincode(config, ssh_clients, scp_clients, logger):
         dir_name = os.path.dirname(os.path.realpath(__file__))
 
-        logger.info("Pushing and chaincode to all nodes")
-        indices = config['orderer_indices'] + config['peer_indices']
+        logger.info("Pushing chaincode to all nodes")
+        indices = unique(config['orderer_indices'] + config['peer_indices'])
+        logger.info("Indices to be pushed to: " + indices)
 
         # pushing the ssh-key and the chaincode on the first vm
         scp_clients[0].put(f"{config['priv_key_path']}", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem")
@@ -1444,7 +1469,7 @@ class Fabric_Network:
         string_cli_core = string_cli_core + f" -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE={my_net}"
 
         string_cli_tls = ""
-        if config['fabric_settings']['tls_enabled'] == 1:
+        if config['fabric_settings']['tls_enabled']:
             # logger.debug("    --> TLS environment variables set")
             string_cli_tls = string_cli_tls + f" -e CORE_PEER_TLS_ENABLED=true"
             string_cli_tls = string_cli_tls + f" -e CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/peerOrganizations/org{org}.example.com/peers/peer{peer}.org{org}.example.com/tls/server.crt"
@@ -1456,7 +1481,7 @@ class Fabric_Network:
         string_cli_v = ""
         string_cli_v = string_cli_v + f" -v /var/run/:/host/var/run/"
         string_cli_v = string_cli_v + f" -v /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode/:/opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/"
-        string_cli_v = string_cli_v + f" -v /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config/"
+        string_cli_v = string_cli_v + f" -v /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config"
         string_cli_v = string_cli_v + f" -v /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts/"
         string_cli_v = string_cli_v + f" -v /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts"
         string_cli_v = string_cli_v + f" -w /opt/gopath/src/github.com/hyperledger/fabric/peer"
