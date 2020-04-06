@@ -34,6 +34,7 @@ from BlockchainFormation.blockchain_specifics.empty.Empty_Network import *
 from BlockchainFormation.blockchain_specifics.eos.Eos_Network import *
 from BlockchainFormation.blockchain_specifics.geth.Geth_Network import *
 from BlockchainFormation.blockchain_specifics.indy.Indy_Network import *
+from BlockchainFormation.blockchain_specifics.indy_client.Indy_client_Network import *
 from BlockchainFormation.blockchain_specifics.leveldb.Leveldb_Network import *
 from BlockchainFormation.blockchain_specifics.parity.Parity_Network import *
 from BlockchainFormation.blockchain_specifics.quorum.Quorum_Network import *
@@ -187,7 +188,7 @@ class Node_Handler:
             else:
                 replace_command = "wget https://github.com/EOSIO/eos/releases/download/v2.0.3/eosio_2.0.3-1-ubuntu-18.04_amd64.deb && sudo apt install -y ./eosio_2.0.3-1-ubuntu-18.04_amd64.deb"
 
-            os.system(f"cp {dir_name}/blockchain_specifics/eos/bootstrap_eos.sh {dir_name}/blockchain_specifics/Eos/bootstrap_eos_temp.sh")
+            os.system(f"cp {dir_name}/blockchain_specifics/eos/bootstrap_eos.sh {dir_name}/blockchain_specifics/eos/bootstrap_eos_temp.sh")
             os.system(f"sed -i -e \"s#substitute_replace_command#{replace_command}#g\" {dir_name}/blockchain_specifics/eos/bootstrap_eos_temp.sh")
             os.system(f"sed -i -e 's/substitute_replace_commandsubstitute_replace_command/\&\&/g' {dir_name}/blockchain_specifics/eos/bootstrap_eos_temp.sh")
 
@@ -277,6 +278,9 @@ class Node_Handler:
 
         if self.config['blockchain_type'] == "fabric":
             Fabric_Network.check_config(self.config, self.logger)
+
+        elif self.config['blockchain_type'] == 'corda':
+            Corda_Network.check_config(self.config, self.logger)
 
         elif self.config['blockchain_type'] == "eos":
             # check_config is currently executed below
@@ -688,12 +692,8 @@ class Node_Handler:
             func(self)
 
         except Exception as e:
-            if self.config['blockchain_type'] == 'client' or self.config['blockchain_type'] == 'indy_client':
-                Client_Network.startup()
-
-            else:
-                self.logger.exception(e)
-                raise Exception("")
+            self.logger.exception(e)
+            raise Exception("Network startup failed")
 
 
     def restart_network(self):
