@@ -34,12 +34,21 @@ class Couchdb_Network:
         ssh_clients = node_handler.ssh_clients
         scp_clients = node_handler.scp_clients
 
+        logger.info("Getting the logs")
+        stdin, stdout, stderr = ssh_clients[0].exec_command("docker logs couchdb0 >> /home/ubuntu/couchdb.log")
+        wait_and_log(stdout, stderr)
+
+        scp_clients[0].get("/home/ubuntu/couchdb.log", f"{config['exp_dir']}/couchdb.log")
+
+
         logger.info("Shutting down the CouchDB instance")
 
         try:
-            stdin, stdout, stderr = ssh_clients[0].exec_command("docker kill mycouch && rm -r /data/CouchDB_database_dir && mkdir /data/CouchDB_database_dir")
-            logger.debug(stdout.readlines())
-            logger.debug(stderr.readlines())
+            # ssh_clients[0].get_transport().open_session().exec_command("docker kill couchdb0 && rm -r /data/CouchDB_database_dir && mkdir /data/CouchDB_database_dir")
+            # stdin, stdout, stderr = ssh_clients[0].exec_command("docker stop $(docker ps -aq); yes | docker system prune; yes | docker volume prune")
+            # logger.info("\n".join(stdout.readlines()))
+            # logger.info("\n".join(stderr.readlines()))
+
 
             logger.info("Checking whether everything is shut down cleanly")
             stdin, stdout, stderr = ssh_clients[0].exec_command("docker ps && docker image ls")
@@ -54,6 +63,7 @@ class Couchdb_Network:
 
         except Exception as e:
 
+            logger.info("Rebooting the vm")
             channel = ssh_clients[0].get_transport().open_session()
             channel.exec_command("sudo reboot")
 
@@ -64,6 +74,10 @@ class Couchdb_Network:
             if False in wait_till_done(config, ssh_clients, config['ips'], 30 * 60, 60, "/var/log/user_data_success.log", False, 10 * 60, logger):
                 logger.error('CouchDB shutdown not successful')
                 raise Exception("Restart failed")
+
+            # stdin, stdout, stderr = ssh_clients[0].exec_command("docker stop $(docker ps -aq); yes | docker system prune; yes | docker volume prune")
+            # logger.info("\n".join(stdout.readlines()))
+            # logger.info("\n".join(stderr.readlines()))
 
         logger.info("")
         logger.info("**************** !!! CouchDB shutdown was successful !!! *********************")
@@ -141,13 +155,11 @@ class Couchdb_Network:
             scp_clients[index].put(f"{dir_name}/setup/etc", "/home/ubuntu", recursive=True)
 
             stdin, stdout, stderr = ssh_clients[index].exec_command(f"sudo sed -i -e 's/substitute_ip/{config['priv_ips'][index]}/g' /home/ubuntu/etc/vm.args")
-            logger.info(stdout.readlines())
-            logger.info(stderr.readlines())
+            wait_and_log(stdout, stderr)
 
             for key in ['number_of_shards', 'number_of_replicas']:
                 stdin, stdout, stderr = ssh_clients[index].exec_command(f"sudo sed -i -e 's/{key}/{config['couchdb_settings'][key]}/g' /home/ubuntu/etc/local.d/default.ini")
-                logger.info(stdout.readlines())
-                logger.info(stderr.readlines())
+                wait_and_log(stdout, stderr)
 
 
         Couchdb_Network.start_docker(config, logger, ssh_clients)
@@ -278,4 +290,4 @@ class Couchdb_Network:
         scp_clients = node_handler.scp_clients
 
         Couchdb_Network.shutdown(node_handler)
-        Couchdb_Network.start_docker(node_handler)
+        Couchdb_Network.start_docker(config, logger, ssh_clients)
