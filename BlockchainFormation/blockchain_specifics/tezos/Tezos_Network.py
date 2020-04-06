@@ -438,45 +438,6 @@ class Tezos_Network:
                         except Exception:
                             pass
 
-        # all this stuff will be migrated to DAppFormation
-        # putting some files for the truffle/react demo
-        # Writing config files for the client
-        Tezos_Network.write_accounts(config)
-        Tezos_Network.write_truffle_config(config)
-        scp_clients[0].put(f"{config['exp_dir']}/setup/accounts.js", "/home/ubuntu/tezos-react-tutorial/scripts/sandbox")
-        scp_clients[0].put(f"{config['exp_dir']}/setup/truffle-config.js", "/home/ubuntu/tezos-react-tutorial")
-
-        for index, _ in enumerate(config['priv_ips']):
-            scp_clients[index].put(f"{dir_name}/setup", "/home/ubuntu", recursive=True)
-            logger.info("Installing npm packages")
-            channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"(cd setup && . ~/.profile && npm install >> /home/ubuntu/setup/install.log && echo Success >> /home/ubuntu/setup/install.log)")
-
-        status_flags = wait_till_done(config, ssh_clients, config['ips'], 180, 10, "/home/ubuntu/setup/install.log", "Success", 30, logger)
-        if False in status_flags:
-            raise Exception("Installation failed")
-
-        for index, ip in enumerate(config['priv_ips']):
-            logger.info(f"Starting the server on {ip}")
-            stdin, stdout, stderr = ssh_clients[index].exec_command("echo '{\n    \"ip\": \"" + f"{config['priv_ips'][index]}" + "\"\n}' >> ~/setup/config.json")
-            logger.debug(stdout.readlines())
-            logger.debug(stderr.readlines())
-
-            channel = ssh_clients[index].get_transport().open_session()
-            channel.exec_command(f"(source /home/ubuntu/.profile && cd setup && node server.js >> /home/ubuntu/server.log)")
-            logger.info(f"Server is now running on {ip}")
-
-
-        # running the tezos-react-tutorial
-        stdin, stdout, stderr = ssh_clients[0].exec_command("source ~/.profile && cd tezos-react-tutorial && npm install -g truffle@tezos && npm install && npm run compile")
-        logger.info("\n".join(stdout.readlines()))
-        logger.info("\n".join(stderr.readlines()))
-
-        stdin, stdout, stderr = ssh_clients[0].exec_command("source ~/.profile && cd tezos-react-tutorial && npm run migrate")
-        logger.info("\n".join(stdout.readlines()))
-        logger.info("\n".join(stderr.readlines()))
-
-
 
     @staticmethod
     def write_peers_string(config):
@@ -497,76 +458,12 @@ class Tezos_Network:
         for index, _ in enumerate(config['priv_ips']):
             sandbox_parameters["bootstrap_accounts"].append([config["public_keys"][index].replace("unencrypted:", ""), "4000000000000"])
 
-        """
-        sandbox_parameters["preserved_cycles"] = 2
-        sandbox_parameters["blocks_per_cycle"] = 8
-        sandbox_parameters["blocks_per_commitment"] = 4
-        sandbox_parameters["blocks_per_roll_snapshot"] = 4
-        sandbox_parameters["blocks_per_voting_period"] = 4
-        sandbox_parameters["time_between_blocks"] = ["10", "5"]
-        sandbox_parameters["endorsers_per_block"] = 2
-        sandbox_parameters["hard_gas_limit_per_operation"] = "1040000"
-        sandbox_parameters["hard_gas_limit_per_block"] = "10400000"
-        sandbox_parameters["proof_of_work_threshold"] = "-1"
-        sandbox_parameters["tokens_per_roll"] = "8000000000"
-        sandbox_parameters["michelson_maximum_type_size"] = 1000
-        sandbox_parameters["seed_nonce_revelation_tip"] = "125000"
-        sandbox_parameters["origination_size"] = 0
-        sandbox_parameters["block_security_deposit"] = "512000000"
-        sandbox_parameters["endorsement_security_deposit"] = "64000000"
-        sandbox_parameters["baking_reward_per_endorsement"] = ["1250000", "187500"]
-        sandbox_parameters["endorsement_reward"] = ["1250000", "833333"]
-        sandbox_parameters["cost_per_byte"] = "1000"
-        sandbox_parameters["hard_storage_limit_per_operation"] = "60000"
-        sandbox_parameters["test_chain_duration"] = "1966080"
-        sandbox_parameters["quorum_min"] = 2000
-        sandbox_parameters["quorum_max"] = 7000
-        sandbox_parameters["min_proposal_quorum"] = 500
-        sandbox_parameters["initial_endorsers"] = 1
-        sandbox_parameters["delay_per_missing_endorsement"] = "1"
-        """
-
         for key in config['tezos_settings']:
             sandbox_parameters[key] = config['tezos_settings'][key]
 
         with open(f"{config['exp_dir']}/setup/sandbox-parameters.json", 'w+') as outfile:
             json.dump(sandbox_parameters, outfile, default=datetimeconverter, indent=4)
 
-
-    @staticmethod
-    def write_accounts(config):
-        with open(f"{config['exp_dir']}/setup/accounts.js", 'w+') as file:
-
-            file.write("module.exports = {\n")
-            file.write("    alice: {\n")
-            file.write(f"        pkh: \"{config['public_key_hashes'][0]}\",\n")
-            file.write(f"        sk: \"{config['private_keys'][0].replace('unencrypted:', '')}\",\n")
-            file.write(f"        pk: \"{config['public_keys'][0].replace('unencrypted', '')}\"\n")
-            file.write("    }\n")
-            file.write("};\n")
-
-            file.close()
-
-
-    @staticmethod
-    def write_truffle_config(config):
-        with open(f"{config['exp_dir']}/setup/truffle-config.js", "w+") as file:
-
-            file.write("const { alice } = require(\"./scripts/sandbox/accounts\");\n")
-            file.write("module.exports = {\n")
-            file.write("  // see <http://truffleframework.com/docs/advanced/configuration>\n")
-            file.write("  // for more details on how to specify configuration options!\n")
-            file.write("  contracts_directory: \"./contracts\",\n")
-            file.write("  networks: {\n")
-            file.write("    development: {\n")
-            file.write(f"      host: \"http://{config['priv_ips'][0]}\",\n")
-            file.write("      port: 18730,\n")
-            file.write("      network_id: \"*\",\n")
-            file.write("      secretKey: alice.sk,\n")
-            file.write("      type: \"tezos\"\n")
-            file.write("    }")
-            file.write("  }\n")
-            file.write("};\n")
 
     @staticmethod
     def restart(node_handler):

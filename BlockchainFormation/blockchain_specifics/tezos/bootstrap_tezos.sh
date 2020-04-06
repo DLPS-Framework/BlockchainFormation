@@ -89,9 +89,6 @@ ACTIVATOR_SECRET="unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28c
 ~/tezos/tezos-client --addr \$ADDR --port 18730 -block genesis activate protocol PsCARTHAGazKbHtnKfLzQg3kms52kSRpgnDY982a9oYsSXRLQEb with fitness 1 and key activator and parameters ~/tezos/sandbox-parameters.json --timestamp \$(TZ="AAA+1" date +%%FT%%TZ)
 ' >> ~/bootstrap.sh && sudo chmod 775 ~/bootstrap.sh
 
-cd ~
-git clone https://github.com/claudebarde/tezos-react-tutorial
-
   # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log
 
