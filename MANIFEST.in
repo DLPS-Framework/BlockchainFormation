@@ -15,6 +15,7 @@ include BlockchainFormation/blockchain_specifics/empty/*
 include BlockchainFormation/blockchain_specifics/eos/*
 recursive-include BlockchainFormation/blockchain_specifics/eos/contracts *
 include BlockchainFormation/blockchain_specifics/indy/*
+include BlockchainFormation/blockchain_specifics/indy_client/*
 include BlockchainFormation/blockchain_specifics/leveldb/*
 include BlockchainFormation/blockchain_specifics/leveldb/setup/*
 include BlockchainFormation/blockchain_specifics/sawtooth/processor/*
