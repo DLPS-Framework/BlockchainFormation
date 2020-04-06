@@ -22,6 +22,13 @@ from BlockchainFormation.utils.utils import *
 class Corda_Network:
 
     @staticmethod
+    def check_config(config, logger):
+
+        if config['corda_settings']['number_of_parties'] + config['corda_settings']['number_of_notaries'] != config['vm_count']:
+            logger.info("Replacing the original number of nodes by the one specified through the corda-specific settings")
+            config['vm_count'] = config['corda_settings']['number_of_parties'] + config['corda_settings']['number_of_notaries']
+
+    @staticmethod
     def shutdown(node_handler):
         """
         runs the corda specific shutdown operations (e.g. pulling the associated logs from the VMs)
@@ -45,8 +52,7 @@ class Corda_Network:
         ssh_clients = node_handler.ssh_clients
         scp_clients = node_handler.scp_clients
 
-        config['node_indices'] = list(range(1, config['vm_count']))
-        config['group_indices'] = [config['node_indices']]
+        config['node_indices'] = list(range(config['corda_settings']['number_of_notaries'], config['vm_count']))
 
         # Creating docker swarm
         logger.info("Preparing & starting docker swarm")
