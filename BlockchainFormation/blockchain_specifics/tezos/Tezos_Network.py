@@ -371,7 +371,7 @@ class Tezos_Network:
             channel.exec_command(f"screen -L -Logfile ~/endorser.log -dmS endorser ~/tezos/tezos-endorser-006-PsCARTHA --addr {config['priv_ips'][index]} --port 18730 run this_node")
             time.sleep(10)
 
-        time.sleep
+        time.sleep(180)
 
         logger.info("Registering each node's bootstrap account as delegate")
         for index, _ in enumerate(config['priv_ips']):
@@ -408,7 +408,7 @@ class Tezos_Network:
         logger.debug(stdout.readlines())
         logger.debug(stderr.readlines())
         """
-
+        """
         # Waiting until all bakers have forged at least one block
         status_flags = np.zeros(len(ssh_clients), dtype=bool)
 
@@ -437,6 +437,12 @@ class Tezos_Network:
                                 channel.exec_command(f"screen -L -Logfile ~/baker.log -dmS baker ~/tezos/tezos-baker-006-PsCARTHA --addr {config['priv_ips'][index]} --port 18730 run with local node /home/ubuntu/test this_node")
                         except Exception:
                             pass
+                            
+        """
+        for index, _ in enumerate(config['priv_ips']):
+            logger.info(f"Registering node {index}'s bootstrap account as delegate again")
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 register key this_node as delegate")
+            wait_and_log(stdout, stderr)
 
 
     @staticmethod
