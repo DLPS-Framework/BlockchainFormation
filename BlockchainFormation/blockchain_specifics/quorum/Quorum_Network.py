@@ -197,6 +197,10 @@ class Quorum_Network:
         logger.info("Starting quorum nodes")
         Quorum_Network.start_network(config, ssh_clients, logger)
 
+        time.sleep(10)
+        logger.info("Distributing the money")
+        Quorum_Network.split_funds(config, ssh_clients, logger)
+
     @staticmethod
     def start_tessera(config, ssh_clients, logger):
         # for saving the public and private keys of the tessera nodes (enclaves)
@@ -336,6 +340,9 @@ class Quorum_Network:
                                  f"--minerthreads {config['quorum_settings']['istanbul_minerthreads']} "
                                  f"--verbosity 5 "
                                  f"--networkid 10 "
+                                 # f"--ws "
+                                 # f"--wsport 23000 "
+                                 # f"--wsorigins=* "
                                  f"--rpc "
                                  f"--rpcaddr 0.0.0.0 "
                                  f"--rpcport 22000 "
@@ -413,6 +420,25 @@ class Quorum_Network:
         logger.info("Unlocking all accounts forever")
         for node, _ in enumerate(config['priv_ips']):
             Quorum_Network.unlock_node(config, ssh_clients, node, logger)
+
+    @staticmethod
+    def split_funds(config, ssh_clients, logger):
+
+        logger.debug("Distributing the funds equally among all nodes")
+        amount = round(10000000000000000000000000 / len(config['priv_ips']))
+        for node in range(1, len(config['priv_ips'])):
+            stdin, stdout, stderr = ssh_clients[0].exec_command("geth --exec 'eth.sendTransaction({" + f"from: \"{config['addresses'][0]}\", to: \"{config['addresses'][node]}\", value: {amount}" + "})' attach /data/nodes/new-node-1/geth.ipc")
+            wait_and_log(stdout, stderr)
+
+        """
+        time.sleep(5)
+        logger.debug("Checking the new balances")
+        for node in range(0, len(config['priv_ips'])):
+            logger.info(f"geth --exec 'eth.getBalance(\"{config['addresses'][node]}\")' attach /data/nodes/new-node-1/geth.ipc")
+            stdin, stdout, stderr = ssh_clients[-1].exec_command(f"geth --exec 'eth.getBalance(\"{config['addresses'][node]}\")' attach /data/nodes/new-node-1/geth.ipc")
+            logger.debug(stdout.readlines())
+            logger.debug(stderr.readlines())
+        """
 
     @staticmethod
     def check_network(config, ssh_clients, logger):
