@@ -67,7 +67,7 @@
 
   wget https://github.com/EOSIO/eosio.contracts/archive/v1.8.1.zip
   unzip v1.8.1.zip
-  mv eosio.contracts-1.8.1 /data/contracts
+  mv eosio.contracts-1.8.1 ~/contracts
 
   mkdir /data/bootbios
   cd /data/bootbios
