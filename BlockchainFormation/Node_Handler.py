@@ -451,6 +451,9 @@ class Node_Handler:
         if self.config['blockchain_type'] == "eos":
             max_time = 120
             normal_time = 60
+        elif self.config['blockchain_type'] == "tezos":
+            max_time = 60
+            normal_time = 30
         else:
             max_time = 30
             normal_time = 10
