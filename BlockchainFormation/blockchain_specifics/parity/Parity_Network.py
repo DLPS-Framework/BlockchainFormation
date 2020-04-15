@@ -451,7 +451,8 @@ class Parity_Network:
                                  'reseal_on_txs': 'none',
                                  'tx_queue_mem_limit': config['parity_settings']['tx_queue_mem_limit'],
                                  'tx_queue_size': config['parity_settings']['tx_queue_size'],
-                                 'usd_per_tx': '0'
+                                 'usd_per_tx': '0',
+                                 'force_sealing': True
                                  }
 
         if unlock is not None:
