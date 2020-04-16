@@ -3,13 +3,14 @@
 ## General Information
 
 The purpose of this package is to automate the process of deploying blockchain solutions. It is currently supported on AWS or on fresh, own ubuntu 18.04 VMs.
-Everything happens via ssh and scp (wrapped in python), orchestrated from the computer where this package is installed.
+Everything happens via ssh and scp (wrapped in python), orchestrated from the computer where this package is installed and run.
 
 In the beginning, one has to specify the configuration of the blockchain network, e.g. number of nodes, blocksize, ..., by means of a config file.
 In case of AWS setup, AWS settings have to be included, based on which ```vm_count``` EC2 instances will automatically be started. Afterwards, necessary software packages will be installed on each VM, 
-and a blockchain network with the specified configuration will be automatically be orchestrated on the virtual machines, organized centrally from the computer where the package *BlockchainFormation* is used.
+and a blockchain network with the specified configuration will be automatically set up.
 
 Currently, the following blockchains are supported:
+* Hyperledger Besu with IBFT2 consensus (beta)
 * Corda (beta)
 * Eos (beta)
 * Hyperledger Fabric (very sophisticated)
@@ -19,9 +20,9 @@ Currently, the following blockchains are supported:
 * Hyperledger Sawtooth (very sophisticated)
 * Tezos (beta)
 
-In order to have some baseline, we also integrated
-* CouchDB (beta)
-* LevelDB (alpha)
+In order to have some centralized baseline, we also integrated
+* CouchDB (single and cluster)
+* LevelDB
 
 The provided VMs then can be used for different objectives, e.g., to deploy custom smart contracts and connect with clients (see package *ClientFormation*) and then do some benchmarking (see package *ChainLab*), i.e., 
 to evaluate the performance of a given blockchain solution, 
@@ -70,8 +71,11 @@ To add another blockchain, the following steps are required:
 * Make existing setups even more customizable
 * Add logrotate to UserData setup scripts # TODO??? @Philipp
 *  Support more blockchains
+    * Cardano
     * Ethermint
     * Libra
+    * Multichain
+    * QLDB
 * Integrate Azure or further cloud computing services
 * In-depth explanation of all the blockchain-specific configurations in the configs
 * Find a nicer way to modify bootstrap_scripts based on the config file
@@ -101,7 +105,7 @@ If this was successful you can install the package with pip. The following is a 
 
 Now you can import the modules like vm_handler:
 ```
-from BlockchainFormation import vm_handler
+from BlockchainFormation.Node_Handler import Node_Handler
 ```
 
 

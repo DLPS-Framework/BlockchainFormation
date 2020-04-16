@@ -389,9 +389,12 @@ class Parity_Network:
                 logger.debug("Middleware already injected")
 
         logger.info("testing if new blocks are generated across all nodes; if latest block numbers are not changing over multiple cycles something is maybe wrong")
-        for x in range(5):
-            for index, _ in enumerate(web3_clients):
-                logger.info(web3_clients[index].eth.getBlock('latest')['number'])
+
+        for x in range(0, 50):
+            blocknumber = web3_clients[0].eth.getBlock('latest')['number']
+            logger.info(blocknumber)
+            if blocknumber != 0:
+                break
 
             logger.info("----------------------------------")
             time.sleep(10)
