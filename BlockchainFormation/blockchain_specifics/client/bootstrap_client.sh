@@ -26,8 +26,8 @@
   . ~/.profile
   . ~/.bashrc
 
-  nvm install 8.16.0
-  echo "export PATH=$PATH:/home/ubuntu/.nvm/versions/node/v8.16.0/bin" >> /home/ubuntu/.profile
+  nvm install 13.12.0
+  echo "export PATH=$PATH:/home/ubuntu/.nvm/versions/node/v13.12.0/bin" >> /home/ubuntu/.profile
   . ~/.profile
   . ~/.bashrc
   echo "node version: $(node -v)"

@@ -26,6 +26,7 @@ from scp import SCPClient
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from BlockchainFormation.cost_calculator import AWSCostCalculator
 
+from BlockchainFormation.blockchain_specifics.besu.Besu_Network import *
 from BlockchainFormation.blockchain_specifics.client.Client_Network import *
 from BlockchainFormation.blockchain_specifics.corda.Corda_Network import *
 from BlockchainFormation.blockchain_specifics.couchdb.Couchdb_Network import *
@@ -451,6 +452,9 @@ class Node_Handler:
         if self.config['blockchain_type'] == "eos":
             max_time = 120
             normal_time = 60
+        elif self.config['blockchain_type'] == "tezos":
+            max_time = 60
+            normal_time = 30
         else:
             max_time = 30
             normal_time = 10

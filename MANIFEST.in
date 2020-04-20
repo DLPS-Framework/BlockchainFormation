@@ -1,5 +1,6 @@
 include BlockchainFormation/UserDataScripts/*
 include BlockchainFormation/blockchain_specifics/*
+include BlockchainFormation/blockchain_specifics/besu/*
 include BlockchainFormation/blockchain_specifics/corda/*
 include BlockchainFormation/blockchain_specifics/corda/setup/*
 include BlockchainFormation/blockchain_specifics/couchdb/*

@@ -228,9 +228,27 @@ class Eos_Network:
 
             logger.info("Compiling the conctracts on the vm")
             channel = ssh_clients[0].get_transport().open_session()
-            channel.exec_command("(cd ~/contracts && ./build.sh -e /usr/opt/eosio/2.0.3 -c /usr/opt/eosio.cdt/1.6.3 >> ~/deploy_contracts.log 2>&1 && touch ~/success.log)")
+            channel.exec_command("(cd ~/contracts && ./build.sh -e /usr/opt/eosio/2.0.3 -c /usr/opt/eosio.cdt/1.6.3 >> ~/deploy_contracts.log 2>&1 && touch /home/ubuntu/success.log)")
 
-            time.sleep(60)
+            boo = False
+            timer = 0
+            total_time = 600
+            typical_time = 60
+            while boo == False and timer < total_time:
+                time.sleep(30)
+                timer += 30
+                logger.debug(f" --> Waited {timer} seconds so far, {total_time - timer} seconds left before abort"
+                             f"(it usually takes less than {np.ceil(typical_time / 60)} minutes)")
+
+                try:
+                    client_sftp = ssh_clients[0].open_sftp()
+                    client_sftp.stat("/home/ubuntu/success.log")
+                    boo = True
+                except Exception as e:
+                    pass
+
+            if boo == False:
+                raise Exception("Compiling the contracts failed")
 
         stdin, stdout, stderr = ssh_clients[0].exec_command("cleos set contract eosio.token ~/contracts/build/contracts/eosio.token/")
         logger.debug(stdout.readlines())
