@@ -42,8 +42,8 @@ from BlockchainFormation.blockchain_specifics.quorum.Quorum_Network import *
 from BlockchainFormation.blockchain_specifics.sawtooth.Sawtooth_Network import *
 from BlockchainFormation.blockchain_specifics.tezos.Tezos_Network import *
 
-from BlockchainFormation.lb_handler import *
-from BlockchainFormation.utils.utils import *
+from utils.utils import *
+from Node_Handler import *
 
 utc = pytz.utc
 

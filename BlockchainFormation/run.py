@@ -19,8 +19,8 @@ import logging.config
 import os
 import sys
 
-from BlockchainFormation.utils.utils import yes_or_no
-from BlockchainFormation.Node_Handler import Node_Handler
+from utils.utils import yes_or_no
+from Node_Handler import Node_Handler
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
