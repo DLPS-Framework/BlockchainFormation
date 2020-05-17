@@ -1350,7 +1350,7 @@ class Fabric_Network:
 
             Fabric_Network.setup_network(config, ssh_clients, scp_clients, logger, "network_setup")
 
-            Fabric_Network.install_chaincode(config, ssh_clients, scp_clients, logger)
+            Fabric_Network.install_chaincode(node_handler)
 
         except Exception as e:
             logger.exception(e)
@@ -1544,17 +1544,23 @@ class Fabric_Network:
 
         for index, node in enumerate(config['orderer_indices']):
 
-            stdin, stdout, stderr = ssh_clients[node].exec_command(f"a=3 && cat orderer{index+1}.log " + "| grep 'Start accepting requests as Raft leader' | grep mychannel | awk -F ' ' '{print $NF-$a}'")
-            out = stdout.readlines()
-            logger.info(out)
-            logger.info(stderr.readlines())
+            try:
 
-            if len(out) != 0:
-                leaders.append(node)
-                blocknumbers.append(out[-1].replace('\n', ""))
+                stdin, stdout, stderr = ssh_clients[node].exec_command(f"a=3 && cat orderer{index+1}.log " + "| grep 'Start accepting requests as Raft leader' | grep mychannel | awk -F ' ' '{print $NF-$a}'")
+                out = stdout.readlines()
+                logger.info(out)
+                logger.info(stderr.readlines())
 
-            if len(out) > 1:
-                logger.info(f"Multiple elections found on {node}")
+                if len(out) != 0:
+                    leaders.append(node)
+                    blocknumbers.append(out[-1].replace('\n', ""))
+
+                if len(out) > 1:
+                    logger.info(f"Multiple elections found on {node}")
+
+            except Exception as e:
+                logger.info("A problem occurred when searching for the raft leader")
+                logger.exception(e)
 
         logger.info(f"Leaders: {leaders}")
         logger.info(f"Raft leaders found: {leaders} at {[config['ips'][i] for i in leaders]}")
@@ -1599,6 +1605,38 @@ class Fabric_Network:
             ssh_clients[leader_index].exec_command("sudo reboot")
 
         logger.info("Crashed leader successfully")
+        time.sleep(10)
+
+        logger.info("Who is the new leader?")
+        new_leader = Fabric_Network.find_leader(config, ssh_clients, scp_clients, logger)
+
+        logger.info(f"The new leader is {new_leader} at ip {config['ips'][new_leader]}")
+
+        return leader_index
+
+    @staticmethod
+    def shutdown_raft_nonleader(config, ssh_clients, scp_clients, logger):
+
+        leader_index = config['orderer_indices'][Fabric_Network.find_leader(config, ssh_clients, scp_clients, logger)]
+        other_index = config['orderer_indices'][(Fabric_Network.find_leader(config, ssh_clients, scp_clients, logger) + 1) % (config['fabric_settings']['orderer_count'])]
+
+        logger.info(f"Crashing leader node with index {other_index} and ip {config['ips'][other_index]}")
+
+        try:
+            stdin, stdout, stderr = ssh_clients[other_index].exec_command("docker stop $(docker ps -a -q) && docker rm -f $(docker ps -a -q) && docker rmi $(docker images | grep 'my-net' | awk '{print $1}'); rm /home/ubuntu/orderer*.log && sudo rm -r ./var/lib/docker/volumes/afe902cdfb0eb2d7bb0284743e8652278753d75ef7732e3702e20687afb4013b/")
+            wait_and_log(stdout, stderr)
+
+            stdin, stdout, stderr = ssh_clients[other_index].exec_command("docker volume rm $(docker volume ls -q)")
+            wait_and_log(stdout, stderr)
+
+            stdin, stdout, stderr = ssh_clients[other_index].exec_command("docker ps -a && docker volume ls && docker images")
+            wait_and_log(stdout, stderr)
+
+        except Exception as e:
+
+            ssh_clients[other_index].exec_command("sudo reboot")
+
+        logger.info("Crashed non-leader successfully")
         time.sleep(10)
 
         logger.info("Who is the new leader?")

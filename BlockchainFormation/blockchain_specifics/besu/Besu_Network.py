@@ -174,7 +174,7 @@ class Besu_Network:
 
         logger.info("Starting the first node and getting its enode")
         channel = ssh_clients[0].get_transport().open_session()
-        channel.exec_command(f'(cd /data/Node_0 && . ~/.profile && besu --data-path=data --genesis-file=./genesis.json --rpc-http-enabled --rpc-http-api=ETH,NET,IBFT --host-whitelist="*" --rpc-http-cors-origins="all" --rpc-http-host=0.0.0.0 --rpc-http-port=8545 --p2p-host={config["priv_ips"][0]} >> node.log)')
+        channel.exec_command(f'(cd /data/Node_0 && . ~/.profile && besu --data-path=data --genesis-file=./genesis.json --tx-pool-max-size=100 --rpc-http-enabled --rpc-http-api=ETH,NET,IBFT --host-whitelist="*" --rpc-http-cors-origins="all" --rpc-http-host=0.0.0.0 --rpc-http-port=8545 --p2p-host={config["priv_ips"][0]} >> node.log)')
 
         time.sleep(10)
 
@@ -190,7 +190,7 @@ class Besu_Network:
         for index, _ in enumerate(config['priv_ips']):
             if index != 0:
                 channel = ssh_clients[index].get_transport().open_session()
-                channel.exec_command(f'(cd /data/Node_{index} && . ~/.profile &&  besu --data-path=data --genesis-file=./genesis.json --bootnodes={enode} --p2p-port=30303 --rpc-http-enabled --rpc-http-api=ETH,NET,IBFT --host-whitelist="*" --rpc-http-cors-origins="all" --rpc-http-host=0.0.0.0 --rpc-http-port=8545 --p2p-host={config["priv_ips"][index]} >> node.log)')
+                channel.exec_command(f'(cd /data/Node_{index} && . ~/.profile &&  besu --data-path=data --genesis-file=./genesis.json --tx-pool-max-size=100 --bootnodes={enode} --p2p-port=30303 --rpc-http-enabled --rpc-http-api=ETH,NET,IBFT --host-whitelist="*" --rpc-http-cors-origins="all" --rpc-http-host=0.0.0.0 --rpc-http-port=8545 --p2p-host={config["priv_ips"][index]} >> node.log)')
 
 
         time.sleep(10)

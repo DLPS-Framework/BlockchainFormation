@@ -393,11 +393,15 @@ class Tezos_Network:
         stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 get balance for this_node")
         logger.debug(stdout.readlines())
         logger.debug(stderr.readlines())
+        
+        """
 
-        stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 transfer 10000 from this_node to {config['public_key_hashes'][1]} --fee 0.05")
-        logger.debug(stdout.readlines())
-        logger.debug(stderr.readlines())
+        for index in range(len(config['priv_ips']), 256):
+            channel = ssh_clients[0].get_transport().open_session()
+            channel.exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][0]} --port 18730 transfer 1000000 from this_node to {config['public_key_hashes'][index]} --fee 0.05")
+            time.sleep(0.5)
 
+        """
         time.sleep(5)
 
         stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][0]} --port 18730 get balance for this_node")
@@ -462,6 +466,7 @@ class Tezos_Network:
         sandbox_parameters["bootstrap_accounts"] = []
 
         for index, _ in enumerate(config['priv_ips']):
+        # for index in range(0, 256):
             sandbox_parameters["bootstrap_accounts"].append([config["public_keys"][index].replace("unencrypted:", ""), "4000000000000"])
 
         for key in config['tezos_settings']:
