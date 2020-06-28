@@ -396,10 +396,12 @@ class Tezos_Network:
         
         """
 
-        for index in range(len(config['priv_ips']), 256):
-            channel = ssh_clients[0].get_transport().open_session()
-            channel.exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][0]} --port 18730 transfer 1000000 from this_node to {config['public_key_hashes'][index]} --fee 0.05")
-            time.sleep(0.5)
+        Tezos_Network.test_shielded_transaction(node_handler)
+
+        for node, _ in enumerate(config['priv_ips']):
+            for index in range(len(config['priv_ips']), 256):
+                channel = ssh_clients[node].get_transport().open_session()
+                channel.exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][node]} --port 18730 transfer 1000000 from this_node to {config['public_key_hashes'][index]} --fee 0.05 &")
 
         """
         time.sleep(5)
@@ -491,3 +493,121 @@ class Tezos_Network:
         # You may check which operations live in the mempool using the RPC /chains/main/mempool/pending_operations
         # const json = require("./PointOfSale.json")
         # json.networks.NetXjD3HPJJjmcd.address
+
+    
+    @staticmethod
+    def test_shielded_transaction(node_handler):
+        """
+        Makes a few tests for private transactions
+        :param node_handler: 
+        :return:
+
+        https://gitlab.com/nomadic-labs/tezos/blob/sapling-integration/docs/developer/sapling.rst
+        """
+
+        shielded_addresses = []
+
+        logger = node_handler.logger
+        config = node_handler.config
+        ssh_clients = node_handler.ssh_clients
+        scp_clients = node_handler.scp_clients
+
+        # for readint the manual: ~/tezos/tezos-client --addr {config['priv_ips'][0]} --port 18730 sapling man
+
+        logger.info("Initiating simple sapling contract")
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][0]} --port 18730 "
+                                                            f"originate contract shielded-tez transferring 0 from this_node "
+                                                            f"running ~/tezos/src/lib_crypto/test/sapling_contract.tz "
+                                                            f"--init $(cat ~/tezos/src/lib_crypto/test/sapling_contract_storage) "
+                                                            f"--burn-cap 3")
+        logger.info(stdout.readlines())
+        logger.info(stderr.readlines())
+
+        logger.info("Creating sapling keys for two accounts")
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][0]} --port 18730 "
+                                                            f"gen key alice "
+                                                            f"--for-contract shielded-tez")
+        logger.info(stdout.readlines())
+        logger.info(stderr.readlines())
+
+        stdin, stdout, stderr = ssh_clients[1].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][1]} --port 18730 "
+                                                            f"gen key bob "
+                                                            f"--for-contract shielded-tez")
+        logger.info(stdout.readlines())
+        logger.info(stderr.readlines())
+
+        logger.info("Generating an address for the two accounts")
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][0]} --port 18730 "
+                                                            f"sapling gen address alice")
+        out = stdout.readlines()
+        shielded_addresses.append(out[0].replace("\n", ""))
+        logger.info(out)
+        logger.info(stderr.readlines())
+
+        stdin, stdout, stderr = ssh_clients[1].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][1]} --port 18730 "
+                                                            f"sapling gen address bob")
+        out = stdout.readlines()
+        shielded_addresses.append(out[0].replace("\n", ""))
+        logger.info(out)
+        logger.info(stderr.readlines())
+
+        logger.info("Exchanging some tezzies to shielded token")
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][0]} --port 18730 "
+                                                            f"sapling transfer shield 10 from this_node to {shielded_addresses[0]} "
+                                                            f"using shielded-tez --burn-cap 1")
+        logger.info(stdout.readlines())
+        logger.info(stderr.readlines())
+
+        logger.info("Waiting 20s until the transaction has been included")
+        time.sleep(20)
+
+        logger.info("Checking the shielded balance (which one can only see knowing the key (address))")
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][0]} --port 18730 "
+                                                            f"sapling get balance "
+                                                            f"for alice --for-contract shielded-tez")
+        logger.info(stdout.readlines())
+        logger.info(stderr.readlines())
+
+        logger.info("Creating a shielded transaction from alice to bob")
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][0]} --port 18730 "
+                                                            f"sapling forge transaction 10 "
+                                                            f"from alice to {shielded_addresses[1]} using shielded-tez")
+        logger.info(stdout.readlines())
+        logger.info(stderr.readlines())
+
+        logger.info("Submitting the shielded transaction from another account")
+        if len(config['priv_ips']) > 2:
+            index = 2
+        else:
+            index = 0
+
+        stdin, stdout, stderr = ssh_clients[index].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} "
+                                                                f"sapling submit sapling_transaction from this_node "
+                                                                f"using shielded-tez --burn-cap 1")
+        logger.info(stdout.readlines())
+        logger.info(stderr.readlines())
+
+        logger.info("Waiting 20s until the transaction has been included")
+        time.sleep(20)
+
+        logger.info("Checking the shielded balance")
+        stdin, stdout, stderr = ssh_clients[1].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} "
+                                                            f"sapling get balance for bob --for-contract shielded-tez")
+        logger.info(stdout.readlines())
+        logger.info(stderr.readlines())
+
+        logger.info("Withdrawing bob's shielded tezzies")
+        stdin, stdout, stderr = ssh_clients[1].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} "
+                                                            f"sapling transfer unshield 10 from bob to this_node "
+                                                            f"using shielded-tez --burn-cap 1")
+        logger.info(stdout.readlines())
+        logger.info(stderr.readlines())
+
+
+
+
+
+
+
+
+        
