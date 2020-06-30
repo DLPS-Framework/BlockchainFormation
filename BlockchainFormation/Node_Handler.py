@@ -551,7 +551,10 @@ class Node_Handler:
                     lb_handler.shutdown_lb()
 
             # calculate aws costs
-            self.aws_calculator.calculate_uptime_costs(self.config)
+            try:
+                self.aws_calculator.calculate_uptime_costs(self.config)
+            except Exception as e:
+                logger.exception(e)
 
             for instance in ec2_instances:
                 instance.terminate()
