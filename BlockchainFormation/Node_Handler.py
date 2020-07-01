@@ -41,10 +41,8 @@ from BlockchainFormation.blockchain_specifics.parity.Parity_Network import *
 from BlockchainFormation.blockchain_specifics.quorum.Quorum_Network import *
 from BlockchainFormation.blockchain_specifics.sawtooth.Sawtooth_Network import *
 from BlockchainFormation.blockchain_specifics.tezos.Tezos_Network import *
-from BlockchainFormation.blockchain_specifics.zkrollup.Zkrollup_Network import *
 
-from BlockchainFormation.utils.utils import *
-from BlockchainFormation.Node_Handler import *
+from BlockchainFormation.utils import utils
 
 utc = pytz.utc
 
@@ -551,10 +549,7 @@ class Node_Handler:
                     lb_handler.shutdown_lb()
 
             # calculate aws costs
-            try:
-                self.aws_calculator.calculate_uptime_costs(self.config)
-            except Exception as e:
-                logger.exception(e)
+            self.aws_calculator.calculate_uptime_costs(self.config)
 
             for instance in ec2_instances:
                 instance.terminate()
@@ -633,7 +628,7 @@ class Node_Handler:
                     break
 
             # SCPCLient takes a paramiko transport as an argument
-            scp_clients.append(SCPClient(ssh_clients[index].get_transport(), socket_timeout=86400))
+            scp_clients.append(SCPClient(ssh_clients[index].get_transport(), socket_timeout=86400, progress=Node_Handler.progress))
 
         if self.logger is not None:
             # logger.debug(f"All scp/ssh clients got created and connected")
@@ -716,3 +711,7 @@ class Node_Handler:
 
             self.logger.exception(e)
             raise Exception("")
+
+    @staticmethod
+    def progress(filename, size, sent):
+        sys.stdout.write("%s\'s progress: %.2f%%   \r" % (filename, float(sent) / float(size) * 100))

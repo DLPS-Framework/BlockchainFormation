@@ -158,6 +158,7 @@ class AWSCostCalculator:
         :param osys:
         :return:
         """
+
         data = self.pricing_client.get_products(ServiceCode='AmazonEC2',
                                                 Filters=[{"Field": "tenancy", "Value": "shared", "Type": "TERM_MATCH"},
                                                          {"Field": "operatingSystem", "Value": osys, "Type": "TERM_MATCH"},
@@ -165,10 +166,14 @@ class AWSCostCalculator:
                                                          {"Field": "instanceType", "Value": instance, "Type": "TERM_MATCH"},
                                                          {"Field": "location", "Value": region, "Type": "TERM_MATCH"}])
 
-        od = json.loads(data['PriceList'][0])['terms']['OnDemand']
-        id1 = list(od)[0]
-        id2 = list(od[id1]['priceDimensions'])[0]
-        return od[id1]['priceDimensions'][id2]['pricePerUnit']['USD']
+        try:
+            od = json.loads(data['PriceList'][0])['terms']['OnDemand']
+            id1 = list(od)[0]
+            id2 = list(od[id1]['priceDimensions'])[0]
+            return od[id1]['priceDimensions'][id2]['pricePerUnit']['USD']
+        except Exception:
+            return 0
+
 
     def _get_storage_price(self, region, volume_type):
         """
@@ -189,10 +194,14 @@ class AWSCostCalculator:
                                                     {'Type': 'TERM_MATCH', 'Field': 'volumeType',
                                                      'Value': ebs_name_map[volume_type]},
                                                     {'Type': 'TERM_MATCH', 'Field': 'location', 'Value': region}])
-        od = json.loads(data['PriceList'][0])['terms']['OnDemand']
-        id1 = list(od)[0]
-        id2 = list(od[id1]['priceDimensions'])[0]
-        return od[id1]['priceDimensions'][id2]['pricePerUnit']['USD']
+
+        try:
+            od = json.loads(data['PriceList'][0])['terms']['OnDemand']
+            id1 = list(od)[0]
+            id2 = list(od[id1]['priceDimensions'])[0]
+            return od[id1]['priceDimensions'][id2]['pricePerUnit']['USD']
+        except Exception:
+            return 0
 
     def _get_region_name(self, region_code):
         """get region name for given region code"""

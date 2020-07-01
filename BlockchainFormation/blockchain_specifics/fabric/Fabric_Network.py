@@ -320,6 +320,9 @@ class Fabric_Network:
 
         # pushing the ssh-key and the chaincode on the first vm
         scp_clients[0].put(f"{config['priv_key_path']}", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem")
+        stdin, stdout, stderr = ssh_clients[0].exec_command("sudo chmod 600 /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem")
+        logger.debug(stdout.readlines())
+        logger.debug(stderr.readlines())
         scp_clients[0].put(f"{dir_name}/chaincode/benchcontract", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode", recursive=True)
         Fabric_Network.write_collections(config, logger)
         scp_clients[0].put(f"{config['exp_dir']}/setup/collections.json", "/data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode/benchcontract")
@@ -1108,14 +1111,6 @@ class Fabric_Network:
 
         logger.info("Starting orderer nodes")
         for orderer, index in enumerate(config['orderer_indices']):
-
-            string_orderer_downgrade = ""
-            if 'downgrade' in config['fabric_settings'] and 'downgrade_orderer' in config['fabric_settings']['downgrade']:
-                if orderer < config['fabric_settings']['downgrade']['downgrade_orderer']['num_orderers']:
-                    logger.info(f"Downgrading orderer{orderer}")
-                    string_orderer_downgrade = string_orderer_downgrade + f" --cpuset-cpus={config['fabric_settings']['downgrade']['downgrade_orderer']['cpus']}"
-                    string_orderer_downgrade = string_orderer_downgrade + f" --memory={config['fabric_settings']['downgrade']['downgrade_orderer']['memory']}"
-
             orderer = orderer + 1
             # set up configurations of orderers like with docker compose
             string_orderer_base = ""
@@ -1181,13 +1176,13 @@ class Fabric_Network:
             logger.debug(f" - Starting orderer{orderer} on {config['ips'][index]}")
             channel = ssh_clients[index].get_transport().open_session()
 
-            command = "docker run --rm" + string_orderer_downgrade + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /home/ubuntu/orderer{orderer}.log"
+            command = "docker run --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /home/ubuntu/orderer{orderer}.log"
 
             channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger "
                                  f"&& echo \"{command}\" >> /home/ubuntu/start_orderer.sh "
                                  f"&& sudo chmod 775 /home/ubuntu/start_orderer.sh && bash /home/ubuntu/start_orderer.sh)")
 
-            stdin, stdout, stderr = ssh_clients[index].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_orderer_downgrade + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + " hyperledger/fabric-tools /bin/bash\" >> /data/cli.sh)")
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + " hyperledger/fabric-tools /bin/bash\" >> /data/cli.sh)")
             wait_and_log(stdout, stderr)
 
         # starting peers and databases
@@ -1200,14 +1195,6 @@ class Fabric_Network:
                 ip_db = config['ips'][index_db]
 
                 if config['fabric_settings']['database'] == "CouchDB":
-
-                    string_couchdb_downgrade = ""
-                    if 'downgrade' in config['fabric_settings'] and 'downgrade_couchdb' in config['fabric_settings']['downgrade']:
-                        if org <= config['fabric_settings']['downgrade']['downgrade_couchdb']['num_orgs'] and peer < config['fabric_settings']['downgrade']['downgrade_couchdb']['num_couchdbs']:
-                            logger.info(f"Downgrading couchdb for peer{peer}org{org}")
-                            string_couchdb_downgrade = string_couchdb_downgrade + f" --cpuset-cpus={config['fabric_settings']['downgrade']['downgrade_couchdb']['cpus']}"
-                            string_couchdb_downgrade = string_couchdb_downgrade + f" --memory={config['fabric_settings']['downgrade']['downgrade_couchdb']['memory']}"
-
                     # set up CouchDB configuration
                     string_database_base = ""
                     string_database_base = string_database_base + f" --network='{my_net}' --name couchdb{peer}.org{org} -p 5984:5984"
@@ -1217,16 +1204,9 @@ class Fabric_Network:
                     # Starting the CouchDBs
                     logger.debug(f" - Starting database couchdb{peer}.org{org} on {ip_db}")
                     channel = ssh_clients[index_db].get_transport().open_session()
-                    channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_couchdb_downgrade + string_database_base + f" hyperledger/fabric-couchdb &> /home/ubuntu/couchdb{peer}.org{org}.log)")
+                    channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_database_base + f" hyperledger/fabric-couchdb &> /home/ubuntu/couchdb{peer}.org{org}.log)")
 
                 # Setting up configuration of peer like with docker compose
-                string_peer_downgrade = ""
-                if 'downgrade' in config['fabric_settings'] and 'downgrade_peer' in config['fabric_settings']['downgrade']:
-                    if org <= config['fabric_settings']['downgrade']['downgrade_couchdb']['num_orgs'] and peer < config['fabric_settings']['downgrade']['downgrade_peer']['num_peers']:
-                        logger.info(f"Downgrading peer{peer}org{org}")
-                        string_peer_downgrade = string_peer_downgrade + f" --cpuset-cpus={config['fabric_settings']['downgrade']['downgrade_peer']['cpus']}"
-                        string_peer_downgrade = string_peer_downgrade + f" --memory={config['fabric_settings']['downgrade']['downgrade_peer']['memory']}"
-
                 string_peer_base = ""
                 string_peer_base = string_peer_base + f" --network='{my_net}' --name peer{peer}.org{org}.example.com -p 7051:7051 -p 7053:7053"
 
@@ -1301,9 +1281,9 @@ class Fabric_Network:
                 logger.debug(f" - Starting peer{peer}.org{org} on {ip_peer}")
                 channel = ssh_clients[index_peer].get_transport().open_session()
                 channel.exec_command(
-                    f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_peer_downgrade + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + f" hyperledger/fabric-peer peer node start &> /home/ubuntu/peer{peer}.org{org}.log)")
+                    f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + f" hyperledger/fabric-peer peer node start &> /home/ubuntu/peer{peer}.org{org}.log)")
                 ssh_clients[index_peer].exec_command(
-                    f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_peer_downgrade + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + " hyperledger/fabric-tools /bin/bash\" >> /data/cli.sh)")
+                    f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + " hyperledger/fabric-tools /bin/bash\" >> /data/cli.sh)")
 
         # Waiting for a few seconds until all peers and orderers have started
 
@@ -1394,15 +1374,19 @@ class Fabric_Network:
         logger.debug(f"Starting to push from index {index_source} to index {index_target}")
         # deleting data at the vm associated with source_index and copying it to the vm associated with the target index
         # use scp -v for verbose mode
+
         stdin, stdout, stderr = ssh_clients[index_source].exec_command(
             f"ssh -o 'StrictHostKeyChecking no' -i /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem ubuntu@{config['priv_ips'][index_target]} 'sudo rm -rf /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts && echo Success'")
-        wait_and_log(stdout, stderr)
+        logger.info(stdout.readlines())
+        logger.info(stderr.readlines())
         stdin, stdout, stderr = ssh_clients[index_source].exec_command(
-            f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
-        wait_and_log(stdout, stderr)
+            f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && sudo chmod 600 /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem && echo Success")
+        logger.info(stdout.readlines())
+        logger.info(stderr.readlines())
         stdin, stdout, stderr = ssh_clients[index_source].exec_command(
             f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
-        wait_and_log(stdout, stderr)
+        logger.info(stdout.readlines())
+        logger.info(stderr.readlines())
 
         Fabric_Network.push_chaincode_single(config, ssh_clients, scp_clients, index_source, index_target, logger)
         # logger.debug(f"Successfully pushed to index {index_target}")
@@ -1411,7 +1395,8 @@ class Fabric_Network:
     def push_chaincode_single(config, ssh_clients, scp_clients, index_source, index_target, logger):
         stdin, stdout, stderr = ssh_clients[index_source].exec_command(
             f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
-        wait_and_log(stdout, stderr)
+        logger.info(stdout.readlines())
+        logger.info(stderr.readlines())
 
     @staticmethod
     def upload_chaincode(config, ssh_clients, scp_clients, logger):
@@ -1443,7 +1428,8 @@ class Fabric_Network:
         # deleting the ssh-keys after having finished
         for _, index in enumerate(indices):
             stdin, stdout, stderr = ssh_clients[index].exec_command(f"rm /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem")
-            stdout.readlines()
+            logger.debug(stdout.readlines())
+            logger.debug(stderr.readlines())
 
     @staticmethod
     def setup_network(config, ssh_clients, scp_clients, logger, name):
@@ -1544,23 +1530,17 @@ class Fabric_Network:
 
         for index, node in enumerate(config['orderer_indices']):
 
-            try:
+            stdin, stdout, stderr = ssh_clients[node].exec_command(f"a=3 && cat orderer{index+1}.log " + "| grep 'Start accepting requests as Raft leader' | grep mychannel | awk -F ' ' '{print $NF-$a}'")
+            out = stdout.readlines()
+            logger.info(out)
+            logger.info(stderr.readlines())
 
-                stdin, stdout, stderr = ssh_clients[node].exec_command(f"a=3 && cat orderer{index+1}.log " + "| grep 'Start accepting requests as Raft leader' | grep mychannel | awk -F ' ' '{print $NF-$a}'")
-                out = stdout.readlines()
-                logger.info(out)
-                logger.info(stderr.readlines())
+            if len(out) != 0:
+                leaders.append(node)
+                blocknumbers.append(out[-1].replace('\n', ""))
 
-                if len(out) != 0:
-                    leaders.append(node)
-                    blocknumbers.append(out[-1].replace('\n', ""))
-
-                if len(out) > 1:
-                    logger.info(f"Multiple elections found on {node}")
-
-            except Exception as e:
-                logger.info("A problem occurred when searching for the raft leader")
-                logger.exception(e)
+            if len(out) > 1:
+                logger.info(f"Multiple elections found on {node}")
 
         logger.info(f"Leaders: {leaders}")
         logger.info(f"Raft leaders found: {leaders} at {[config['ips'][i] for i in leaders]}")
@@ -1614,38 +1594,6 @@ class Fabric_Network:
 
         return leader_index
 
-    @staticmethod
-    def shutdown_raft_nonleader(config, ssh_clients, scp_clients, logger):
-
-        leader_index = config['orderer_indices'][Fabric_Network.find_leader(config, ssh_clients, scp_clients, logger)]
-        other_index = config['orderer_indices'][(Fabric_Network.find_leader(config, ssh_clients, scp_clients, logger) + 1) % (config['fabric_settings']['orderer_count'])]
-
-        logger.info(f"Crashing leader node with index {other_index} and ip {config['ips'][other_index]}")
-
-        try:
-            stdin, stdout, stderr = ssh_clients[other_index].exec_command("docker stop $(docker ps -a -q) && docker rm -f $(docker ps -a -q) && docker rmi $(docker images | grep 'my-net' | awk '{print $1}'); rm /home/ubuntu/orderer*.log && sudo rm -r ./var/lib/docker/volumes/afe902cdfb0eb2d7bb0284743e8652278753d75ef7732e3702e20687afb4013b/")
-            wait_and_log(stdout, stderr)
-
-            stdin, stdout, stderr = ssh_clients[other_index].exec_command("docker volume rm $(docker volume ls -q)")
-            wait_and_log(stdout, stderr)
-
-            stdin, stdout, stderr = ssh_clients[other_index].exec_command("docker ps -a && docker volume ls && docker images")
-            wait_and_log(stdout, stderr)
-
-        except Exception as e:
-
-            ssh_clients[other_index].exec_command("sudo reboot")
-
-        logger.info("Crashed non-leader successfully")
-        time.sleep(10)
-
-        logger.info("Who is the new leader?")
-        new_leader = Fabric_Network.find_leader(config, ssh_clients, scp_clients, logger)
-
-        logger.info(f"The new leader is {new_leader} at ip {config['ips'][new_leader]}")
-
-        return leader_index
-
 
     @staticmethod
     def restart_orderer(config, ssh_clients, scp_clients, logger, index):
@@ -1690,39 +1638,5 @@ class Fabric_Network:
 
         channel = ssh_clients[config['orderer_indices'][leader_index]].get_transport().open_session()
         channel.exec_command("bash /home/ubuntu/start_orderer.sh")
-
-    @staticmethod
-    def stop_node(node_handler, org, peer):
-
-        logger = node_handler.logger
-        config = node_handler.config
-        ssh_clients = node_handler.ssh_clients
-        scp_clients = node_handler.scp_clients
-
-        peer_index = config['peer_indices'][(org-1) * config['fabric_settings']['peer_count'] + peer]
-
-        stdin, stdout, stderr = ssh_clients[peer_index].exec_command(f"docker stop peer{peer}.org{org}.example.com")
-        logger.info(stdout.readlines())
-        logger.info(stderr.readlines())
-
-        # stdin, stdout, stderr = ssh_clients[peer_index].exec_command(f"docker stop couchdb{peer}.org{org}")
-        # logger.info(stdout.readlines())
-        # logger.info(stderr.readlines())
-
-    @staticmethod
-    def start_node(node_handler, org, peer):
-
-        logger = node_handler.logger
-        config = node_handler.config
-        ssh_clients = node_handler.ssh_clients
-        scp_clients = node_handler.scp_clients
-
-        peer_index = config['peer_indices'][(org-1) * config['fabric_settings']['peer_count'] + peer]
-
-        channel = ssh_clients[peer_index].get_transport().open_session()
-
-        channel.exec_command(f"docker start peer{peer}.example.com")
-        # channel.exec_command(f"docker start couchdb{peer}.org{org}")
-
 
 
