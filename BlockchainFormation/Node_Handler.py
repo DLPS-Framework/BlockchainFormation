@@ -33,6 +33,7 @@ from BlockchainFormation.blockchain_specifics.couchdb.Couchdb_Network import *
 from BlockchainFormation.blockchain_specifics.fabric.Fabric_Network import *
 from BlockchainFormation.blockchain_specifics.empty.Empty_Network import *
 from BlockchainFormation.blockchain_specifics.eos.Eos_Network import *
+from BlockchainFormation.blockchain_specifics.ethermint.Ethermint_Network import *
 from BlockchainFormation.blockchain_specifics.geth.Geth_Network import *
 from BlockchainFormation.blockchain_specifics.indy.Indy_Network import *
 from BlockchainFormation.blockchain_specifics.indy_client.Indy_client_Network import *
@@ -40,6 +41,7 @@ from BlockchainFormation.blockchain_specifics.leveldb.Leveldb_Network import *
 from BlockchainFormation.blockchain_specifics.parity.Parity_Network import *
 from BlockchainFormation.blockchain_specifics.quorum.Quorum_Network import *
 from BlockchainFormation.blockchain_specifics.sawtooth.Sawtooth_Network import *
+from BlockchainFormation.blockchain_specifics.tendermint.Tendermint_Network import *
 from BlockchainFormation.blockchain_specifics.tezos.Tezos_Network import *
 
 from BlockchainFormation.utils import utils

@@ -333,6 +333,7 @@ class Quorum_Network:
             channel.exec_command(f"PRIVATE_CONFIG=/data/qdata/tm/tm.ipc geth "
                                  f"--datadir /data/nodes/new-node-1 "
                                  f"--nodiscover "
+                                 f"--allow-insecure-unlock "
                                  f"--istanbul.blockperiod {config['quorum_settings']['istanbul_blockperiod']} "
                                  f"--maxpeers {config['vm_count']} "
                                  f"--syncmode full "
@@ -357,8 +358,9 @@ class Quorum_Network:
                 channel.exec_command(f"PRIVATE_CONFIG=/data/qdata/tm/tm.ipc geth "
                                      f"--datadir /data/nodes/new-node-1 "
                                      f"--nodiscover "
+                                     f"--allow-insecure-unlock "
                                      f"--verbosity 5 "
-                                     f"--networkid 31337 "
+                                     f"--networkid 10 "
                                      f"--raft "
                                      f"--raftblocktime {config['quorum_settings']['raft_blocktime']} "
                                      f"--maxpeers {config['vm_count']} "
@@ -374,8 +376,9 @@ class Quorum_Network:
                 channel.exec_command(f"PRIVATE_CONFIG=/data/qdata/tm/tm.ipc geth "
                                      f"--datadir /data/nodes/new-node-1 "
                                      f"--nodiscover "
+                                     f"--allow-insecure-unlock "
                                      f"--verbosity 5 "
-                                     f"--networkid 31337 "
+                                     f"--networkid 10 "
                                      f"--raft "
                                      f"--raftblocktime {config['quorum_settings']['raft_blocktime']} "
                                      f"--maxpeers {config['vm_count']} "
@@ -406,12 +409,13 @@ class Quorum_Network:
         stdin, stdout, stderr = ssh_clients[node].exec_command("geth --exec eth.accounts attach /data/nodes/new-node-1/geth.ipc")
         out = stdout.readlines()
         sender = out[0].replace("\n", "").replace("[", "").replace("]", "")
+        logger.debug(f"sender: {sender}")
         stdin, stdout, stderr = ssh_clients[node].exec_command("geth --exec " +
                                                                "\'" + f"personal.unlockAccount({sender}, " + '\"' + "user" + '\"' + ", 0)" + "\'" +
                                                                " attach /data/nodes/new-node-1/geth.ipc")
         out = stdout.readlines()
         if out[0].replace("\n", "") != "true":
-            logger.info(f"Something went wrong on unlocking on node {node} on IP {config['ips']}")
+            logger.info(f"Something went wrong on unlocking on node {node} on IP {config['ips'][node]}")
             logger.debug(out)
             logger.debug(f"stderr: {stderr.readlines()}")
 

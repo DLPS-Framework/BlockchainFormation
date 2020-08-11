@@ -18,50 +18,60 @@
   cd /data
   sudo chown -R ubuntu /data
 
-  cd
-
   # Getting updates (and upgrades)
   sudo apt-get update
-  sudo apt-get -y upgrade || echo "Upgrading in quorum_bootstrap failed" >> /home/ubuntu/upgrade_fail2.log
+  sudo apt-get -y upgrade || echo "Upgrading in ethermint_bootstrap failed" >> /home/ubuntu/upgrade_fail2.log
 
   # Setting up go (TODO: check whether go is necessary)
   # echo 'Y' | sudo apt-get install golang-go
   wget -c https://dl.google.com/go/go1.13.8.linux-amd64.tar.gz
-  sudo tar -C /usr/local -xzf go1.13.8.linux-amd64.tar.gz -C /usr/local
+  sudo tar -C /usr/local -xzf go1.13.8.linux-amd64.tar.gz
+  sudo chown -R ubuntu:ubuntu /usr/local
 
-  echo "export GOROOT=\"/usr/local/go\"" >> ~/.profile
-  echo "export GOPATH=\"/usr/local/go/bin\"" >> ~/.profile
-  echo "export PATH=\"\$PATH:\$GOPATH\"" >> ~/.profile
-  echo "export GO111MODULE=on" >> ~/profile
+  echo "export GOROOT=/usr/local/go" >> ~/.profile
+  echo "export GOPATH=/usr/local/go/bin" >> ~/.profile
+  echo "export PATH=$PATH:/usr/local/go:/usr/local/go/bin:/usr/local/go/bin/bin:" >> ~/.profile
+  echo "export GO111MODULE=on" >> ~/.profile
 
-  source ~/.profile
+  . ~/.profile
 
-  sudo chown -R ubuntu:ubuntu /usr/local/go
+  which go
 
-  sudo apt-get install -y build-essential
-  git clone https://github.com/ethereum/go-ethereum
-  cd go-ethereum
-  make geth
-
-  mkdir -p $GOPATH/src/github.com/tendermint
-  cd $GOPATH/src/github.com/tendermint
-  git clone https://github.com/tendermint/tendermint.git
-  cd tendermint
-  make tools
+  sudo apt-get install -y gcc jq make
+  git clone https://github.com/ChainSafe/ethermint.git
+  cd ethermint
   make install
 
-  mv build/tendermint $GOPATH/bin
+  ethermintd -h
+  ethermintcli -h
 
-  tendermint --home ~/.ethermint/tendermint init
-  tendermint --home ~/.ethermint/tendermint node
 
-  mkdir -p $GOPATH/src/github.com/cosmos
-  cd $GOPATH/src/github.com/cosmos
+  # sudo chown -R ubuntu:ubuntu /usr/local/go
 
-  git clone https://github.com/cosmos/ethermint.git
-  cd ethermint
-  make tools
-  make
+  # sudo apt-get install -y build-essential
+  # git clone https://github.com/ethereum/go-ethereum
+  # cd go-ethereum
+  # make geth
+
+  # mkdir -p $GOPATH/src/github.com/tendermint
+  # cd $GOPATH/src/github.com/tendermint
+  # git clone https://github.com/tendermint/tendermint.git
+  # cd tendermint
+  # make tools
+  # make install
+
+  # mv build/tendermint $GOPATH/bin
+
+  # tendermint --home ~/.ethermint/tendermint init
+  # tendermint --home ~/.ethermint/tendermint node
+
+  # mkdir -p $GOPATH/src/github.com/cosmos
+  # cd $GOPATH/src/github.com/cosmos
+
+  # git clone https://github.com/cosmos/ethermint.git
+  # cd ethermint
+  # make tools
+  # make
 
   # ethermint --datadir ~/.ethermint --rpc --rpcaddr=0.0.0.0 ws --wsaddr=0.0.0.0 --rpcapi eth,net,web3,personal,admin
 
