@@ -26,6 +26,7 @@ from scp import SCPClient
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from BlockchainFormation.cost_calculator import AWSCostCalculator
 
+from BlockchainFormation.blockchain_specifics.acapy.Acapy_Network import *
 from BlockchainFormation.blockchain_specifics.besu.Besu_Network import *
 from BlockchainFormation.blockchain_specifics.client.Client_Network import *
 from BlockchainFormation.blockchain_specifics.corda.Corda_Network import *
