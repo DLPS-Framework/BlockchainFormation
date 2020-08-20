@@ -31,6 +31,8 @@ class Quorum_Network:
         ssh_clients = node_handler.ssh_clients
         scp_clients = node_handler.scp_clients
 
+
+        """
         logger.info("Getting quorum logs from the network")
         boo = True
 
@@ -52,6 +54,7 @@ class Quorum_Network:
 
         if boo is True:
             logger.info("All logs successfully stored")
+        """
 
     @staticmethod
     def startup(node_handler):

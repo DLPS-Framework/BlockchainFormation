@@ -115,6 +115,9 @@ class Indy_Network:
 
         logger.info("Indy network is running...")
 
+        logger.info("Getting pool transactions genesis")
+        scp_clients[0].get("/data/indy/my-net/pool_transactions_genesis", f"{config['exp_dir']}")
+
     @staticmethod
     def restart(node_handler):
         """

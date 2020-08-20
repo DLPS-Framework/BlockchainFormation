@@ -396,16 +396,17 @@ class Tezos_Network:
         
         """
 
-        Tezos_Network.test_shielded_transaction(node_handler)
-
+        # Tezos_Network.test_shielded_transaction(node_handler)
+        """
         for node, _ in enumerate(config['priv_ips']):
             for index in range(len(config['priv_ips']), 256):
                 channel = ssh_clients[node].get_transport().open_session()
                 channel.exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][node]} --port 18730 transfer 1000000 from this_node to {config['public_key_hashes'][index]} --fee 0.05 &")
-
         """
-        time.sleep(5)
 
+
+        time.sleep(5)
+        """
         stdin, stdout, stderr = ssh_clients[0].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][0]} --port 18730 get balance for this_node")
         logger.debug(stdout.readlines())
         logger.debug(stderr.readlines())
@@ -414,7 +415,7 @@ class Tezos_Network:
         logger.debug(stdout.readlines())
         logger.debug(stderr.readlines())
         """
-        """
+
         # Waiting until all bakers have forged at least one block
         status_flags = np.zeros(len(ssh_clients), dtype=bool)
 
@@ -443,8 +444,7 @@ class Tezos_Network:
                                 channel.exec_command(f"screen -L -Logfile ~/baker.log -dmS baker ~/tezos/tezos-baker-006-PsCARTHA --addr {config['priv_ips'][index]} --port 18730 run with local node /home/ubuntu/test this_node")
                         except Exception:
                             pass
-                            
-        """
+
         for index, _ in enumerate(config['priv_ips']):
             logger.info(f"Registering node {index}'s bootstrap account as delegate again")
             stdin, stdout, stderr = ssh_clients[index].exec_command(f"~/tezos/tezos-client --addr {config['priv_ips'][index]} --port 18730 register key this_node as delegate")
