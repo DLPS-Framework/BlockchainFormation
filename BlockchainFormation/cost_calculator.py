@@ -52,22 +52,31 @@ class AWSCostCalculator:
         """
 
         self.config = config
-        ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
+
         if "instance_ids" not in self.config or self.config['instance_ids'] == []:
             aws_costs = {}
         else:
-            self.ec2_instances = [ec2.Instance(instance_id) for instance_id in self.config['instance_ids']]
 
-            launch_times = self.config['launch_times']
-
+            launch_times = []
             stop_times = []
-            self.logger.info("Waiting for all instances to reach stopped status")
-            for i in self.ec2_instances:
-                i.wait_until_stopped()
-                stop_time = self._calculate_transition_time(i)
-                stop_times.append(datetime.datetime.strptime(stop_time, '%Y-%m-%d %H:%M:%S %Z'))
 
-            self.logger.info("All instances have now reached stopped status")
+            for region in self.config["aws_region"]:
+                ec2 = self.session.resource('ec2', region_name=region)
+
+                ec2_instances = [ec2.Instance(instance_id) for instance_id in self.config["instance_ids"][region]]
+
+                launch_times = launch_times + self.config['launch_times'][region]
+
+                self.logger.info("Waiting for all instances to reach stopped status")
+                for i in ec2_instances:
+                    i.wait_until_stopped()
+                    stop_time = self._calculate_transition_time(i, region)
+                    stop_times.append(datetime.datetime.strptime(stop_time, '%Y-%m-%d %H:%M:%S %Z'))
+
+                self.logger.info(f"All instances in region {region} have now reached stopped status")
+
+            self.logger.info("     ")
+            self.logger.info("All instances in all regions have now reached stopped status")
             self.logger.info("Launch Times:" + str(launch_times))
             self.logger.info("Stop Times:" + str([x.strftime('%Y-%m-%d %H:%M:%S') for x in stop_times]))
 
@@ -93,8 +102,11 @@ class AWSCostCalculator:
                 'sc1': 0
             }
 
-            ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
-            image = ec2.Image(self.config['image']['image_id'])
+            self.logger.info("Still inaccurate because the costs from the first region are taken everywhere")
+            region = list(self.config["aws_region"].keys())[0]
+            self.logger.info(f"Using region {region}")
+            ec2 = self.session.resource('ec2', region_name=region)
+            image = ec2.Image(self.config['image']['image_ids'][region])
             root_storage_mapping = image.block_device_mappings
 
             self._extract_ebs_storage_from_blockdevicemapping(self.config['storage_settings'])
@@ -105,7 +117,7 @@ class AWSCostCalculator:
 
             # Get current price for a given instance, region and os
             # make operation system not hardcoded
-            instance_price_per_hour = float(self._get_instance_price(self._get_region_name(self.config['aws_region']), self.config['instance_type'], 'Linux'))
+            instance_price_per_hour = float(self._get_instance_price(self._get_region_name(region), self.config['instance_type'], 'Linux'))
 
             # lookup from hard coded list if the api request fails
             if instance_price_per_hour == 0:
@@ -122,7 +134,7 @@ class AWSCostCalculator:
             # source: https://aws.amazon.com/ebs/pricing/?nc1=h_ls
             # get price of used storage
             storage_price_per_hour = sum(
-                [float(self._get_storage_price(self._get_region_name(self.config['aws_region']), volume_type)) * float(volume_size) / 30 / 24 for
+                [float(self._get_storage_price(self._get_region_name(region), volume_type)) * float(volume_size) / 30 / 24 for
                  volume_type, volume_size in self.storage_dict.items()])
 
             self.logger.info("Instance cost per hour: " + str(np.round(instance_price_per_hour, 4)))
@@ -136,6 +148,7 @@ class AWSCostCalculator:
             self.logger.info(f"The total storage  cost of {self.config['vm_count']} {self.storage_dict} storage units running for averagely {np.round(np.mean(time_diff_in_hours), 4)} hours was: {np.round(total_storage_cost_until_stop, 4)} USD.")
             total_cost_until_stop = total_instance_cost_until_stop + total_storage_cost_until_stop
             self.logger.info(f"Total Cost: {np.round(total_cost_until_stop, 4)} USD")
+
 
             aws_costs = {
                 'instance_type': config['instance_type'],
@@ -213,6 +226,7 @@ class AWSCostCalculator:
         try:
             with open(endpoint_file, 'r') as f:
                 data = json.load(f)
+                # self.logger.info(data)
             return data['partitions'][0]['regions'][region_code]['description']
         except IOError:
             return default_region
@@ -223,12 +237,12 @@ class AWSCostCalculator:
             if "Ebs" in device:
                 self.storage_dict[device["Ebs"]["VolumeType"]] += device["Ebs"]["VolumeSize"]
 
-    def _calculate_transition_time(self, instance, new_state="stopped"):
+    def _calculate_transition_time(self, instance, region, new_state="stopped"):
         """Calculate the  stop time of a given VM instance"""
 
         # get stop time for all stopped instances
         # https://stackoverflow.com/questions/41231630/checking-stop-time-of-ec2-instance-with-boto3
-        client = self.session.client('ec2', region_name=self.config['aws_region'])
+        client = self.session.client('ec2', region_name=region)
         rsp = client.describe_instances(InstanceIds=[instance.id])
         if rsp:
             status = rsp['Reservations'][0]['Instances'][0]

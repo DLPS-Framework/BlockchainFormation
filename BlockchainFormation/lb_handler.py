@@ -27,7 +27,7 @@ class LBHandler:
     """Class for handling aws application load balancer
     """
 
-    def __init__(self, config, session):
+    def __init__(self, config, session, region):
         """
         Constructor
         :param config: config containing all info for creating LB
@@ -36,6 +36,7 @@ class LBHandler:
 
         self.config = config
         self.session = session
+        self.region= region
 
         if not self.logger.handlers:
             self.logger = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ class LBHandler:
             ch.setFormatter(formatter)
             self.logger.addHandler(ch)
 
-        self.lb_client = self.session.client('elbv2', region_name=self.config['aws_region'])
+        self.lb_client = self.session.client('elbv2', region_name=self.region)
 
     def creation_routine(self):
         """creates lb, target group and add VMs as targets

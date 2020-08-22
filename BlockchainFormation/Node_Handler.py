@@ -230,55 +230,25 @@ class Node_Handler:
         except Exception as e:
             self.logger.info("AWS by default")
 
-        def search_newest_image(list_of_images):
-            """
-            Search for the newest ubuntu image from a given list
-            :param list_of_images: list with all found images
-            :return:
-            """
-            latest = None
-            for image in list_of_images:
-                if not latest:
-                    latest = image
-                    continue
+        self.logger.info("Checking consistency of the region")
+        if type(self.config["aws_region"]) is dict:
+            count = 0
+            for key in self.config["aws_region"]:
+                count = count + self.config["aws_region"][key]
 
-                if parser.parse(image['CreationDate']) > parser.parse(latest['CreationDate']):
-                    latest = image
+            self.logger.info(f"Different regions; in total there are {count} instances")
+            if count != self.config["vm_count"]:
+                self.logger.info("Inconsistent")
+                raise Exception("Error: Inconsistent number of nodes in the regions")
+            else:
+                self.logger.info("All right")
 
-            return latest
+        else:
+            region = self.config["aws_region"]
+            self.config["aws_region"] = {}
+            self.config["aws_region"][region] = self.config["vm_count"]
 
-        if (self.config['instance_provision'] == 'aws' and self.config['vm_count'] > 0):
-
-            # If no specific image ID is given search for the newest ubuntu 18 image
-            if self.config['image']['image_id'] is None:
-                ec2 = self.session.client('ec2', region_name=self.config['aws_region'])
-
-                # Find the latest official Ubuntu image from Canonical(owner = 099720109477)
-                amis = ec2.describe_images(
-                    Filters=[
-                        {
-                            'Name': 'name',
-                            'Values': [f"{self.config['image']['os']}/images/hvm-ssd/{self.config['image']['os']}-*-{self.config['image']['version']}*-amd64-server-????????"]
-                        },
-                        {
-                            'Name': 'architecture',
-                            'Values': ['x86_64']
-                        },
-                        {
-                            'Name': 'state',
-                            'Values': ['available']
-                        },
-                        {
-                            'Name': 'root-device-type',
-                            'Values': ['ebs']
-                        }
-                    ],
-                    Owners=[
-                        '099720109477',
-                    ]
-                )
-                image = search_newest_image(amis['Images'])
-                self.config['image']['image_id'] = image["ImageId"]
+        self.logger.info(f"New region: {self.config['aws_region']}")
 
         if self.config['blockchain_type'] == "fabric":
             Fabric_Network.check_config(self.config, self.logger)
@@ -293,69 +263,30 @@ class Node_Handler:
 
         elif self.config['blockchain_type'] == "sawtooth":
             Sawtooth_Network.check_config(self.config, self.logger)
+            
+        self.get_image_ids()
 
         if self.config['instance_provision'] == "aws" and self.config["vm_count"] > 0:
 
-            ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
-            image = ec2.Image(self.config['image']['image_id'])
-
-            self.logger.info("Selected Image: " + image.description)
-
-            session = boto3.Session(profile_name=self.config['profile'])
-            ec2 = session.resource('ec2', region_name=self.config['aws_region'])
-            self.ec2_instances = ec2.create_instances(
-                ImageId=self.config['image']['image_id'],
-                MinCount=self.config['vm_count'],
-                MaxCount=self.config['vm_count'],
-                InstanceType=self.config['instance_type'],
-                KeyName=self.config['key_name'],
-                BlockDeviceMappings=self.config['storage_settings'],
-                UserData=self.user_data,
-                TagSpecifications=[
-                    {
-                        'ResourceType': "instance",
-                        'Tags': [
-                            {
-                                'Key': 'Creator',
-                                'Value': self.config['tag_name']
-                            },
-                            {
-                                'Key': 'Name',
-                                'Value': self.config['tag_name']
-                            },
-                        ]
-                    },
-                ],
-                InstanceMarketOptions={
-                    'MarketType': 'spot',
-                    'SpotOptions': {
-                        # 'MaxPrice': 'string',
-                        'SpotInstanceType': 'one-time',  # | 'persistent'
-                        'BlockDurationMinutes': 240,
-                        'InstanceInterruptionBehavior': 'terminate'
-                    }
-
-                } if 'aws_spot_instances' in self.config and self.config['aws_spot_instances'] else {},
-                NetworkInterfaces=[
-                    {
-                        'DeviceIndex': 0,
-                        'SubnetId': self.config['subnet_id'],
-                        'Groups': self.config['security_group_id'],
-                        'AssociatePublicIpAddress': self.config['public_ip']
-                    }]
-            )
+            self.start_instances()
+            
             self.logger.info(f"Initiated the start of {self.config['vm_count']} {self.config['instance_type']} machines.")
             ips = []
             public_ips = []
             vpc_ids = []
             self.logger.info("Waiting until all VMs are up...")
-            for i in self.ec2_instances:
-                i.wait_until_running()
-                i.load()
-                ips.append(i.private_ip_address)
-                vpc_ids.append(i.vpc_id)
-                if self.config['public_ip']:
-                    public_ips.append(i.public_ip_address)
+            self.logger.info(f"{self.ec2_instances}")
+            for region in self.config["aws_region"]:
+                for i in self.ec2_instances[region]:
+                    i.wait_until_running()
+                    i.load()
+                    ips.append(i.private_ip_address)
+                    vpc_ids.append(i.vpc_id)
+                    if self.config['public_ip']:
+                        public_ips.append(i.public_ip_address)
+
+            self.logger.info(f"IPs: {ips}")
+
 
             # add no proxy for all VM IPs
             if self.config['proxy'] is not None:
@@ -371,7 +302,10 @@ class Node_Handler:
                 self.config['pub_ips'] = public_ips
             else:
                 self.config['pub_ips'] = ips
-            self.config['instance_ids'] = [instance.id for instance in self.ec2_instances]
+
+            self.config["instance_ids"] = {}
+            for region in self.config["aws_region"]:
+                self.config['instance_ids'][region] = [instance.id for instance in self.ec2_instances[region]]
 
             self.logger.info(f"You can now access machines via: ssh -i \"path to {self.config['key_name']} key\" ubuntu@{self.config['ips']} (if user is ubuntu) ")
             self.logger.info(f"e.g. ssh -i {self.config['priv_key_path']} ubuntu@{self.config['ips'][0]}")
@@ -379,23 +313,27 @@ class Node_Handler:
             # Give launched instances tag with time/type of experiment/number of node
             ts = time.time()
             st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H-%M-%S')
-            for index, i in enumerate(self.ec2_instances):
-                exp_tag = f"exp_{st}_{self.config['blockchain_type']}_Node{index}"
-                ec2.create_tags(Resources=[
-                    i.id,
-                ],
-                    Tags=[
-                        {
-                            'Key': 'exp_tag',
-                            'Value': exp_tag
-                        },
-                    ])
+            for region in self.config["aws_region"]:
+                ec2 = self.session.resource('ec2', region_name=region)
+                for index, i in enumerate(self.ec2_instances[region]):
+                    exp_tag = f"exp_{st}_{self.config['blockchain_type']}_Node{index}"
+                    ec2.create_tags(Resources=[
+                        i.id,
+                    ],
+                        Tags=[
+                            {
+                                'Key': 'exp_tag',
+                                'Value': exp_tag
+                            },
+                        ])
 
-            self.launch_times = []
-            for i in self.ec2_instances:
-                # self.logger.info("Launch Time: " + str(i.launch_time))
-                # get launch time
-                self.launch_times.append(i.launch_time.replace(tzinfo=None))
+            self.launch_times = {}
+            for region in self.config["aws_region"]:
+                self.launch_times[region] = []
+                for i in self.ec2_instances[region]:
+                    # self.logger.info("Launch Time: " + str(i.launch_time))
+                    # get launch time
+                    self.launch_times[region].append(i.launch_time.replace(tzinfo=None))
 
             # create experiment directory structure
             self.config['launch_times'] = self.launch_times
@@ -496,7 +434,7 @@ class Node_Handler:
                 # Load Balancer
                 if self.config['load_balancer_settings']['add_loadbalancer']:
                     self.logger.info("Load Balancer option was chosen, starting the creation routine now")
-                    lb_handler = LBHandler(self.config, self.session)
+                    lb_handler = LBHandler(self.config, self.session, region)
                     lb_handler.creation_routine()
 
             self.logger.info(
@@ -543,33 +481,40 @@ class Node_Handler:
             if self.config['proxy'] is not None:
                 os.environ["NO_PROXY"] = f"{self.config['proxy']['no_proxy']},{','.join(str(ip) for ip in self.config['ips'])}"
 
-            ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
-            try:
-                ec2_instances = ec2.instances.filter(InstanceIds=self.config['instance_ids'])
-            except:
-                ec2_instances = []
-            if any(instance.state['Name'] == "stopped" for instance in ec2_instances):
-                self.logger.info(f"At least on of the instances was already stopped, hence no logs can be pulled from the machines, terminating them in the next step")
+            self.ec2_instances = {}
+            for region in self.config["aws_region"]:
+                ec2 = self.session.resource('ec2', region_name=region)
+                try:
+                    self.ec2_instances[region] = ec2.instances.filter(InstanceIds=self.config['instance_ids'][region])
+                    self.logger.info(f"There are {sum(1 for _ in self.ec2_instances[region])} instances in region {region}")
+                except Exception as e:
+                    self.logger.exception(e)
+                    self.ec2_instances[region] = []
 
-        self._run_specific_shutdown()
+                if any(instance.state['Name'] == "stopped" for instance in self.ec2_instances[region]):
+                    self.logger.info(f"At least on of the instances was already stopped, hence no logs can be pulled from the machines, terminating them in the next step")
+
+                    self._run_specific_shutdown()
 
         if self.config['instance_provision'] == "aws":
 
-            for instance in ec2_instances:
-                instance.stop()
+            for region in self.config["aws_region"]:
+                for instance in self.ec2_instances[region]:
+                    instance.stop()
 
-            if 'load_balancer_settings' in self.config and 'add_loadbalancer' in self.config['load_balancer_settings']:
-                # Load Balancer
-                if self.config['load_balancer_settings']['add_loadbalancer']:
-                    self.logger.info("Starting Load Balancer termination now")
-                    lb_handler = LBHandler(self.config, self.session)
-                    lb_handler.shutdown_lb()
+                if 'load_balancer_settings' in self.config and 'add_loadbalancer' in self.config['load_balancer_settings']:
+                    # Load Balancer
+                    if self.config['load_balancer_settings']['add_loadbalancer']:
+                        self.logger.info("Starting Load Balancer termination now")
+                        lb_handler = LBHandler(self.config, self.session, region)
+                        lb_handler.shutdown_lb()
 
             # calculate aws costs
             self.aws_calculator.calculate_uptime_costs(self.config)
 
-            for instance in ec2_instances:
-                instance.terminate()
+            for region in self.config["aws_region"]:
+                for instance in self.ec2_instances[region]:
+                    instance.terminate()
 
         # close ssh and scp channels
         self.close_ssh_scp_clients()
@@ -733,3 +678,115 @@ class Node_Handler:
     @staticmethod
     def progress(filename, size, sent):
         sys.stdout.write("%s\'s progress: %.2f%%   \r" % (filename, float(sent) / float(size) * 100))
+
+    def get_image_ids(self):
+        
+        def search_newest_image(list_of_images):
+            """
+            Search for the newest ubuntu image from a given list
+            :param list_of_images: list with all found images
+            :return:
+            """
+            latest = None
+            for image in list_of_images:
+                if not latest:
+                    latest = image
+                    continue
+
+                if parser.parse(image['CreationDate']) > parser.parse(latest['CreationDate']):
+                    latest = image
+
+            return latest
+
+        if (self.config['instance_provision'] == 'aws' and self.config['vm_count'] > 0):
+
+            self.config['image']['image_ids'] = {}
+            for region in self.config["aws_region"]:
+
+                # If no specific image ID is given search for the newest ubuntu 18 image
+                if self.config['image']['image_id'] is None:
+                    ec2 = self.session.client('ec2', region_name=region)
+
+                    # Find the latest official Ubuntu image from Canonical(owner = 099720109477)
+                    amis = ec2.describe_images(
+                        Filters=[
+                            {
+                                'Name': 'name',
+                                'Values': [f"{self.config['image']['os']}/images/hvm-ssd/{self.config['image']['os']}-*-{self.config['image']['version']}*-amd64-server-????????"]
+                            },
+                            {
+                                'Name': 'architecture',
+                                'Values': ['x86_64']
+                            },
+                            {
+                                'Name': 'state',
+                                'Values': ['available']
+                            },
+                            {
+                                'Name': 'root-device-type',
+                                'Values': ['ebs']
+                            }
+                        ],
+                        Owners=[
+                            '099720109477',
+                        ]
+                    )
+                    image = search_newest_image(amis['Images'])
+                    self.config['image']['image_ids'][region] = image["ImageId"]
+
+            self.logger.info(f"Image IDs: {self.config['image']['image_ids']}")
+            
+    def start_instances(self):
+
+        self.ec2_instances = {}
+
+        for region in self.config["aws_region"]:
+
+            ec2 = self.session.resource('ec2', region_name=region)
+            image = ec2.Image(self.config['image']['image_ids'][region])
+
+            self.logger.info(f"Selected Image for region {region}: " + image.description)
+
+            session = boto3.Session(profile_name=self.config['profile'])
+            ec2 = session.resource('ec2', region_name=region)
+            self.ec2_instances[region] = ec2.create_instances(
+                ImageId=self.config['image']['image_ids'][region],
+                MinCount=self.config['aws_region'][region],
+                MaxCount=self.config['aws_region'][region],
+                InstanceType=self.config['instance_type'],
+                KeyName=self.config['key_name'],
+                BlockDeviceMappings=self.config['storage_settings'],
+                UserData=self.user_data,
+                TagSpecifications=[
+                    {
+                        'ResourceType': "instance",
+                        'Tags': [
+                            {
+                                'Key': 'Creator',
+                                'Value': self.config['tag_name']
+                            },
+                            {
+                                'Key': 'Name',
+                                'Value': self.config['tag_name']
+                            },
+                        ]
+                    },
+                ],
+                InstanceMarketOptions={
+                    'MarketType': 'spot',
+                    'SpotOptions': {
+                        # 'MaxPrice': 'string',
+                        'SpotInstanceType': 'one-time',  # | 'persistent'
+                        'BlockDurationMinutes': 240,
+                        'InstanceInterruptionBehavior': 'terminate'
+                    }
+
+                } if 'aws_spot_instances' in self.config and self.config['aws_spot_instances'] else {},
+                NetworkInterfaces=[
+                    {
+                        'DeviceIndex': 0,
+                        'SubnetId': self.config['subnet_id'][region],
+                        'Groups': self.config['security_group_id'][region],
+                        'AssociatePublicIpAddress': self.config['public_ip']
+                    }]
+            )

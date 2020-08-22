@@ -115,6 +115,8 @@ if __name__ == '__main__':
             if yes_or_no("Do you want to shut down the whole network?"):
                 node_handler.run_general_shutdown()
 
+        node_handler.run_general_shutdown()
+
     elif namespace.goal == 'termination':
         config = ArgParser.load_config(vars(namespace))
         node_handler = Node_Handler(config)
