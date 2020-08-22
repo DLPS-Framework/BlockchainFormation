@@ -18,7 +18,7 @@
   sudo apt upgrade || sudo apt upgrade || echo "Upgrading in client_bootstrap failed" >> /home/ubuntu/upgrade_fail2.log
 
   sudo apt-get install -y make || sudo apt-get install -y make
-  sudo apt install -y g++ || sudo apt install -y g++
+  sudo apt install -y g++ || sudo apt install -y g++ jq
   sudo apt install -y python2.7 python-pip || sudo apt install -y python2.7 python-pip
 
   wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash || wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash || wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash

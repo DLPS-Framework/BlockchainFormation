@@ -53,99 +53,102 @@ class AWSCostCalculator:
 
         self.config = config
         ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
-        self.ec2_instances = [ec2.Instance(instance_id) for instance_id in self.config['instance_ids']]
-
-        launch_times = self.config['launch_times']
-
-        stop_times = []
-        self.logger.info("Waiting for all instances to reach stopped status")
-        for i in self.ec2_instances:
-            i.wait_until_stopped()
-            stop_time = self._calculate_transition_time(i)
-            stop_times.append(datetime.datetime.strptime(stop_time, '%Y-%m-%d %H:%M:%S %Z'))
-
-        self.logger.info("All instances have now reached stopped status")
-        self.logger.info("Launch Times:" + str(launch_times))
-        self.logger.info("Stop Times:" + str([x.strftime('%Y-%m-%d %H:%M:%S') for x in stop_times]))
-
-        if type(launch_times[0]) is str:
-            time_differences = np.subtract(stop_times, [
-                datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S') for x in launch_times])
+        if "instance_ids" not in self.config or self.config['instance_ids'] == []:
+            aws_costs = {}
         else:
-            time_differences = np.subtract(stop_times, [datetime.datetime.strptime(x.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S') for x in launch_times])
+            self.ec2_instances = [ec2.Instance(instance_id) for instance_id in self.config['instance_ids']]
 
-        def diff_in_hours(x):
-            return float(x.total_seconds() / 3600)
+            launch_times = self.config['launch_times']
 
-        time_diff_in_hours = list(map(diff_in_hours, time_differences))
+            stop_times = []
+            self.logger.info("Waiting for all instances to reach stopped status")
+            for i in self.ec2_instances:
+                i.wait_until_stopped()
+                stop_time = self._calculate_transition_time(i)
+                stop_times.append(datetime.datetime.strptime(stop_time, '%Y-%m-%d %H:%M:%S %Z'))
 
-        # self.logger.info(time_diff_in_hours)
+            self.logger.info("All instances have now reached stopped status")
+            self.logger.info("Launch Times:" + str(launch_times))
+            self.logger.info("Stop Times:" + str([x.strftime('%Y-%m-%d %H:%M:%S') for x in stop_times]))
 
-        # dict for all storage 
-        self.storage_dict = {
-            'standard': 0,
-            'gp2': 0,
-            'io1': 0,
-            'st1': 0,
-            'sc1': 0
-        }
+            if type(launch_times[0]) is str:
+                time_differences = np.subtract(stop_times, [
+                    datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S') for x in launch_times])
+            else:
+                time_differences = np.subtract(stop_times, [datetime.datetime.strptime(x.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S') for x in launch_times])
 
-        ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
-        image = ec2.Image(self.config['image']['image_id'])
-        root_storage_mapping = image.block_device_mappings
+            def diff_in_hours(x):
+                return float(x.total_seconds() / 3600)
 
-        self._extract_ebs_storage_from_blockdevicemapping(self.config['storage_settings'])
-        self._extract_ebs_storage_from_blockdevicemapping(root_storage_mapping)
-        # self.logger.info(self.storage_dict)
-        # Use AWS Pricing API at eu-central-1
-        # 'eu-central-1' not working -> Pricing the same ? 
+            time_diff_in_hours = list(map(diff_in_hours, time_differences))
 
-        # Get current price for a given instance, region and os
-        # make operation system not hardcoded
-        instance_price_per_hour = float(self._get_instance_price(self._get_region_name(self.config['aws_region']), self.config['instance_type'], 'Linux'))
+            # self.logger.info(time_diff_in_hours)
 
-        # lookup from hard coded list if the api request fails
-        if instance_price_per_hour == 0:
-            if self.config['instance_type'] == "m5.large":
-                instance_price_per_hour = 0.096
-            elif self.config['instance_type'] == "m5.xlarge":
-                instance_price_per_hour = 0.192
-            elif self.config['instance_type'] == "m5.2xlarge":
-                instance_price_per_hour = 0.384
+            # dict for all storage
+            self.storage_dict = {
+                'standard': 0,
+                'gp2': 0,
+                'io1': 0,
+                'st1': 0,
+                'sc1': 0
+            }
 
-        # For example, let's say that you provision a 2000 GB volume for 12 hours (43,200 seconds) in a 30 day month.
-        # In a region that charges $0.10 per GB-month, you would be charged $3.33 for the volume ($0.10 per GB-month
-        # * 2000 GB * 43,200 seconds / (86,400 seconds/day * 30 day-month)).
-        # source: https://aws.amazon.com/ebs/pricing/?nc1=h_ls
-        # get price of used storage
-        storage_price_per_hour = sum(
-            [float(self._get_storage_price(self._get_region_name(self.config['aws_region']), volume_type)) * float(volume_size) / 30 / 24 for
-             volume_type, volume_size in self.storage_dict.items()])
+            ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
+            image = ec2.Image(self.config['image']['image_id'])
+            root_storage_mapping = image.block_device_mappings
 
-        self.logger.info("Instance cost per hour: " + str(np.round(instance_price_per_hour, 4)))
-        self.logger.info("Storage cost per hour: " + str(np.round(storage_price_per_hour, 4)))
+            self._extract_ebs_storage_from_blockdevicemapping(self.config['storage_settings'])
+            self._extract_ebs_storage_from_blockdevicemapping(root_storage_mapping)
+            # self.logger.info(self.storage_dict)
+            # Use AWS Pricing API at eu-central-1
+            # 'eu-central-1' not working -> Pricing the same ?
 
-        # calculate price for each instance and then sum up the prices of all instances up to once total price
-        total_instance_cost_until_stop = sum(map(lambda x: x * instance_price_per_hour, time_diff_in_hours))
-        total_storage_cost_until_stop = sum(map(lambda x: x * storage_price_per_hour, time_diff_in_hours))
+            # Get current price for a given instance, region and os
+            # make operation system not hardcoded
+            instance_price_per_hour = float(self._get_instance_price(self._get_region_name(self.config['aws_region']), self.config['instance_type'], 'Linux'))
 
-        self.logger.info(f"The total instance cost of {self.config['vm_count']} {self.config['instance_type']} instances running for averagely {np.round(np.mean(time_diff_in_hours), 4)} hours was: {np.round(total_instance_cost_until_stop, 4)} USD.")
-        self.logger.info(f"The total storage  cost of {self.config['vm_count']} {self.storage_dict} storage units running for averagely {np.round(np.mean(time_diff_in_hours), 4)} hours was: {np.round(total_storage_cost_until_stop, 4)} USD.")
-        total_cost_until_stop = total_instance_cost_until_stop + total_storage_cost_until_stop
-        self.logger.info(f"Total Cost: {np.round(total_cost_until_stop, 4)} USD")
+            # lookup from hard coded list if the api request fails
+            if instance_price_per_hour == 0:
+                if self.config['instance_type'] == "m5.large":
+                    instance_price_per_hour = 0.096
+                elif self.config['instance_type'] == "m5.xlarge":
+                    instance_price_per_hour = 0.192
+                elif self.config['instance_type'] == "m5.2xlarge":
+                    instance_price_per_hour = 0.384
 
-        aws_costs = {
-            'instance_type': config['instance_type'],
-            'vm_count': config['vm_count'],
-            'storage_in_GB': self.storage_dict,
-            'launch_times': launch_times,
-            'stop_times': stop_times,
-            'instance_price_per_hour': instance_price_per_hour,
-            'storage_price_per_hour': storage_price_per_hour,
-            'total_cost_until_stop': total_cost_until_stop,
-            'currency': 'USD'
+            # For example, let's say that you provision a 2000 GB volume for 12 hours (43,200 seconds) in a 30 day month.
+            # In a region that charges $0.10 per GB-month, you would be charged $3.33 for the volume ($0.10 per GB-month
+            # * 2000 GB * 43,200 seconds / (86,400 seconds/day * 30 day-month)).
+            # source: https://aws.amazon.com/ebs/pricing/?nc1=h_ls
+            # get price of used storage
+            storage_price_per_hour = sum(
+                [float(self._get_storage_price(self._get_region_name(self.config['aws_region']), volume_type)) * float(volume_size) / 30 / 24 for
+                 volume_type, volume_size in self.storage_dict.items()])
 
-        }
+            self.logger.info("Instance cost per hour: " + str(np.round(instance_price_per_hour, 4)))
+            self.logger.info("Storage cost per hour: " + str(np.round(storage_price_per_hour, 4)))
+
+            # calculate price for each instance and then sum up the prices of all instances up to once total price
+            total_instance_cost_until_stop = sum(map(lambda x: x * instance_price_per_hour, time_diff_in_hours))
+            total_storage_cost_until_stop = sum(map(lambda x: x * storage_price_per_hour, time_diff_in_hours))
+
+            self.logger.info(f"The total instance cost of {self.config['vm_count']} {self.config['instance_type']} instances running for averagely {np.round(np.mean(time_diff_in_hours), 4)} hours was: {np.round(total_instance_cost_until_stop, 4)} USD.")
+            self.logger.info(f"The total storage  cost of {self.config['vm_count']} {self.storage_dict} storage units running for averagely {np.round(np.mean(time_diff_in_hours), 4)} hours was: {np.round(total_storage_cost_until_stop, 4)} USD.")
+            total_cost_until_stop = total_instance_cost_until_stop + total_storage_cost_until_stop
+            self.logger.info(f"Total Cost: {np.round(total_cost_until_stop, 4)} USD")
+
+            aws_costs = {
+                'instance_type': config['instance_type'],
+                'vm_count': config['vm_count'],
+                'storage_in_GB': self.storage_dict,
+                'launch_times': launch_times,
+                'stop_times': stop_times,
+                'instance_price_per_hour': instance_price_per_hour,
+                'storage_price_per_hour': storage_price_per_hour,
+                'total_cost_until_stop': total_cost_until_stop,
+                'currency': 'USD'
+
+            }
 
         with open(f"{self.config['exp_dir']}/aws_costs.json", 'w') as outfile:
             json.dump(aws_costs, outfile, default=datetimeconverter)

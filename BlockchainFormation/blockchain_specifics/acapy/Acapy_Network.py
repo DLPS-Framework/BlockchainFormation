@@ -14,6 +14,7 @@
 
 
 import hashlib
+import json
 
 from BlockchainFormation.utils.utils import *
 
@@ -54,7 +55,11 @@ class Acapy_Network:
             scp_clients[index].put("/media/sf_VM_Benchmarking/aries-cloudagent", "/home/ubuntu", recursive=True)
             scp_clients[index].put("/media/sf_VM_Benchmarking/aries-test-framework", "/home/ubuntu", recursive=True)
 
-            stdin, stdout, stderr = ssh_clients[index].exec_command("cd /home/ubuntu/aries-cloudagent && sudo pip3 install . && sudo pip3 install -r requirements.dev.txt")
+            stdin, stdout, stderr = ssh_clients[index].exec_command("cd /home/ubuntu/aries-cloudagent "
+                                                                    "&& python3 -m pip install . >> /home/ubuntu/aries-cloudagent/install.log 2>&1 "
+                                                                    "&& python3 -m pip install -r requirements.txt >> /home/ubuntu/aries-cloudagent/install.log 2>&1" 
+                                                                    "&& python3 -m pip install -r requirements.dev.txt >> /home/ubuntu/aries-cloudagent/install.log 2>&1"
+                                                                    "&& python3 -m pip install -r requirements.indy.txt >> /home/ubuntu/aries-cloudagent/install.log 2>&1")
             logger.info(stdout.readlines())
             logger.info(stderr.readlines())
 
@@ -81,3 +86,46 @@ class Acapy_Network:
 
         Acapy_Network.shutdown(config, logger, ssh_clients, scp_clients)
         Acapy_Network.startup(config, logger, ssh_clients, scp_clients)
+
+    @staticmethod
+    def attach_to_blockchain_conf(node_handler):
+        """
+        Attach client settings to another config
+        :param config:
+        :param logger:
+        :return:
+        """
+
+        config = node_handler.config
+        logger = node_handler.logger
+
+        try:
+            with open(config["client_settings"]["target_network_conf"]) as json_file:
+                network_config_file = json.load(json_file)
+        except Exception as e:
+            logger.exception(e)
+            logger.error("ERROR: Problem loading the given config file")
+
+        network_config_file["client settings"] = {
+
+            "ips": config["ips"],
+            "exp_dir": config["exp_dir"]
+
+        }
+
+        try:
+            network_config_file['launch_times'] = config['launch_times'],
+            network_config_file['vpc_ids'] = config['vpc_ids']
+            network_config_file['instance_ids'] = config['instance_ids']
+
+        except Exception as e:
+            logger.info("No vpc_ids and instance_ids available")
+
+        logger.info("Attaching client config to parent network config now")
+        logger.info(f"Target parent network: {config['client_settings']['target_network_conf']}")
+        if config['public_ip']:
+            network_config_file["client settings"]['public_ips'] = 'public_ips'
+
+        # write network config back
+        with open(f"{config['client_settings']['target_network_conf']}", 'w') as outfile:
+            json.dump(network_config_file, outfile, default=datetimeconverter, indent=4)

@@ -44,6 +44,7 @@ from BlockchainFormation.blockchain_specifics.quorum.Quorum_Network import *
 from BlockchainFormation.blockchain_specifics.sawtooth.Sawtooth_Network import *
 from BlockchainFormation.blockchain_specifics.tendermint.Tendermint_Network import *
 from BlockchainFormation.blockchain_specifics.tezos.Tezos_Network import *
+from BlockchainFormation.blockchain_specifics.vendia.Vendia_Network import *
 
 from BlockchainFormation.utils import utils
 
@@ -246,7 +247,7 @@ class Node_Handler:
 
             return latest
 
-        if self.config['instance_provision'] == 'aws':
+        if (self.config['instance_provision'] == 'aws' and self.config['vm_count'] > 0):
 
             # If no specific image ID is given search for the newest ubuntu 18 image
             if self.config['image']['image_id'] is None:
@@ -293,7 +294,7 @@ class Node_Handler:
         elif self.config['blockchain_type'] == "sawtooth":
             Sawtooth_Network.check_config(self.config, self.logger)
 
-        if self.config['instance_provision'] == "aws":
+        if self.config['instance_provision'] == "aws" and self.config["vm_count"] > 0:
 
             ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
             image = ec2.Image(self.config['image']['image_id'])
@@ -399,7 +400,7 @@ class Node_Handler:
             # create experiment directory structure
             self.config['launch_times'] = self.launch_times
 
-        elif self.config['instance_provision'] == "own":
+        elif (self.config['instance_provision'] == "own" and self.config['vm_count'] > 0):
 
             self.config['vm_count'] = len(self.config['pub_ips'])
             if self.config['vm_count'] == len(self.config['pub_ips']) and self.config['vm_count'] == len(self.config['priv_ips']) and self.config['vm_count'] == len(self.config['ips']):
@@ -427,6 +428,15 @@ class Node_Handler:
             else:
                 raise Exception("Inconsistent lengths of the ip fields compared to vm_count")
 
+        elif self.config["vm_count"] == 0:
+            self.config["ips"] = []
+            self.config["pub_ips"] = []
+            self.config["priv_ips"] = []
+
+        else:
+            self.logger.info("Neither AWS nor own IPs nor 0 nodes deployed")
+            raise Exception("Invalid configuration")
+
         ts = time.time()
         st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H-%M-%S')
         self.config['exp_dir'] = f"{self.config['exp_dir']}/experiments/exp_{st}_{self.config['blockchain_type']}"
@@ -445,8 +455,9 @@ class Node_Handler:
         if self.config['instance_provision'] is not "none":
             # wait couple minutes until VMs are up
             # first connect ssh clients, then scp client
-            self.logger.info("Waiting 60 seconds before creating ssh connection to VMs")
-            time.sleep(60)
+            if self.config['vm_count'] > 0:
+                self.logger.info("Waiting 60 seconds before creating ssh connection to VMs")
+                time.sleep(60)
             self.create_ssh_scp_clients()
 
         self.logger.info("Waiting for all VMs to finish the userData setup...")
@@ -533,7 +544,10 @@ class Node_Handler:
                 os.environ["NO_PROXY"] = f"{self.config['proxy']['no_proxy']},{','.join(str(ip) for ip in self.config['ips'])}"
 
             ec2 = self.session.resource('ec2', region_name=self.config['aws_region'])
-            ec2_instances = ec2.instances.filter(InstanceIds=self.config['instance_ids'])
+            try:
+                ec2_instances = ec2.instances.filter(InstanceIds=self.config['instance_ids'])
+            except:
+                ec2_instances = []
             if any(instance.state['Name'] == "stopped" for instance in ec2_instances):
                 self.logger.info(f"At least on of the instances was already stopped, hence no logs can be pulled from the machines, terminating them in the next step")
 
@@ -580,6 +594,7 @@ class Node_Handler:
         :return:
         """
         self.config['client_settings']['target_network_conf'] = dir_name
+        print(f"Dir_name in set_target_network_conf: " + dir_name)
 
         with open(f"{self.config['exp_dir']}/config.json", 'w') as outfile:
             json.dump(self.config, outfile, default=datetimeconverter, indent=4)
