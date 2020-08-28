@@ -215,49 +215,53 @@ class Fabric_Network:
         # Creating docker swarm
         logger.info("Preparing & starting docker swarm")
 
-        stdin, stdout, stderr = ssh_clients[0].exec_command("sudo docker swarm init")
+        stdin, stdout, stderr = ssh_clients[0].exec_command(f"sudo docker swarm init --advertise-addr {config['priv_ips'][0]}")
         out = stdout.readlines()
-        # for index, _ in enumerate(out):
-        #     logger.debug(out[index].replace("\n", ""))
+        for index, _ in enumerate(out):
+            logger.debug(out[index].replace("\n", ""))
 
         # logger.debug("".join(stderr.readlines()))
 
         stdin, stdout, stderr = ssh_clients[0].exec_command("sudo docker swarm join-token manager")
         out = stdout.readlines()
-        # logger.debug(out)
-        # logger.debug("".join(stderr.readlines()))
+        logger.debug(out)
+        logger.debug("".join(stderr.readlines()))
         join_command = out[2].replace("    ", "").replace("\n", "")
 
         for index, _ in enumerate(config['priv_ips']):
 
             if index != 0:
-                stdin, stdout, stderr = ssh_clients[index].exec_command("sudo " + join_command)
+                stdin, stdout, stderr = ssh_clients[index].exec_command("sudo " + join_command + f" --advertise-addr {config['priv_ips'][index]}")
                 out = stdout.readlines()
-                # logger.debug(out)
-                # logger.debug("".join(stderr.readlines()))
+                logger.debug(out)
+                logger.debug("".join(stderr.readlines()))
 
         config['join_command'] = "sudo " + join_command
 
         # Name of the swarm network
         my_net = "my-net"
-        stdin, stdout, stderr = ssh_clients[0].exec_command(f"sudo docker network create --subnet 10.10.0.0/16 --attachable --driver overlay {my_net}")
+        # stdin, stdout, stderr = ssh_clients[0].exec_command(f"sudo docker network create --subnet 10.10.0.0/16 --attachable --driver overlay {my_net}")
+        stdin, stdout, stderr = ssh_clients[0].exec_command(
+            f"sudo docker network create --attachable --driver overlay {my_net}")
         out = stdout.readlines()
-        # logger.debug(out)
-        # logger.debug("".join(stderr.readlines()))
+        logger.debug(out)
+        logger.debug("".join(stderr.readlines()))
         network = out[0].replace("\n", "")
 
         logger.info("Testing whether setup was successful")
-        stdin, stdout, stderr = ssh_clients[0].exec_command("sudo docker node ls")
-        out = stdout.readlines()
-        for index, _ in enumerate(out):
-            logger.debug(out[index].replace("\n", ""))
+        for index, _ in enumerate(config['priv_ips']):
+            stdin, stdout, stderr = ssh_clients[index].exec_command("sudo docker node ls")
+            out = stdout.readlines()
+            # for index2, _ in enumerate(out):
+                # logger.debug(out[index2].replace("\n", ""))
 
-        logger.debug("".join(stderr.readlines()))
-        if len(out) == len(config['priv_ips']) + 1:
-            logger.info("Docker swarm started successfully")
-        else:
-            logger.info("Docker swarm setup was not successful")
-            sys.exit("Fatal error when performing docker swarm setup")
+            # logger.debug("".join(stderr.readlines()))
+            if len(out) == len(config['priv_ips']) + 1:
+                logger.info(f"Docker swarm started successfully on node{index}")
+            else:
+                logger.info("Docker swarm setup was not successful")
+                logger.info(f"Docker swarm setup not successful on {config['pub_ips'][index]}")
+
 
         logger.info(f"Creating crypto-config.yaml and pushing it to {config['ips'][0]}")
         Fabric_Network.write_crypto_config(config, logger)
@@ -1018,15 +1022,15 @@ class Fabric_Network:
 
                 logger.debug(f" - Starting zookeeper{zookeeper} on {config['ips'][index]}")
                 channel = ssh_clients[index].get_transport().open_session()
-                channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /home/ubuntu/zookeeper{zookeeper}.log)")
+                channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --restart on-failure:5" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /home/ubuntu/zookeeper{zookeeper}.log)")
                 stdin, stdout, stderr = ssh_clients[index].exec_command(
-                    f"echo '(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /home/ubuntu/zookeeper{zookeeper}.log)' >> /home/ubuntu/starting_command.log")
+                    f"echo '(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run -it --rm" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /home/ubuntu/zookeeper{zookeeper}.log)' > /home/ubuntu/starting_command.log")
                 stdout.readlines()
                 # logger.debug(stdout.readlines())
                 # logger.debug(stderr.readlines())
 
             # TODO look for log line which is needed for ready zookeepers
-            time.sleep(10)
+            time.sleep(30)
 
             # Starting kafka nodes
             logger.info(f"Starting kafka nodes")
@@ -1059,12 +1063,12 @@ class Fabric_Network:
 
                 logger.debug(f" - Starting kafka{kafka} on {config['ips'][index]}")
                 channel = ssh_clients[index].get_transport().open_session()
-                channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /home/ubuntu/kafka{kafka}.log)")
+                channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --restart on-failure:5" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /home/ubuntu/kafka{kafka}.log)")
                 stdin, stdout, stderr = ssh_clients[index].exec_command(
-                    f"echo '(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /home/ubuntu/kafka{kafka}.log)' >> /home/ubuntu/starting_command.log")
+                    f"echo '(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run -it --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /home/ubuntu/kafka{kafka}.log)' >> /home/ubuntu/starting_command.log")
                 stdout.readlines()
 
-            time.sleep(10)
+            time.sleep(30)
 
         # Starting Certificate Authorities
         """
@@ -1106,7 +1110,7 @@ class Fabric_Network:
             # logger.debug(f" - Starting ca for org{org} on {config['ips'][org - 1]}")
             # channel = ssh_clients[org - 1].get_transport().open_session()
             # channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + f" hyperledger/fabric-ca sh -c 'fabric-ca-server start -b admin:adminpw -d' &> /home/ubuntu/ca.org{org}.log)")
-            # ssh_clients[org - 1].exec_command(f"echo \"docker run -it --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + " hyperledger/fabric-tools /bin/bash\" >> cli.sh")
+            # ssh_clients[org - 1].exec_command(f"echo \"docker run -it --rm" + string_ca_base + string_ca_ca + string_ca_tls + string_ca_v + " hyperledger/fabric-tools /bin/bash\" > cli.sh")
         """
 
         logger.info("Starting orderer nodes")
@@ -1176,13 +1180,13 @@ class Fabric_Network:
             logger.debug(f" - Starting orderer{orderer} on {config['ips'][index]}")
             channel = ssh_clients[index].get_transport().open_session()
 
-            command = "docker run --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer &> /home/ubuntu/orderer{orderer}.log"
+            command = "docker run --restart on-failure:5" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer > /home/ubuntu/orderer{orderer}.log 2>&1"
 
             channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger "
                                  f"&& echo \"{command}\" >> /home/ubuntu/start_orderer.sh "
                                  f"&& sudo chmod 775 /home/ubuntu/start_orderer.sh && bash /home/ubuntu/start_orderer.sh)")
 
-            stdin, stdout, stderr = ssh_clients[index].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + " hyperledger/fabric-tools /bin/bash\" >> /data/cli.sh)")
+            stdin, stdout, stderr = ssh_clients[index].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + " hyperledger/fabric-tools /bin/bash\" > /data/cli.sh)")
             wait_and_log(stdout, stderr)
 
         # starting peers and databases
@@ -1203,8 +1207,13 @@ class Fabric_Network:
 
                     # Starting the CouchDBs
                     logger.debug(f" - Starting database couchdb{peer}.org{org} on {ip_db}")
+
+                    command = f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --restart on-failure:5" + string_database_base + f" hyperledger/fabric-couchdb > /home/ubuntu/couchdb{peer}.org{org}.log 2>&1)"
+
                     channel = ssh_clients[index_db].get_transport().open_session()
-                    channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_database_base + f" hyperledger/fabric-couchdb &> /home/ubuntu/couchdb{peer}.org{org}.log)")
+                    channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger "
+                                         f"&& echo \"{command}\" >> /home/ubuntu/start_couchdb.sh "
+                                         f"&& sudo chmod 775 /home/ubuntu/start_couchdb.sh && bash /home/ubuntu/start_couchdb.sh)")
 
                 # Setting up configuration of peer like with docker compose
                 string_peer_base = ""
@@ -1280,14 +1289,131 @@ class Fabric_Network:
                 # Starting the peers
                 logger.debug(f" - Starting peer{peer}.org{org} on {ip_peer}")
                 channel = ssh_clients[index_peer].get_transport().open_session()
-                channel.exec_command(
-                    f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + f" hyperledger/fabric-peer peer node start &> /home/ubuntu/peer{peer}.org{org}.log)")
-                ssh_clients[index_peer].exec_command(
-                    f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + " hyperledger/fabric-tools /bin/bash\" >> /data/cli.sh)")
+                command = f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --restart on-failure:5" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + f" hyperledger/fabric-peer peer node start > /home/ubuntu/peer{peer}.org{org}.log 2>&1)"
+                ssh_clients[index_peer].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + " hyperledger/fabric-tools /bin/bash\" > /data/cli.sh)")
 
-        # Waiting for a few seconds until all peers and orderers have started
+                channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger "
+                                     f"&& echo \"{command}\" >> /home/ubuntu/start_peer.sh "
+                                     f"&& sudo chmod 775 /home/ubuntu/start_peer.sh && bash /home/ubuntu/start_peer.sh)")
 
-        time.sleep(10)
+        retry = True
+        counter = 0
+        while retry and counter < 10:
+            retry = False
+            counter = counter + 1
+            logger.info(f"Retry no. {counter} - waiting for a minute until all peers and orderers have started")
+            time.sleep(30)
+
+            for org in range(1, config['fabric_settings']['org_count'] + 1):
+                for peer in range(0, config['fabric_settings']['peer_count']):
+                    index_peer = config['peer_indices'][(org - 1) * config['fabric_settings']['peer_count'] + peer]
+
+                    stdin, stdout, stderr = ssh_clients[index_peer].exec_command(f"cat /home/ubuntu/peer{peer}.org{org}.log")
+                    # logger.info(f"Logs from starting peer{peer}.org{org}")
+
+                    try:
+                        out = stdout.readlines()
+                        if out == [] or "Error while dialing dial tcp" in out[-1] or "docker: Error response from daemon" in out[-1] or "error waiting for container" in out[-1] or "See 'docker run --help'" in out[-1]:
+                            logger.info(out[-1])
+                            logger.info("Equals docker --help:")
+                            print("See 'docker run --help'" in out[-1])
+                            if out == []:
+                                pass
+                                # logger.info(out)
+                            else:
+                                pass
+                                # logger.info(out[-1])
+                            logger.info(f"Attempting to remove and restart peer{peer}.org{org}")
+                            retry = True
+                            stdin, stdout, stderr = ssh_clients[index_peer].exec_command(f"docker rm peer{peer}.org{org}.example.com")
+                            stdout.readlines()
+                            stderr.readlines()
+                            # logger.info(stdout.readlines())
+                            # logger.info(stderr.readlines())
+                            channel = ssh_clients[index_peer].get_transport().open_session()
+                            channel.exec_command(f"bash /home/ubuntu/start_peer.sh > /home/ubuntu/peer{peer}.org{org}.log 2>&1")
+                        else:
+                            pass
+                            # logger.info(f"peer{peer}.org{org} has started successfully: Other output")
+                            # logger.info(f"Not doing anything on peer{peer}.org{org}")
+
+                    except Exception:
+                        pass
+                        # logger.info("Invalid byte")
+                        # logger.info(f"Not doing anything on peer{peer}.org{org}")
+                    # logger.info(stderr.readlines())
+
+                    if config['fabric_settings']['database'] == "CouchDB":
+                        index_db = config['db_indices'][(org - 1) * config['fabric_settings']['peer_count'] + peer]
+
+                        stdin, stdout, stderr = ssh_clients[index_db].exec_command(f"cat /home/ubuntu/couchdb{peer}.org{org}.log")
+                        # logger.info(f"Logs from starting couchdb{peer}.org{org}")
+
+                        try:
+                            out = stdout.readlines()
+                            if out == [] or "Error while dialing dial tcp" in out[-1] or "docker: Error response from daemon" in out[-1] or "error waiting for container" in out[-1] or "See 'docker run --help'" in out[-1]:
+                                if out == []:
+                                    pass
+                                    # logger.info(out)
+                                else:
+                                    pass
+                                    # logger.info(out[-1])
+                                logger.info(f"Attempting to restart couchdb{peer}.org{org}")
+                                retry = True
+                                stdin, stdout, stderr = ssh_clients[index_db].exec_command(f"docker rm couchdb{peer}.org{org}")
+                                stdout.readlines()
+                                stderr.readlines()
+                                # logger.info(stdout.readlines())
+                                # logger.info(stderr.readlines())
+                                channel = ssh_clients[index_db].get_transport().open_session()
+                                channel.exec_command(f"bash /home/ubuntu/start_couchdb.sh > couchdb{peer}.org{org}.log 2>&1")
+                            else:
+                                pass
+                                # logger.info(f"couchdb{peer}org{org} has started successfully: Other output")
+                                # logger.info(f"Not doing anything on couchdb{peer}.org{org}")
+
+                        except Exception:
+                                pass
+                            # logger.info("Invalid byte")
+                            # logger.info(f"Not doing anything on couchdb{peer}.org{org}")
+                        # logger.info(stderr.readlines())
+
+
+            for orderer, index in enumerate(config['orderer_indices']):
+                orderer = orderer + 1
+                stdin, stdout, stderr = ssh_clients[index].exec_command(f"cat /home/ubuntu/orderer{orderer}.log")
+                # logger.info(f"Logs from starting orderer{orderer}")
+
+                try:
+                    out = stdout.readlines()
+                    if out == [] or "Error while dialing dial tcp" in out[-1] or "docker: Error response from daemon" in out[-1] or "error waiting for container" in out[-1] or "See 'docker run --help'" in out[-1]:
+                        if out == []:
+                                pass
+                            # logger.info(out)
+                        else:
+                            pass
+                            # logger.info(out[-1])
+                        logger.info(f"Attempting to restart orderer{orderer}")
+                        retry = True
+                        stdin, stdout, stderr = ssh_clients[index].exec_command(f"docker rm orderer{orderer}.example.com")
+                        stdout.readlines()
+                        stderr.readlines()
+                        # logger.info(stdout.readlines())
+                        # logger.info(stderr.readlines())
+                        channel = ssh_clients[index].get_transport().open_session()
+                        channel.exec_command(f"bash /home/ubuntu/start_orderer.sh > orderer{orderer}.log 2>&1")
+                    else:
+                        pass
+                        # logger.info(f"orderer{orderer} has started successfully: Other output")
+                        # logger.info(f"Not doing anything on orderer{orderer}")
+
+                except Exception:
+                    logger.info("Invalid byte")
+                    logger.info(f"Not doing anything on orderer{orderer}")
+                logger.info(stderr.readlines())
+
+        logger.info("Waiting one last time before creating the channel(s)")
+        time.sleep(30)
 
     @staticmethod
     def restart(node_handler):
@@ -1377,16 +1503,22 @@ class Fabric_Network:
 
         stdin, stdout, stderr = ssh_clients[index_source].exec_command(
             f"ssh -o 'StrictHostKeyChecking no' -i /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem ubuntu@{config['priv_ips'][index_target]} 'sudo rm -rf /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts && echo Success'")
-        logger.info(stdout.readlines())
-        logger.info(stderr.readlines())
+        stdout.readlines()
+        stderr.readlines()
+        # logger.info(stdout.readlines())
+        # logger.info(stderr.readlines())
         stdin, stdout, stderr = ssh_clients[index_source].exec_command(
             f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && sudo chmod 600 /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem && echo Success")
-        logger.info(stdout.readlines())
-        logger.info(stderr.readlines())
+        stdout.readlines()
+        stderr.readlines()
+        # logger.info(stdout.readlines())
+        # logger.info(stderr.readlines())
         stdin, stdout, stderr = ssh_clients[index_source].exec_command(
             f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/channel-artifacts ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
-        logger.info(stdout.readlines())
-        logger.info(stderr.readlines())
+        stdout.readlines()
+        stderr.readlines()
+        # logger.info(stdout.readlines())
+        # logger.info(stderr.readlines())
 
         Fabric_Network.push_chaincode_single(config, ssh_clients, scp_clients, index_source, index_target, logger)
         # logger.debug(f"Successfully pushed to index {index_target}")
@@ -1395,8 +1527,10 @@ class Fabric_Network:
     def push_chaincode_single(config, ssh_clients, scp_clients, index_source, index_target, logger):
         stdin, stdout, stderr = ssh_clients[index_source].exec_command(
             f"scp -o 'StrictHostKeyChecking no' -ri /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/crypto-config/key.pem /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/chaincode ubuntu@{config['priv_ips'][index_target]}:/data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo Success")
-        logger.info(stdout.readlines())
-        logger.info(stderr.readlines())
+        stdout.readlines()
+        stderr.readlines()
+        # logger.info(stdout.readlines())
+        # logger.info(stderr.readlines())
 
     @staticmethod
     def upload_chaincode(config, ssh_clients, scp_clients, logger):
@@ -1503,7 +1637,7 @@ class Fabric_Network:
             out = stdout.readlines()
 
             # save the cli command on the last node and save it in exp_dir
-            ssh_clients[index_last_node].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash\" >> /data/cli2.sh)")
+            ssh_clients[index_last_node].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_cli_base + string_cli_core + string_cli_tls + string_cli_v + f" hyperledger/fabric-tools /bin/bash\" > /data/cli2.sh)")
 
             if out[len(out) - 1] == "========= All GOOD, script completed =========== \n":
                 logger.info("")

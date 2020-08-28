@@ -13,6 +13,7 @@
 #  limitations under the License.
 
 import os
+import subprocess
 
 class Vendia_Network:
 
@@ -56,3 +57,15 @@ class Vendia_Network:
         config = node_handler.config
         ssh_clients = node_handler.ssh_clients
         scp_clients = node_handler.scp_clients
+
+
+
+        cdh_call = subprocess.Popen(["cdh get bc-exp"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        output, errors = cdh_call.communicate(input=reply)
+        cdh_call.wait()
+        print(output)
+        print(errors)
+
+        # os.system("cdh get bc-exp")
+
+        reply = str(input("Input YK")).strip()

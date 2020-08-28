@@ -65,7 +65,8 @@ class Indy_client_Network:
         network_config_file["client settings"] = {
 
             "ips": config["ips"],
-            "exp_dir": config["exp_dir"]
+            "exp_dir": config["exp_dir"],
+            "aws_region": config["aws_region"]
 
         }
 

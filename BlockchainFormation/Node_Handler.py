@@ -248,6 +248,21 @@ class Node_Handler:
             self.config["aws_region"] = {}
             self.config["aws_region"][region] = self.config["vm_count"]
 
+
+        if type(self.config["subnet_id"]) is dict:
+            pass
+        else:
+            subnet_id = self.config["subnet_id"]
+            self.config["subnet_id"] = {}
+            self.config["subnet_id"][region] = subnet_id
+
+        if type(self.config["security_group_id"]) is dict:
+            pass
+        else:
+            security_group_id = self.config["security_group_id"]
+            self.config["security_group_id"] = {}
+            self.config["security_group_id"][region] = security_group_id
+
         self.logger.info(f"New region: {self.config['aws_region']}")
 
         if self.config['blockchain_type'] == "fabric":
@@ -271,19 +286,21 @@ class Node_Handler:
             self.start_instances()
             
             self.logger.info(f"Initiated the start of {self.config['vm_count']} {self.config['instance_type']} machines.")
-            ips = []
-            public_ips = []
-            vpc_ids = []
+            ips = [0] * self.config['vm_count']
+            public_ips = [0] * self.config['vm_count']
+            vpc_ids = [0] * self.config['vm_count']
             self.logger.info("Waiting until all VMs are up...")
             self.logger.info(f"{self.ec2_instances}")
-            for region in self.config["aws_region"]:
-                for i in self.ec2_instances[region]:
+            for index1, region in enumerate(self.config["aws_region"]):
+                for index2, i in enumerate(self.ec2_instances[region]):
+                    pos = index1 + index2 * len(self.config["aws_region"].keys())
+                    self.logger.info(pos)
                     i.wait_until_running()
                     i.load()
-                    ips.append(i.private_ip_address)
-                    vpc_ids.append(i.vpc_id)
+                    ips[pos] = i.private_ip_address
+                    vpc_ids[pos] = i.vpc_id
                     if self.config['public_ip']:
-                        public_ips.append(i.public_ip_address)
+                        public_ips[pos] = i.public_ip_address
 
             self.logger.info(f"IPs: {ips}")
 
@@ -296,7 +313,10 @@ class Node_Handler:
             # add instance IPs and IDs to config
             self.config['ips'] = ips
             self.config['vpc_ids'] = vpc_ids
-            self.config['priv_ips'] = ips
+            if len(self.config['aws_region'].keys()) == 1:
+                self.config['priv_ips'] = ips
+            else:
+                self.config['priv_ips'] = public_ips
             if self.config['public_ip']:
                 self.config['ips'] = public_ips
                 self.config['pub_ips'] = public_ips
@@ -560,6 +580,7 @@ class Node_Handler:
             # logger.debug(f"Trying to connect the ssh clients")
             pass
 
+        self.logger.info(self.config['ips'])
         for index, ip in enumerate(self.config['ips']):
             if self.config['public_ip']:
                 # use public ip if exists, else it wont work

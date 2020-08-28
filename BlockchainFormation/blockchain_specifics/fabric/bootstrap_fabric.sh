@@ -43,6 +43,7 @@
   # Cloning hyperledger fabric + docker images
   curl -sSL http://bit.ly/2ysbOFE | sudo bash -s -- substitute_fabric_version substitute_fabric_ca_version substitute_fabric_thirdparty_version
   docker pull hyperledger/fabric-zookeeper
+  # docker pull hyperledger/fabric-couchdb:latest
 
   # Cloning github repository with helping material for Multi-Host-Network
   git clone https://github.com/wahabjawed/Build-Multi-Host-Network-Hyperledger.git

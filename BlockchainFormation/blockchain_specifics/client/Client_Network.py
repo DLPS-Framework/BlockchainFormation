@@ -65,14 +65,18 @@ class Client_Network:
         network_config_file["client settings"] = {
 
             "ips": config["ips"],
-            "exp_dir": config["exp_dir"]
+            "exp_dir": config["exp_dir"],
+            "aws_region": config["aws_region"],
+
 
         }
 
         try:
-            network_config_file['launch_times'] = config['launch_times'],
-            network_config_file['vpc_ids'] = config['vpc_ids']
-            network_config_file['instance_ids'] = config['instance_ids']
+            network_config_file["client settings"]['launch_times'] = config['launch_times'],
+            network_config_file["client settings"]['vpc_ids'] = config['vpc_ids']
+            network_config_file["client settings"]['instance_ids'] = config['instance_ids']
+            network_config_file["client settings"]['ips'] = config["ips"]
+            network_config_file["client settings"]['priv_ips'] = config['priv_ips']
 
         except Exception as e:
             logger.info("No vpc_ids and instance_ids available")
@@ -80,7 +84,7 @@ class Client_Network:
         logger.info("Attaching client config to parent network config now")
         logger.info(f"Target parent network: {config['client_settings']['target_network_conf']}")
         if config['public_ip']:
-            network_config_file["client settings"]['public_ips'] = 'public_ips'
+            network_config_file["client settings"]['pub_ips'] = config["pub_ips"]
 
         # write network config back
         with open(f"{config['client_settings']['target_network_conf']}", 'w') as outfile:
