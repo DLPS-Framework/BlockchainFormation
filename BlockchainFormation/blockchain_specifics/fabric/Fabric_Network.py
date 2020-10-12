@@ -88,6 +88,19 @@ class Fabric_Network:
         ssh_clients = node_handler.ssh_clients
         scp_clients = node_handler.scp_clients
 
+        logger.info("Getting logs from vms")
+
+        for index, ip in enumerate(config['ips']):
+            scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
+
+            try:
+                scp_clients[index].get("/home/ubuntu/*.log", f"{config['exp_dir']}/fabric_logs")
+                logger.info("Logs fetched successfully")
+            except:
+                logger.info(f"No logs available on {ip}")
+
+        logger.info("")
+
 
     @staticmethod
     def startup(node_handler):
@@ -157,7 +170,8 @@ class Fabric_Network:
         config['groups'] = []
         for org in range(0, config['fabric_settings']['org_count']):
 
-            peer_range = range(org * config['fabric_settings']['peer_count'], (org + 1) * (config['fabric_settings']['peer_count']))
+            # peer_range = range(org * config['fabric_settings']['peer_count'], (org + 1) * (config['fabric_settings']['peer_count']))
+            peer_range = list(org + np.array(range(0, config['fabric_settings']['peer_count'])) * config['fabric_settings']['org_count'])
 
             peer_indices = []
             peer_ips = []
@@ -374,18 +388,6 @@ class Fabric_Network:
         # Fabric_Network.stopstart_leader(node_handler)
         # Fabric_Network.find_leader(config, ssh_clients, scp_clients, logger)
 
-        logger.info("Getting logs from vms")
-
-        for index, ip in enumerate(config['ips']):
-            scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
-
-        try:
-            scp_clients[index].get("/home/ubuntu/*.log", f"{config['exp_dir']}/fabric_logs")
-            logger.info("Logs fetched successfully")
-        except:
-            logger.info(f"No logs available on {ip}")
-
-        logger.info("")
 
     @staticmethod
     def write_crypto_config(config, logger):
@@ -1022,7 +1024,7 @@ class Fabric_Network:
 
                 logger.debug(f" - Starting zookeeper{zookeeper} on {config['ips'][index]}")
                 channel = ssh_clients[index].get_transport().open_session()
-                channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --restart on-failure:5" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /home/ubuntu/zookeeper{zookeeper}.log)")
+                channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /home/ubuntu/zookeeper{zookeeper}.log)")
                 stdin, stdout, stderr = ssh_clients[index].exec_command(
                     f"echo '(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run -it --rm" + string_zookeeper_base + string_zookeeper_servers + f" hyperledger/fabric-zookeeper &> /home/ubuntu/zookeeper{zookeeper}.log)' > /home/ubuntu/starting_command.log")
                 stdout.readlines()
@@ -1063,9 +1065,9 @@ class Fabric_Network:
 
                 logger.debug(f" - Starting kafka{kafka} on {config['ips'][index]}")
                 channel = ssh_clients[index].get_transport().open_session()
-                channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --restart on-failure:5" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /home/ubuntu/kafka{kafka}.log)")
+                channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /home/ubuntu/kafka{kafka}.log)")
                 stdin, stdout, stderr = ssh_clients[index].exec_command(
-                    f"echo '(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run -it --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /home/ubuntu/kafka{kafka}.log)' >> /home/ubuntu/starting_command.log")
+                    f"echo '(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run -it --rm" + string_kafka_base + string_kafka_zookeeper + string_kafka_v + f" hyperledger/fabric-kafka &> /home/ubuntu/kafka{kafka}.log)' > /home/ubuntu/starting_command.log")
                 stdout.readlines()
 
             time.sleep(30)
@@ -1180,7 +1182,7 @@ class Fabric_Network:
             logger.debug(f" - Starting orderer{orderer} on {config['ips'][index]}")
             channel = ssh_clients[index].get_transport().open_session()
 
-            command = "docker run --restart on-failure:5" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer > /home/ubuntu/orderer{orderer}.log 2>&1"
+            command = "docker run" + string_orderer_base + string_orderer_kafka + string_orderer_tls + string_orderer_v + f" hyperledger/fabric-orderer orderer > /home/ubuntu/orderer{orderer}.log 2>&1"
 
             channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger "
                                  f"&& echo \"{command}\" >> /home/ubuntu/start_orderer.sh "
@@ -1208,7 +1210,7 @@ class Fabric_Network:
                     # Starting the CouchDBs
                     logger.debug(f" - Starting database couchdb{peer}.org{org} on {ip_db}")
 
-                    command = f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --restart on-failure:5" + string_database_base + f" hyperledger/fabric-couchdb > /home/ubuntu/couchdb{peer}.org{org}.log 2>&1)"
+                    command = f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run" + string_database_base + f" hyperledger/fabric-couchdb > /home/ubuntu/couchdb{peer}.org{org}.log 2>&1)"
 
                     channel = ssh_clients[index_db].get_transport().open_session()
                     channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger "
@@ -1289,7 +1291,7 @@ class Fabric_Network:
                 # Starting the peers
                 logger.debug(f" - Starting peer{peer}.org{org} on {ip_peer}")
                 channel = ssh_clients[index_peer].get_transport().open_session()
-                command = f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run --restart on-failure:5" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + f" hyperledger/fabric-peer peer node start > /home/ubuntu/peer{peer}.org{org}.log 2>&1)"
+                command = f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && docker run" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + f" hyperledger/fabric-peer peer node start > /home/ubuntu/peer{peer}.org{org}.log 2>&1)"
                 ssh_clients[index_peer].exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger && echo \"docker run -it --rm" + string_peer_base + string_peer_database + string_peer_core + string_peer_tls + string_peer_v + " hyperledger/fabric-tools /bin/bash\" > /data/cli.sh)")
 
                 channel.exec_command(f"(cd /data/fabric-samples/Build-Multi-Host-Network-Hyperledger "
@@ -1298,7 +1300,20 @@ class Fabric_Network:
 
         retry = True
         counter = 0
-        while retry and counter < 10:
+        while retry and counter < 20:
+            """
+            if counter == 10:
+                for index, _ in enumerate(config['ips']):
+                    ssh_clients[index].exec_command("sudo reboot")
+
+                logger.info("Waiting till all machines have rebooted")
+                time.sleep(10)
+
+                status_flags = wait_till_done(config, ssh_clients, config['ips'], 10 * 60, 10, "/var/log/user_data_success.log", False, 10 * 60, logger)
+                if False in status_flags:
+                        raise Exception(f"Instance reboot failed: {status_flags}")
+            """
+
             retry = False
             counter = counter + 1
             logger.info(f"Retry no. {counter} - waiting for a minute until all peers and orderers have started")
@@ -1313,19 +1328,38 @@ class Fabric_Network:
 
                     try:
                         out = stdout.readlines()
-                        if out == [] or "Error while dialing dial tcp" in out[-1] or "docker: Error response from daemon" in out[-1] or "error waiting for container" in out[-1] or "See 'docker run --help'" in out[-1]:
-                            logger.info(out[-1])
-                            logger.info("Equals docker --help:")
-                            print("See 'docker run --help'" in out[-1])
+                        logger.info("stderr:")
+                        logger.info(stderr.readlines())
+                        if out == []:
+                            pass
+                        elif "Error while dialing dial tcp" in out[-1] or "docker: Error response from daemon" in out[-1] or "error waiting for container" in out[-1]:
                             if out == []:
-                                pass
-                                # logger.info(out)
+                                logger.info("Empty")
+                            elif "Error while dialing dial tcp" in out[-1]:
+                                logger.info("Error while dialing dial tcp")
+                                logger.info(out)
+                            elif "docker: Error response from daemon" in out[-1]:
+                                logger.info("docker: Error response from daemon")
+                                logger.info(out)
+                            elif "error waiting for container" in out[-1]:
+                                logger.info("error waiting for container" in out[-1])
+                                logger.info(out)
+                            elif "See 'docker run --help'" in out[-1]:
+                                logger.info("See 'docker run --help'")
+                                logger.info(out)
                             else:
-                                pass
+                                if "error waiting for container: context canceled" not in out[-1]:
+                                    logger.info(out[-1])
+                                else:
+                                    try:
+                                        logger.info(out[-1])
+                                        logger.info(out[-2])
+                                    except:
+                                        pass
                                 # logger.info(out[-1])
                             logger.info(f"Attempting to remove and restart peer{peer}.org{org}")
                             retry = True
-                            stdin, stdout, stderr = ssh_clients[index_peer].exec_command(f"docker rm peer{peer}.org{org}.example.com")
+                            stdin, stdout, stderr = ssh_clients[index_peer].exec_command(f"docker stop peer{peer}.org{org}.example.com && docker rm peer{peer}.org{org}.example.com")
                             stdout.readlines()
                             stderr.readlines()
                             # logger.info(stdout.readlines())
@@ -1351,7 +1385,9 @@ class Fabric_Network:
 
                         try:
                             out = stdout.readlines()
-                            if out == [] or "Error while dialing dial tcp" in out[-1] or "docker: Error response from daemon" in out[-1] or "error waiting for container" in out[-1] or "See 'docker run --help'" in out[-1]:
+                            if out == []:
+                                pass
+                            elif "Error while dialing dial tcp" in out[-1] or "docker: Error response from daemon" in out[-1] or "error waiting for container" in out[-1]:
                                 if out == []:
                                     pass
                                     # logger.info(out)
@@ -1360,7 +1396,7 @@ class Fabric_Network:
                                     # logger.info(out[-1])
                                 logger.info(f"Attempting to restart couchdb{peer}.org{org}")
                                 retry = True
-                                stdin, stdout, stderr = ssh_clients[index_db].exec_command(f"docker rm couchdb{peer}.org{org}")
+                                stdin, stdout, stderr = ssh_clients[index_db].exec_command(f"docker stop couchdb{peer}.org{org} && docker rm couchdb{peer}.org{org}")
                                 stdout.readlines()
                                 stderr.readlines()
                                 # logger.info(stdout.readlines())
@@ -1382,24 +1418,27 @@ class Fabric_Network:
             for orderer, index in enumerate(config['orderer_indices']):
                 orderer = orderer + 1
                 stdin, stdout, stderr = ssh_clients[index].exec_command(f"cat /home/ubuntu/orderer{orderer}.log")
-                # logger.info(f"Logs from starting orderer{orderer}")
-
                 try:
                     out = stdout.readlines()
-                    if out == [] or "Error while dialing dial tcp" in out[-1] or "docker: Error response from daemon" in out[-1] or "error waiting for container" in out[-1] or "See 'docker run --help'" in out[-1]:
+                    if out == []:
+                        pass
+                    elif "Error while dialing dial tcp" in out[-1] or "docker: Error response from daemon" in out[-1] or "error waiting for container" in out[-1]:
+                        logger.info("docker: Error response from daemon" in out[-1])
+                        logger.info("You cannot remove a running container" in out[-1])
+                        logger.info("You cannot remove a running container" not in out[-1])
                         if out == []:
                                 pass
                             # logger.info(out)
                         else:
-                            pass
-                            # logger.info(out[-1])
+                            # pass
+                            logger.info(out[-1])
                         logger.info(f"Attempting to restart orderer{orderer}")
                         retry = True
-                        stdin, stdout, stderr = ssh_clients[index].exec_command(f"docker rm orderer{orderer}.example.com")
-                        stdout.readlines()
-                        stderr.readlines()
-                        # logger.info(stdout.readlines())
-                        # logger.info(stderr.readlines())
+                        stdin, stdout, stderr = ssh_clients[index].exec_command(f"docker stop orderer{orderer}.example.com && docker rm orderer{orderer}.example.com")
+                        # stdout.readlines()
+                        # stderr.readlines()
+                        logger.info(stdout.readlines())
+                        logger.info(stderr.readlines())
                         channel = ssh_clients[index].get_transport().open_session()
                         channel.exec_command(f"bash /home/ubuntu/start_orderer.sh > orderer{orderer}.log 2>&1")
                     else:
@@ -1428,14 +1467,16 @@ class Fabric_Network:
             for index, _ in enumerate(ssh_clients):
 
                 try:
-                    stdin, stdout, stderr = ssh_clients[index].exec_command("docker stop $(docker ps -a -q) && docker rm -f $(docker ps -a -q) && docker rmi $(docker images | grep 'my-net' | awk '{print $1}')")
-                    wait_and_log(stdout, stderr)
+                    stdin, stdout, stderr = ssh_clients[index].exec_command("docker stop $(docker ps -a -q); docker rm -f $(docker ps -a -q) && docker rmi $(docker images | grep 'my-net' | awk '{print $1}')")
+                    logger.info(stdout.readlines())
+                    logger.info(stderr.readlines())
 
                     # stdin, stdout, stderr = ssh_clients[index].exec_command("docker volume rm $(docker volume ls -q)")
                     # wait_and_log(stdout, stderr)
 
                     stdin, stdout, stderr = ssh_clients[index].exec_command("docker ps -a && docker volume ls && docker images")
-                    wait_and_log(stdout, stderr)
+                    logger.info(stdout.readlines())
+                    logger.info(stderr.readlines())
 
                 except Exception as e:
 
@@ -1460,7 +1501,7 @@ class Fabric_Network:
 
         except Exception as e:
             logger.exception(e)
-            Fabric_Network.shutdown(config, logger, ssh_clients, scp_clients)
+            Fabric_Network.shutdown(node_handler)
             Fabric_Network.start_docker_containers(config, logger, ssh_clients, scp_clients)
 
     @staticmethod
