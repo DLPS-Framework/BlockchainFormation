@@ -35,6 +35,25 @@
   echo "node version: $(node -v)"
   echo "npm version: $(npm -v)"
 
+  # Install requirements for installing crypto stuff
+  sudo apt-get install -y cmake autoconf libtool curl python3 pkg-config libssl-dev
+
+  # Install Rust
+  curl -sSf https://sh.rustup.rs | sh -s -- -y && source ~/.cargo/env
+
+  # Download and build libsodium
+  curl -fsSL https://github.com/jedisct1/libsodium/archive/1.0.18.tar.gz | tar -xz
+  cd libsodium-1.0.18 && ./autogen.sh && ./configure --disable-dependency-tracking && make
+  echo "export SODIUM_LIB_DIR=/usr/local/lib" >> /home/ubuntu/.profile && . ~/.profile
+  echo "export LD_LIBRARY_PATH=/usr/local/lib" >> /home/ubuntu/.profile && . ~/.profile
+
+  # Download and build ursa
+  cd /home/ubuntu && git clone https://github.com/hyperledger/ursa.git
+  cd /home/ubuntu/ursa/ && cargo build --release
+  echo "export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/home/ubuntu/ursa/target/release" >> /home/ubuntu/.profile && . ~/.profile
+  sudo cp /home/ubuntu/ursa/target/release/*.so /usr/lib
+
+  # Get Indy stuff from Sovrin
   sudo add-apt-repository ppa:deadsnakes/ppa -y
 	sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88 || echo "Adding keyserver failed" >> /home/ubuntu/upgrade_fail2.log
 	sudo add-apt-repository "deb https://repo.sovrin.org/deb xenial master"
@@ -42,8 +61,7 @@
   sudo add-apt-repository "deb http://us.archive.ubuntu.com/ubuntu xenial main universe"
 	sudo apt-get update
 
-  sudo apt-get install -y libsodium18
-    sudo apt-get install -y python3.5 python3-pip python3.5-dev
+  sudo apt-get install -y python3.5 python3-pip python3.5-dev
 	sudo apt-get install -y libindy libindy-crypto=0.4.5
 	sudo pip3 install python3-indy==1.11.0
 
