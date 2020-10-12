@@ -46,8 +46,8 @@ class Acapy_Network:
         scp_clients = node_handler.scp_clients
 
         # the indices of the blockchain nodes
-        config['coordinator_indices'] = [0]
-        config['agent_indices'] = list(range(1, config['vm_count']))
+        config['agent_indices'] = [0]
+        config['coordinator_indices'] = list(range(1, config['vm_count']))
 
         for index, _ in enumerate(config['priv_ips']):
             # scp_clients[index].put("/media/sf_VM_Benchmarking/Aries-Cloud-Agent/cdk/components/ec2/aries_agent/deployment", "/home/ubuntu", recursive=True)
