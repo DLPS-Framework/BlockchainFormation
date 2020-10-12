@@ -248,18 +248,15 @@ class Node_Handler:
             self.config["aws_region"] = {}
             self.config["aws_region"][region] = self.config["vm_count"]
 
-        if self.config["subnet_id"] is None:
-            pass
-        elif type(self.config["subnet_id"]) is dict:
+
+        if type(self.config["subnet_id"]) is dict:
             pass
         else:
             subnet_id = self.config["subnet_id"]
             self.config["subnet_id"] = {}
             self.config["subnet_id"][region] = subnet_id
 
-        if self.config["security_group_id"] is None:
-            pass
-        elif type(self.config["security_group_id"]) is dict:
+        if type(self.config["security_group_id"]) is dict:
             pass
         else:
             security_group_id = self.config["security_group_id"]
@@ -489,6 +486,8 @@ class Node_Handler:
         # create ssh and scp channels
         self.create_ssh_scp_clients()
 
+        self._run_specific_shutdown()
+
         for index, ip in enumerate(self.config['ips']):
             # get userData from all instances
             try:
@@ -517,7 +516,6 @@ class Node_Handler:
                 if any(instance.state['Name'] == "stopped" for instance in self.ec2_instances[region]):
                     self.logger.info(f"At least on of the instances was already stopped, hence no logs can be pulled from the machines, terminating them in the next step")
 
-                    self._run_specific_shutdown()
 
         if self.config['instance_provision'] == "aws":
 
@@ -615,7 +613,7 @@ class Node_Handler:
                     break
 
             # SCPCLient takes a paramiko transport as an argument
-            scp_clients.append(SCPClient(ssh_clients[index].get_transport(), socket_timeout=86400, progress=Node_Handler.progress))
+            scp_clients.append(SCPClient(ssh_clients[index].get_transport(), socket_timeout=86400, progress=Node_Handler.progress, sanitize=lambda x: x))
 
         if self.logger is not None:
             # logger.debug(f"All scp/ssh clients got created and connected")
@@ -773,19 +771,6 @@ class Node_Handler:
 
             session = boto3.Session(profile_name=self.config['profile'])
             ec2 = session.resource('ec2', region_name=region)
-
-            network_interfaces = [
-                    {
-                        'DeviceIndex': 0,
-                        'AssociatePublicIpAddress': self.config['public_ip']
-                    }]
-
-            if self.config['subnet_id'] is not None:
-                network_interfaces[0]['SubnetId'] = self.config['subnet_id'][region],
-
-            if self.config['security_group_id'] is not None:
-                network_interfaces[0]['Groups'] = self.config['security_group_id'][region],
-
             self.ec2_instances[region] = ec2.create_instances(
                 ImageId=self.config['image']['image_ids'][region],
                 MinCount=self.config['aws_region'][region],
@@ -819,5 +804,11 @@ class Node_Handler:
                     }
 
                 } if 'aws_spot_instances' in self.config and self.config['aws_spot_instances'] else {},
-                NetworkInterfaces=network_interfaces
+                NetworkInterfaces=[
+                    {
+                        'DeviceIndex': 0,
+                        'SubnetId': self.config['subnet_id'][region],
+                        'Groups': self.config['security_group_id'][region],
+                        'AssociatePublicIpAddress': self.config['public_ip']
+                    }]
             )
