@@ -12,10 +12,21 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import json
 import os
 import subprocess
 
 class Vendia_Network:
+
+    @staticmethod
+    def check_config(config, logger):
+        with open("/home/user/vendia-share/bmw-example/details.json") as details:
+            details_json = json.load(details)
+            if len(details_json["nodes"]) != (config["vendia_settings"]["number_of_nodes"]):
+                raise Exception("The number of nodes is wrong")
+            else:
+                logger.info("Correct number of nodes")
+                return
 
     @staticmethod
     def shutdown(node_handler):
