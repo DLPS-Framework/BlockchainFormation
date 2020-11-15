@@ -25,10 +25,12 @@ include BlockchainFormation/blockchain_specifics/sawtooth/*
 include BlockchainFormation/blockchain_specifics/quorum/*
 include BlockchainFormation/blockchain_specifics/geth/*
 include BlockchainFormation/blockchain_specifics/parity/*
+include BlockchainFormation/blockchain_specifics/prometheus/*
 include BlockchainFormation/blockchain_specifics/client/*
 include BlockchainFormation/blockchain_specifics/tendermint/*
 include BlockchainFormation/blockchain_specifics/tendermint/setup/*
 include BlockchainFormation/blockchain_specifics/tezos/*
 include BlockchainFormation/blockchain_specifics/tezos/setup/*
 include BlockchainFormation/blockchain_specifics/vendia/*
+include BlockchainFormation/blockchain_specifics/zkrollup/*
 include BlockchainFormation/utils/*

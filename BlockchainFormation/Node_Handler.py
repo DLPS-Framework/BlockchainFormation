@@ -40,11 +40,13 @@ from BlockchainFormation.blockchain_specifics.indy.Indy_Network import *
 from BlockchainFormation.blockchain_specifics.indy_client.Indy_client_Network import *
 from BlockchainFormation.blockchain_specifics.leveldb.Leveldb_Network import *
 from BlockchainFormation.blockchain_specifics.parity.Parity_Network import *
+from BlockchainFormation.blockchain_specifics.prometheus.Prometheus_Network import *
 from BlockchainFormation.blockchain_specifics.quorum.Quorum_Network import *
 from BlockchainFormation.blockchain_specifics.sawtooth.Sawtooth_Network import *
 from BlockchainFormation.blockchain_specifics.tendermint.Tendermint_Network import *
 from BlockchainFormation.blockchain_specifics.tezos.Tezos_Network import *
 from BlockchainFormation.blockchain_specifics.vendia.Vendia_Network import *
+from BlockchainFormation.blockchain_specifics.zkrollup.Zkrollup_Network import *
 
 from BlockchainFormation.utils import utils
 
@@ -67,6 +69,14 @@ class Node_Handler:
             # fh.setFormatter(formatter)
             ch.setFormatter(formatter)
             self.logger.addHandler(ch)
+
+        new_regions = {}
+        for region in config["aws_region"]:
+            if config["aws_region"][region] > 0:
+                new_regions[region] = config["aws_region"][region]
+
+        config["aws_region"] = new_regions
+        self.logger.info(config)
 
         self.config = config
         self.user_data = self.create_user_data()
@@ -278,6 +288,9 @@ class Node_Handler:
 
         elif self.config['blockchain_type'] == "sawtooth":
             Sawtooth_Network.check_config(self.config, self.logger)
+
+        elif self.config['blockchain_type'] == "vendia":
+            Vendia_Network.check_config(self.config, self.logger)
             
         self.get_image_ids()
 
@@ -553,13 +566,13 @@ class Node_Handler:
     def get_config(self):
         return self.config
 
-    def set_target_network_conf(self, dir_name):
+    def set_target_network_conf(self, dir_name, name):
         """
         Needed by ChainLab project to set network_config after parallelism is finished
         :param dir_name: Name of target_network_conf
         :return:
         """
-        self.config['client_settings']['target_network_conf'] = dir_name
+        self.config[f'{name}_settings']['target_network_conf'] = dir_name
         print(f"Dir_name in set_target_network_conf: " + dir_name)
 
         with open(f"{self.config['exp_dir']}/config.json", 'w') as outfile:
@@ -684,13 +697,17 @@ class Node_Handler:
             raise Exception("Network startup failed")
 
 
-    def restart_network(self):
+    def restart_network(self, number_of_endorsers=None):
 
         blockchain_type = self.config['blockchain_type']
 
         try:
-            func = getattr(globals()[f"{blockchain_type.capitalize()}_Network"], "restart")
-            func(self)
+            if blockchain_type == "fabric":
+                func = getattr(globals()[f"{blockchain_type.capitalize()}_Network"], "restart")
+                func(self, number_of_endorsers)
+            else:
+                func = getattr(globals()[f"{blockchain_type.capitalize()}_Network"], "restart")
+                func(self)
 
         except Exception as e:
 
