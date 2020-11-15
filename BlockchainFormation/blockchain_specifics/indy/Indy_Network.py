@@ -134,5 +134,5 @@ class Indy_Network:
         ssh_clients = node_handler.ssh_clients
         scp_clients = node_handler.scp_clients
 
-        Indy_Network.shutdown(config, logger, ssh_clients, scp_clients)
-        Indy_Network.startup(config, logger, ssh_clients, scp_clients)
+        Indy_Network.shutdown(node_handler)
+        Indy_Network.startup(node_handler)

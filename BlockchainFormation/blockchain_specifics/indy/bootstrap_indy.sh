@@ -20,7 +20,7 @@
   sudo apt-get -y upgrade || echo "Upgrading in indy_bootstrap failed" >> /home/ubuntu/upgrade_fail2.log
 
   # Install requirements for installing crypto stuff
-  sudo apt-get install -y cmake autoconf libtool curl python3 pkg-config libssl-dev
+  sudo apt-get install -y cmake autoconf libtool curl python3 pkg-config libssl-dev python3-pip
 
   # Install Rust
   curl -sSf https://sh.rustup.rs | sh -s -- -y && source ~/.cargo/env
@@ -33,7 +33,7 @@
 
   # Download and build ursa
   cd /home/ubuntu && git clone https://github.com/hyperledger/ursa.git
-  cd /home/ubuntu/ursa/ && cargo build --release
+  cd /home/ubuntu/ursa/ && git checkout b10f0f973b3517d878d640dcd90cfc83ae1b4c93 && cargo build --release
   echo "export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/home/ubuntu/ursa/target/release" >> /home/ubuntu/.profile && . ~/.profile
   sudo cp /home/ubuntu/ursa/target/release/*.so /usr/lib
 
@@ -49,12 +49,13 @@
   sudo apt-get update
 
   sudo apt-get install -y apt-transport-https ca-certificates
-  # sudo apt-get install -y libsodium18
+  # sudo apt-get install -y libsodium-dev
   sudo apt-get install -y libbz2-dev zlib1g-dev liblz4-dev libsnappy-dev rocksdb=5.8.8
   sudo apt-get install -y software-properties-common
   sudo apt-get install -y python3.5 python3-pip python3.5-dev
   sudo apt-get install -y libindy libindy-crypto=0.4.5
 
+  cd
   git clone https://github.com/hyperledger/indy-node
   (cd indy-node && sudo pip3 install --upgrade pip && sudo pip3 install -e .[tests] && sudo pip3 install flake8 || echo "\n\n=========\nError in indy-node installation\n========\n\n")
 
