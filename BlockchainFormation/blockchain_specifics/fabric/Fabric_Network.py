@@ -13,6 +13,7 @@
 #  limitations under the License.
 
 
+import datetime
 import json
 import os
 import sys
@@ -94,9 +95,15 @@ class Fabric_Network:
             scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
 
             try:
-                scp_clients[index].get("/home/ubuntu/*.log", f"{config['exp_dir']}/fabric_logs")
+                time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                os.mkdir(f"{config['exp_dir']}/fabric_logs_{time}")
+                scp_clients[index].get("/home/ubuntu/*.log", f"{config['exp_dir']}/fabric_logs_{time}")
                 logger.info("Logs fetched successfully")
-            except:
+                stdin, stdout, stderr = ssh_clients[index].exec_command("rm /home/ubuntu/*.log")
+                logger.info(stdout.readlines())
+                logger.info(stderr.readlines())
+            except exception as e:
+                logger.exception(e)
                 logger.info(f"No logs available on {ip}")
 
         logger.info("")
@@ -919,7 +926,7 @@ class Fabric_Network:
             json.dump(collections, file, default=datetimeconverter, indent=4)
 
     @staticmethod
-    def write_script(config, logger, name):
+    def write_script(config, logger, name, number_of_endorsers=None):
         dir_name = os.path.dirname(os.path.realpath(__file__))
         os.system(f"cp {dir_name}/setup/script_raw_1.sh {config['exp_dir']}/setup/{name}.sh")
 
@@ -975,7 +982,10 @@ class Fabric_Network:
         for org in range(2, config['fabric_settings']['org_count'] + 1):
             enum_orgs = enum_orgs + f" {org}"
 
-        if config['fabric_settings']['endorsement_policy'] == "OR":
+        if number_of_endorsers != None:
+                endorsers_count = number_of_endorsers
+
+        elif config['fabric_settings']['endorsement_policy'] == "OR":
             endorsers_count = 1
 
         elif config['fabric_settings']['endorsement_policy'] == "ALL":
@@ -1120,7 +1130,7 @@ class Fabric_Network:
             orderer = orderer + 1
             # set up configurations of orderers like with docker compose
             string_orderer_base = ""
-            string_orderer_base = string_orderer_base + f" --network={my_net} --name orderer{orderer}.example.com -p 7050:7050"
+            string_orderer_base = string_orderer_base + f" --network={my_net} --name orderer{orderer}.example.com -p 7050:7050 -p 9443:9443"
             string_orderer_base = string_orderer_base + f" -e FABRIC_LOGGING_SPEC={config['fabric_settings']['log_level']}"
             string_orderer_base = string_orderer_base + f" -e ORDERER_GENERAL_KEEPALIVE_SERVERTIMEOUT=1000s"
             string_orderer_base = string_orderer_base + f" -e ORDERER_HOME=/var/hyperledger/orderer"
@@ -1132,6 +1142,8 @@ class Fabric_Network:
             string_orderer_base = string_orderer_base + f" -e ORDERER_GENERAL_LOCALMSPID=OrdererMSP"
             string_orderer_base = string_orderer_base + f" -e ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp"
             string_orderer_base = string_orderer_base + f" -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE={my_net}"
+            string_orderer_base = string_orderer_base + f" -e ORDERER_OPERATIONS_LISTENADDRESS=0.0.0.0:9443"
+            string_orderer_base = string_orderer_base + f" -e ORDERER_METRICS_PROVIDER=prometheus"
 
             string_orderer_link = ""
             for orderer2 in range(1, orderer):
@@ -1219,7 +1231,7 @@ class Fabric_Network:
 
                 # Setting up configuration of peer like with docker compose
                 string_peer_base = ""
-                string_peer_base = string_peer_base + f" --network='{my_net}' --name peer{peer}.org{org}.example.com -p 7051:7051 -p 7053:7053"
+                string_peer_base = string_peer_base + f" --network='{my_net}' --name peer{peer}.org{org}.example.com -p 7051:7051 -p 7053:7053 -p 9443:9443"
 
                 string_peer_link = ""
                 for orderer2 in range(1, config['fabric_settings']['orderer_count'] + 1):
@@ -1268,6 +1280,8 @@ class Fabric_Network:
                 #     string_peer_core = string_peer_core + f" -e CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org{org}.example.com:7051"
 
                 string_peer_core = string_peer_core + f" -e CORE_PEER_CHAINCODELISTENADDRESS=peer{peer}.org{org}.example.com:7052"
+                string_peer_core = string_peer_core + f" -e CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9443"
+                string_peer_core = string_peer_core + f" -e CORE_METRICS_PROVIDER=prometheus"
 
                 string_peer_tls = ""
                 if config['fabric_settings']['tls_enabled']:
@@ -1455,19 +1469,21 @@ class Fabric_Network:
         time.sleep(30)
 
     @staticmethod
-    def restart(node_handler):
+    def restart(node_handler, number_of_endorsers):
 
         logger = node_handler.logger
         config = node_handler.config
         ssh_clients = node_handler.ssh_clients
         scp_clients = node_handler.scp_clients
 
+        Fabric_Network.shutdown(node_handler)
+
         try:
 
             for index, _ in enumerate(ssh_clients):
 
                 try:
-                    stdin, stdout, stderr = ssh_clients[index].exec_command("docker stop $(docker ps -a -q); docker rm -f $(docker ps -a -q) && docker rmi $(docker images | grep 'my-net' | awk '{print $1}')")
+                    stdin, stdout, stderr = ssh_clients[index].exec_command("docker stop $(docker ps -a -q); docker rm -f $(docker ps -a -q) ; docker rmi $(docker images | grep 'my-net' | awk '{print $1}') || echo 'Stopping worked'")
                     logger.info(stdout.readlines())
                     logger.info(stderr.readlines())
 
@@ -1478,14 +1494,27 @@ class Fabric_Network:
                     logger.info(stdout.readlines())
                     logger.info(stderr.readlines())
 
-                except Exception as e:
-
                     ssh_clients[index].exec_command("sudo reboot")
+
+                except Exception as e:
+                    logger.exception(e)
+
 
             logger.info("Waiting till all machines have rebooted")
             time.sleep(10)
 
             status_flags = wait_till_done(config, ssh_clients, config['ips'], 10 * 60, 10, "/var/log/user_data_success.log", False, 10 * 60, logger)
+
+            print(status_flags)
+
+            if False in status_flags:
+                    raise Exception("Problems with rebooting")
+
+            node_handler.close_ssh_scp_clients()
+            node_handler.refresh_ssh_scp_clients()
+
+            ssh_clients = node_handler.ssh_clients
+            scp_clients = node_handler.scp_clients
 
             stdin, stdout, stderr = ssh_clients[index].exec_command("docker volume rm $(docker volume ls -q)")
             logger.debug(stdout.readlines())
@@ -1497,7 +1526,7 @@ class Fabric_Network:
 
             Fabric_Network.setup_network(config, ssh_clients, scp_clients, logger, "network_setup")
 
-            Fabric_Network.install_chaincode(node_handler)
+            Fabric_Network.install_chaincode(node_handler, number_of_endorsers)
 
         except Exception as e:
             logger.exception(e)
@@ -1607,7 +1636,11 @@ class Fabric_Network:
             logger.debug(stderr.readlines())
 
     @staticmethod
-    def setup_network(config, ssh_clients, scp_clients, logger, name):
+    def setup_network(config, ssh_clients, scp_clients, logger, name, number_of_endorsers=None):
+
+        logger.info(f"Creating script for {name}")
+        Fabric_Network.write_script(config, logger, name, number_of_endorsers)
+
         my_net = "my-net"
 
         index_last_node = config['peer_indices'][-1]
@@ -1622,8 +1655,6 @@ class Fabric_Network:
 
         stdin, stdout, stderr = ssh_clients[index_last_node].exec_command("rm -f /data/fabric-samples/Build-Multi-Host-Network-Hyperledger/scripts/script.sh")
         stdout.readlines()
-
-        Fabric_Network.write_script(config, logger, name)
 
         # logger.debug(stdout.readlines())
         # logger.debug(stdout.readlines())
@@ -1693,8 +1724,8 @@ class Fabric_Network:
                 raise Exception("Blockchain did not start properly - Omitting or repeating")
 
     @staticmethod
-    def install_chaincode(node_handler):
-        Fabric_Network.setup_network(node_handler.config, node_handler.ssh_clients, node_handler.scp_clients, node_handler.logger, "chaincode_installation")
+    def install_chaincode(node_handler, number_of_endorsers=None):
+        Fabric_Network.setup_network(node_handler.config, node_handler.ssh_clients, node_handler.scp_clients, node_handler.logger, "chaincode_installation", number_of_endorsers)
 
 
     @staticmethod
