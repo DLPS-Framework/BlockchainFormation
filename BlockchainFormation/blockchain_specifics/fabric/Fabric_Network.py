@@ -90,18 +90,16 @@ class Fabric_Network:
         scp_clients = node_handler.scp_clients
 
         logger.info("Getting logs from vms")
-
+        time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        os.mkdir(f"{config['exp_dir']}/fabric_logs_{time}")
         for index, ip in enumerate(config['ips']):
             scp_clients[index].get("/var/log/user_data.log", f"{config['exp_dir']}/user_data_logs/user_data_log_node_{index}.log")
-
             try:
-                time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                os.mkdir(f"{config['exp_dir']}/fabric_logs_{time}")
-                scp_clients[index].get("/home/ubuntu/*.log", f"{config['exp_dir']}/fabric_logs_{time}")
+                scp_clients[index].get("/home/ubuntu/*.log", f"{config['exp_dir']}/fabric_logs_{time}/")
                 logger.info("Logs fetched successfully")
-                stdin, stdout, stderr = ssh_clients[index].exec_command("rm /home/ubuntu/*.log")
-                logger.info(stdout.readlines())
-                logger.info(stderr.readlines())
+                # stdin, stdout, stderr = ssh_clients[index].exec_command("rm /home/ubuntu/*.log")
+                # logger.info(stdout.readlines())
+                # logger.info(stderr.readlines())
             except exception as e:
                 logger.exception(e)
                 logger.info(f"No logs available on {ip}")
