@@ -1,0 +1,35 @@
+version: '3.5'
+
+services:
+  postgres:
+    image: postgres
+    container_name: 'postgres-container'
+    ports:
+      - "5432:5432"
+    env_file:
+      - ./postgres.env
+    networks:
+      - connector
+    volumes:
+      - connector-data:/var/lib/postgresql/data
+
+  connector:
+    build:
+      context: .
+    container_name: 'connector-container'
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./connector.env
+    networks:
+      - connector
+    depends_on:
+      - postgres
+    expose:
+      - 8080
+
+networks:
+  connector:
+
+volumes:
+  connector-data: {}

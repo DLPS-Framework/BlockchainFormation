@@ -16,6 +16,8 @@ include BlockchainFormation/blockchain_specifics/ethermint/*
 include BlockchainFormation/blockchain_specifics/empty/*
 include BlockchainFormation/blockchain_specifics/eos/*
 recursive-include BlockchainFormation/blockchain_specifics/eos/contracts *
+include BlockchainFormation/blockchain_specifics/ids_connector/*
+include BlockchainFormation/blockchain_specifics/ids_connector/setup/*
 include BlockchainFormation/blockchain_specifics/indy/*
 include BlockchainFormation/blockchain_specifics/indy_client/*
 include BlockchainFormation/blockchain_specifics/leveldb/*

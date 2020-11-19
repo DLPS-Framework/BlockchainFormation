@@ -36,6 +36,7 @@ from BlockchainFormation.blockchain_specifics.empty.Empty_Network import *
 from BlockchainFormation.blockchain_specifics.eos.Eos_Network import *
 from BlockchainFormation.blockchain_specifics.ethermint.Ethermint_Network import *
 from BlockchainFormation.blockchain_specifics.geth.Geth_Network import *
+from BlockchainFormation.blockchain_specifics.ids_connector.Ids_connector_Network import *
 from BlockchainFormation.blockchain_specifics.indy.Indy_Network import *
 from BlockchainFormation.blockchain_specifics.indy_client.Indy_client_Network import *
 from BlockchainFormation.blockchain_specifics.leveldb.Leveldb_Network import *
