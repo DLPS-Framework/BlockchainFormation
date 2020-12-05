@@ -100,11 +100,15 @@ class Indy_Network:
             init_string = f"init_indy_keys --name {node_names[node]} --seed {node_seeds[node]}"
             logger.debug(f"{init_string}")
             stdin, stdout, stderr = ssh_clients[node].exec_command(f"{init_string} && echo \"{init_string}\" >> commands.txt")
-            wait_and_log(stdout, stderr)
+            stdout.readlines()
+            stderr.readlines()
+            # wait_and_log(stdout, stderr)
             tx_string = f"generate_indy_pool_transactions --nodes {len(ssh_clients)} --clients {config['indy_settings']['clients']} --nodeNum {node + 1} --ips \'{ips_string}\' --network my-net"
             logger.debug(f"{tx_string}")
             stdin, stdout, stderr = ssh_clients[node].exec_command(f"{tx_string} && echo \"{tx_string}\" >> commands.txt")
-            wait_and_log(stdout, stderr)
+            stdout.readlines()
+            stderr.readlines()
+            # wait_and_log(stdout, stderr)
             channel = ssh_clients[node].get_transport().open_session()
             channels.append(channel)
             start_string = f"screen -dmS indy-node start_indy_node {node_names[node]} 0.0.0.0 {port + 1} 0.0.0.0 {port + 2} -vv"
