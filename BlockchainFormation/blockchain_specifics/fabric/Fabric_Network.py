@@ -1128,7 +1128,7 @@ class Fabric_Network:
             orderer = orderer + 1
             # set up configurations of orderers like with docker compose
             string_orderer_base = ""
-            string_orderer_base = string_orderer_base + f" --network={my_net} --name orderer{orderer}.example.com -p 7050:7050 -p 9443:9443"
+            string_orderer_base = string_orderer_base + f" --network={my_net} --name orderer{orderer}.example.com -p 7050:7050 -p 9442:9442"
             string_orderer_base = string_orderer_base + f" -e FABRIC_LOGGING_SPEC={config['fabric_settings']['log_level']}"
             string_orderer_base = string_orderer_base + f" -e ORDERER_GENERAL_KEEPALIVE_SERVERTIMEOUT=1000s"
             string_orderer_base = string_orderer_base + f" -e ORDERER_HOME=/var/hyperledger/orderer"
@@ -1140,7 +1140,7 @@ class Fabric_Network:
             string_orderer_base = string_orderer_base + f" -e ORDERER_GENERAL_LOCALMSPID=OrdererMSP"
             string_orderer_base = string_orderer_base + f" -e ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp"
             string_orderer_base = string_orderer_base + f" -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE={my_net}"
-            string_orderer_base = string_orderer_base + f" -e ORDERER_OPERATIONS_LISTENADDRESS=0.0.0.0:9443"
+            string_orderer_base = string_orderer_base + f" -e ORDERER_OPERATIONS_LISTENADDRESS=0.0.0.0:9442"
             string_orderer_base = string_orderer_base + f" -e ORDERER_METRICS_PROVIDER=prometheus"
 
             string_orderer_link = ""
