@@ -10,15 +10,11 @@ In case of AWS setup, AWS settings have to be included, based on which ```vm_cou
 and a blockchain network with the specified configuration will be automatically set up.
 
 Currently, the following blockchains are supported:
-* Hyperledger Besu with IBFT2 consensus (beta)
-* Corda (beta)
-* Eos (beta)
 * Hyperledger Fabric (very sophisticated)
 * Ethereum with Geth and Parity client (very sophisticated)
 * Hyperledger Indy (sophisticated)
 * Quorum with RAFT and IBFT consensus (very sophisticated)
 * Hyperledger Sawtooth (very sophisticated)
-* Tezos (beta)
 
 In order to have some centralized baseline, we also integrated
 * CouchDB (single and cluster)
@@ -67,9 +63,9 @@ To add another blockchain, the following steps are required:
 
 ## Future Steps
 * Keep everything up to date as blockchains evolve
-* Add option to attach no storage at all # TODO??? @Philipp?
+* Add option to attach no storage at all
 * Make existing setups even more customizable
-* Add logrotate to UserData setup scripts # TODO??? @Philipp
+* Add logrotate to UserData setup scripts
 *  Support more blockchains
     * Cardano
     * Ethermint
