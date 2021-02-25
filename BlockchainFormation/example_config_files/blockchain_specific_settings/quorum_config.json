@@ -1,0 +1,20 @@
+{
+  "blockchain_type": "quorum",
+  "quorum_settings": {
+    "consensus": "raft",
+    "istanbul_blockperiod": 1,
+    "istanbul_minerthreads": 1,
+    "raft_blocktime": 50,
+    "cache": 4096,
+    "cache.database": 50,
+    "cache.gc": 25,
+    "cache.trie": 25,
+    "txpool.rejournal": "0h0m30s",
+    "txpool.accountslots": 16,
+    "txpool.globalslots": 4096,
+    "txpool.accountqueue": 500,
+    "txpool.globalqueue": 10000,
+    "txpool.lifetime": "0h0m30s",
+    "private_fors": "2"
+  }
+}

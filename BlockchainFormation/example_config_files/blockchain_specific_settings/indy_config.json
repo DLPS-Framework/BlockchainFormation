@@ -1,0 +1,7 @@
+{
+  "blockchain_type": "indy",
+  "indy_settings": {
+    "clients": 128,
+    "public_network": 1
+  }
+}

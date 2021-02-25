@@ -1,0 +1,13 @@
+{
+  "blockchain_type": "sawtooth",
+  "sawtooth_settings": {
+    "sawtooth.consensus.algorithm.name": "PoET",
+    "sawtooth.poet.initial_wait_time": 1,
+    "sawtooth.poet.target_wait_time": 1,
+    "sawtooth.publisher.max_batches_per_block": 100,
+    "sawtooth.consensus.pbft.block_publishing_delay": 1000,
+    "sawtooth.consensus.raft.heartbeat_tick": 1,
+    "sawtooth.consensus.raft.election_tick": 20,
+    "sawtooth.consensus.raft.period": 3000
+  }
+}

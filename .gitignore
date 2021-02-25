@@ -163,4 +163,3 @@ dmypy.json
 # Experiment folders
 experiments/*
 BlockchainFormation/experiments/*
-BlockchainFormation/example_config_files/*

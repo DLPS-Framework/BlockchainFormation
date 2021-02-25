@@ -1,0 +1,16 @@
+{
+  "blockchain_type": "parity",
+  "parity_settings": {
+    "step_duration": 1,
+    "balance": "0x200000000000000000000000000000000000000000000000000000000000000",
+    "gaslimit": "90000000000000",
+    "num_acc": 2,
+    "tx_queue_mem_limit": 0,
+    "tx_queue_size": 65536,
+    "cache_size_db": 4096,
+    "cache_size_blocks": 32,
+    "cache_size_queue": 1280,
+    "cache_size_state": 1200,
+    "server_threads": 2
+  }
+}
