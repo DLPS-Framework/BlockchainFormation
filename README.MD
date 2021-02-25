@@ -20,7 +20,7 @@ In order to have some centralized baseline, we also integrated
 * CouchDB (single and cluster)
 * LevelDB
 
-The provided VMs then can be used for different objectives, e.g., to deploy custom smart contracts and connect with clients (see package *ClientFormation*) and then do some benchmarking (see package *ChainLab*), i.e., 
+The provided VMs then can be used for different objectives, e.g., to deploy custom smart contracts and connect with clients (see package *DAppFormation*) and then do some benchmarking (see package *ChainLab*), i.e., 
 to evaluate the performance of a given blockchain solution, 
 Another possibility is to further customize an implementation for a specific use case.
 
@@ -38,7 +38,7 @@ The argpass CLI be provided with a config file:
 ```
 python run.py start --config "path to config file" 
 ```
-Example config files are provided in ```/example_config_files/aws_configs``` (with aws) and ```/example_config_files/own_configs``` (with given VMs). 
+Example config files are provided in ```/example_config_files```.
 
 * Terminate a network:
 
@@ -52,7 +52,7 @@ where the config file will be located in the experiment's directory. The path to
 To add another blockchain, the following steps are required:
 * create a directory ```/blockchain_specifics/Blockchain``` containing
   + a Bash script for the basic installations, i.e. ```/blockchain_specifics/blockckain/bootstrap_blockchain.sh```
-  + a Python file with a specific startup, shutdown (, and restart) functionality, i.e. ```/blockchain_specifics/blockchain/blockchain.py```.  
+  + a Python file with a specific startup, shutdown (, and restart) functionality, i.e. ```/blockchain_specifics/blockchain/Blockchain-Network.py```.  
   Within the startup functionality, the following keys should be added to the config file if the blockchain is meant to be benchmarked later on:
     - 'node_indices': which of the VMs should be considered as nodes? There might be VMs which are rather of auxiliary type, e.g., Notaries in Corda or CAs in Hyperleder Fabric
     - 'groups': a partitioning of the nodes e.g. by geographical distribution, for setting delays or package losses later on (perfect connection within a group, worse connection to members of the other groups) 
@@ -68,10 +68,13 @@ To add another blockchain, the following steps are required:
 * Add logrotate to UserData setup scripts
 *  Support more blockchains
     * Cardano
-    * Ethermint
+    * Corda
+    * Cosmos/Ethermint
     * Libra
     * Multichain
     * QLDB
+    * Tezos
+    * Eos
 * Integrate Azure or further cloud computing services
 * In-depth explanation of all the blockchain-specific configurations in the configs
 * Find a nicer way to modify bootstrap_scripts based on the config file
@@ -99,7 +102,7 @@ If this was successful you can install the package with pip. The following is a 
 
 ```
 
-Now you can import the modules like vm_handler:
+Now you can import the modules:
 ```
 from BlockchainFormation.Node_Handler import Node_Handler
 ```
