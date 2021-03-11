@@ -429,7 +429,7 @@ class Parity_Network:
                         'interface': '0.0.0.0',
                         'hosts': ['all'],
                         'cors': ['all'],
-                        'server_threads': config['parity_settings']['server_threads']
+                        # 'server_threads': config['parity_settings']['server_threads']
                            },
                     'websockets': {
                         'port': 8450,
@@ -583,8 +583,6 @@ class Parity_Network:
         #channel = ssh_clients[index].get_transport().open_session()
         ssh_clients[index].exec_command("sudo service parity stop")
         ssh_clients[index].exec_command("sudo rm /var/log/parity.log")
-
-
 
     def delete_pool(ssh_clients, index, logger):
         """

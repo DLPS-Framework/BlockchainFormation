@@ -12,31 +12,45 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
+  sudo mkdir /home/ubuntu/openethereum && cd /home/ubuntu/openethereum
+  sudo wget https://github.com/openethereum/openethereum/releases/download/v3.2.0/openethereum-linux-v3.2.0.zip
+  echo "After OpenEthereum download"
+
+  sudo apt-get update
+  sudo apt-get install unzip
+  echo "After Unzip installation"
+
+  sudo unzip openethereum*.zip
+  sudo chmod +x openethereum
+  echo "After OpenEthereum unzipping"
+
+  cat > /home/ubuntu/openethereum/eth1.service << EOF
+[Unit]
+Description     = openethereum eth1 service
+Wants           = network-online.target
+After           = network-online.target
+
+[Service]
+User            = ubuntu
+WorkingDirectory= /home/ubuntu/openethereum
+ExecStart       = /home/ubuntu/openethereum/openethereum --config /data/parityNetwork/node.toml
+Restart         = on-failure
+
+[Install]
+WantedBy	= multi-user.target
 EOF
+  echo "After OpenEthereum initialization"
 
-  sudo su
-  #only contains stuff needed for parity, base installation are in base shell script
-  # ======== Install Ethereum Parity ========
-  # try http for get parity instead of https
-  bash -c  "bash <(curl http://get.parity.io -L) -r stable" || bash -c  "bash <(curl http://get.parity.io -L) -r stable" || bash -c  "bash <(curl https://get.parity.io -L) -r stable"  || bash -c  "bash <(curl https://get.parity.io -L) -r stable"
+  sudo mv /home/ubuntu/openethereum/eth1.service /etc/systemd/system/eth1.service
+  sudo chmod 644 /etc/systemd/system/eth1.service
+  echo "After eth1.service permissions"
 
-  # ======== Parity Network Setup ======== (https://wiki.parity.io/Demo-PoA-tutorial)
-  cd /data
-  sudo mkdir parityNetwork
-  cd parityNetwork
-  PWD="password"
-  sudo bash -c "echo $PWD > password.txt"
-  sudo chown -R ubuntu /data/parityNetwork/
-  sudo chown -R ubuntu /data
-  sudo chown -R ubuntu /etc/systemd/system/
+  sudo systemctl daemon-reload
+  sudo systemctl enable eth1
+  sudo systemctl start eth1.service
+  echo "Started!"
 
-  #Parity Service
-  bash -c  "sudo printf '%s\n' '[Unit]' 'Description=Parity Ethereum client' '[Service]' 'Type=simple' 'ExecStart=/usr/bin/parity --config /data/parityNetwork/node.toml ' 'StandardOutput=file:/var/log/parity.log' '[Install]' 'WantedBy=default.target' > /etc/systemd/system/parity.service"
-
-  # =======  Create success indicator at end of this script ==========
   sudo touch /var/log/user_data_success.log
 
-
-
-
+#  sudo journalctl -u eth1 -f
 

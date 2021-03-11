@@ -111,14 +111,11 @@ fi
 
 
   # switch to normal user
-  cat << EOF | su ubuntu
-  cd ~
-
-
-
-  #echo "Initial Script finished, Starting more advanced installs now"
-
-  #add users with bash shell
-
-
-
+#cat << EOF | su ubuntu
+#  cd ~
+#
+#  echo "Initial Script finished, Starting more advanced installs now"
+#
+#  #add users with bash shell
+#
+#EOF

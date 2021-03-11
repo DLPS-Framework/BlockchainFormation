@@ -24,7 +24,7 @@ from Node_Handler import Node_Handler
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import aws_cdk.cloud_assembly_schema
+# import aws_cdk.cloud_assembly_schema
 class ArgParser:
 
     def __init__(self):
