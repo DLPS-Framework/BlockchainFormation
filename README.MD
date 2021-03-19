@@ -108,6 +108,27 @@ Now you can import the modules like vm_handler:
 from BlockchainFormation.Node_Handler import Node_Handler
 ```
 
+# Install BlockFormation via Docker
+
+You should have installed ```docker``` and ```docker-compose```
+
+First, specify your  ```AWS_ACCESS_KEY_ID``` and ```AWS_SECRET_ACCESS_KEY``` in the ```.env``` file.
+
+Replace the command to be executed in the ```docker-compose``` file (```command: ...```) by the appropriate one.
+
+Make sure that the selected configuration file (from this folder ```BlockchainFormation/example_config_files/aws_configs```) has the proper paths (have a look on the example file ```parity_config_open_source_docker.json```)
+
+Place the SSH key file (```DLPS_EU.pem```) to the directory of the project
+
+Build your image
+```
+docker-compose build
+```
+
+Run your image
+```
+docker-compose up
+```
 
 ## License
 

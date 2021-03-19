@@ -1,0 +1,47 @@
+{
+  "instance_provision": "aws",
+  "vm_count": 2,
+  "instance_type": "m5.large",
+  "image": {
+    "image_id": null,
+    "os": "ubuntu",
+    "version": 20,
+    "permissions": "default"
+  },
+  "subnet_id": {"eu-central-1": "subnet-2b609267"},
+  "security_group_id": {"eu-central-1": ["sg-0feee02015720a7a1"]},
+  "proxy": null,
+  "user": "ubuntu",
+  "profile": "default",
+  "key_name": "DLPS_EU",
+  "aws_credentials": "~/.aws/credentials",
+  "aws_config": "~/.aws/config",
+  "aws_region": {"eu-central-1": 2},
+  "aws_proxy_settings": null,
+  "priv_key_path": "/app/DLPS_EU.pem",
+  "tag_name": "example_conf_parity",
+  "exp_dir": "/app/BlockchainFormation",
+  "public_ip": true,
+  "storage_settings": [
+    {
+      "DeviceName": "/dev/sdb",
+      "VirtualName": "string",
+      "Ebs": {
+        "DeleteOnTermination": true,
+        "VolumeSize": 32,
+        "VolumeType": "gp2",
+        "Encrypted": false
+      }
+    }
+  ],
+  "blockchain_type": "parity",
+  "parity_settings": {
+    "step_duration": 5,
+    "balance": "0x200000000000000000000000000000000000000000000000000000000000000",
+    "gaslimit": "0x2fefd8",
+    "num_acc": null
+  },
+  "load_balancer_settings": {
+    "add_loadbalancer": false
+  }
+}

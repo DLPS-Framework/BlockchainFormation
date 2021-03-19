@@ -1,0 +1,17 @@
+version: '3.0'
+
+services:
+  blockchain-formation:
+    container_name: blockchain
+    env_file:
+      - .env
+    build:
+     context: .
+     args:
+       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+       AWS_REGION: ${AWS_REGION}
+    tty: true
+    command: python3.8 /app/BlockchainFormation/run.py start --config /app/BlockchainFormation/example_config_files/aws_configs/parity_config_open_source_docker.json
+    volumes:
+    - ./:/app
